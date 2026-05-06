@@ -1,0 +1,916 @@
+// ============================================
+// TENANT SCHEMA
+// Everything below lives in the tenant's own
+// deployment. tenantId on every table enforces
+// data isolation.
+// ============================================
+
+// ============================================
+// ENUMS (Tenant specific)
+// ============================================
+
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../../node_modules/@prisma/tenant-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TenantRole {
+  CEO
+  CO
+  IT_ADMIN
+  INTERNAL_AUDITOR
+  EXTERNAL_AUDITOR
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING_INVITE
+  INACTIVE
+}
+
+enum InviteSource {
+  MANUAL
+  ENTRA_ID
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_REVIEW
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EvidenceType {
+  FILE
+  SCREENSHOT
+  CONFIG
+  DOCUMENT
+  LINK
+  TEXT_NOTE
+  LOG
+}
+
+enum AssetCompliance {
+  FULLY_COMPLIANT
+  PARTIALLY_COMPLIANT
+  NON_COMPLIANT
+  NOT_STARTED
+}
+
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssetType {
+  DATABASE_DATA_STORE
+  SYSTEM_APPLICATION
+  DATA_FLOW
+  THIRD_PARTY_VENDOR
+  CONSENT_MECHANISM
+  PHYSICAL_HARDWARE
+  API_INTEGRATION
+  MOBILE_APPLICATION
+  LEGACY_SYSTEM
+  SAAS_THIRD_PARTY
+  OUTSOURCED_MANAGED
+  IN_HOUSE_CLOUD
+  IN_HOUSE_ON_PREMISE
+  THIRD_PARTY_CLOUD
+}
+
+enum Sensitivity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum LegalBasis {
+  CONSENT
+  CONTRACT
+  LEGAL_OBLIGATION
+  LEGITIMATE_INTEREST
+  VITAL_INTEREST
+}
+
+enum PrincipalType {
+  CUSTOMER
+  EMPLOYEE
+  VENDOR
+  MINOR
+  OTHER
+}
+
+enum AssessmentStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  EVIDENCE_SUBMITTED
+  UNDER_REVIEW
+  APPROVED_INTERNAL
+  FINAL_REVIEW
+  COMPLIANT
+  REJECTED
+  OVERDUE
+}
+
+enum ControlComplianceStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLIANT
+  NON_COMPLIANT
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  EVIDENCE_REJECTED
+  EVIDENCE_APPROVED
+  TASK_OVERDUE
+  TASK_ASSIGNED
+  EVIDENCE_SUBMITTED
+  FINAL_SIGNOFF
+  ASSET_STATUS_CHANGED
+  ASSESSMENT_DUE
+  USER_INVITED
+  ASSET_NON_COMPLIANT
+}
+
+enum TenantAuditAction {
+  // Auth
+  USER_LOGIN
+  USER_LOGOUT
+  USER_INVITED
+  USER_ACTIVATED
+  USER_DEACTIVATED
+  // Onboarding
+  ONBOARDING_COMPLETED
+  // Department
+  DEPARTMENT_CREATED
+  DEPARTMENT_UPDATED
+  DEPARTMENT_DELETED
+  // Asset
+  ASSET_CREATED
+  ASSET_UPDATED
+  ASSET_DEACTIVATED
+  // PII
+  PII_RECORD_CREATED
+  PII_RECORD_UPDATED
+  PII_RECORD_DELETED
+  // Supplier
+  SUPPLIER_CREATED
+  SUPPLIER_UPDATED
+  SUPPLIER_DELETED
+  // Assessment
+  ASSESSMENT_CREATED
+  ASSESSMENT_UPDATED
+  ASSESSMENT_CLOSED
+  // Task
+  TASK_CREATED
+  TASK_ASSIGNED
+  TASK_STARTED
+  TASK_SUBMITTED
+  TASK_APPROVED
+  TASK_REJECTED
+  TASK_ESCALATED
+  TASK_REDELEGATED
+  // Evidence
+  EVIDENCE_UPLOADED
+  EVIDENCE_UPDATED
+  EVIDENCE_APPROVED
+  EVIDENCE_REJECTED
+  // Settings
+  SETTINGS_UPDATED
+  CLASSIFICATION_CHANGED
+  ENTRA_CONNECTED
+  ENTRA_DISCONNECTED
+}
+
+// ============================================
+// USERS
+// ============================================
+
+model User {
+  id           String      @id @default(uuid())
+  tenantId     String
+  name         String
+  email        String
+  passwordHash String?     // null if Entra ID only
+  role         TenantRole
+  status       UserStatus  @default(PENDING_INVITE)
+  source       InviteSource @default(MANUAL)
+  entraObjectId String?    // Microsoft Entra ID object ID
+  invitedById  String?     // FK to User who invited
+  invitedBy    User?       @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitees     User[]      @relation("InvitedBy")
+  lastLoginAt  DateTime?
+  joinedAt     DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  departments          DepartmentUser[]
+  assignedTasks        ComplianceTask[]      @relation("AssignedTo")
+  createdTasks         ComplianceTask[]      @relation("CreatedBy")
+  reviewedTasks        ComplianceTask[]      @relation("ReviewedBy")
+  uploadedEvidence     Evidence[]
+  notifications        Notification[]
+  auditLogs            TenantAuditLog[]
+  invitations          UserInvitation[]
+  quizAttempts         QuizAttempt[]
+  lessonProgress       LmsLessonProgress[]
+  issuedCertificates   IssuedCertificate[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+// ============================================
+// USER INVITATIONS
+// Tracks pending invites with token and expiry
+// ============================================
+
+model UserInvitation {
+  id          String     @id @default(uuid())
+  tenantId    String
+  email       String
+  role        TenantRole
+  token       String     @unique @default(uuid())
+  note        String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String?
+  invitedBy   User?      @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+
+  @@map("user_invitations")
+}
+
+// ============================================
+// DEPARTMENTS
+// ============================================
+
+model Department {
+  id                   String    @id @default(uuid())
+  tenantId             String
+  name                 String
+  description          String?
+  ownerId              String?   // FK to User (department owner)
+
+  // Auto-delegation mappings
+  // When a task is created for an asset in this dept,
+  // it auto-assigns to these users
+  assignedItAdminId    String?   // FK to User with IT_ADMIN role
+  assignedAuditorId    String?   // FK to User with INTERNAL_AUDITOR role
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  users                DepartmentUser[]
+  assets               Asset[]
+  suppliers            Supplier[]
+  assessments          Assessment[]
+  entraGroupMappings   EntraGroupMapping[]
+
+  @@unique([tenantId, name])
+  @@map("departments")
+}
+
+// Junction: User <-> Department (many-to-many)
+// IT Admin and IA can belong to multiple departments
+model DepartmentUser {
+  userId       String
+  departmentId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime   @default(now())
+
+  @@id([userId, departmentId])
+  @@map("department_users")
+}
+
+// ============================================
+// ENTRA ID GROUP MAPPINGS
+// Maps Entra ID groups to roles + departments
+// ============================================
+
+model EntraGroupMapping {
+  id             String      @id @default(uuid())
+  tenantId       String
+  entraGroupId   String      // Entra ID group object ID
+  entraGroupName String      // Display name
+  role           TenantRole
+  // departmentId null = org-wide role (CO, EA)
+  // departmentId set = dept-specific role (IT Admin, IA)
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([tenantId, entraGroupId])
+  @@map("entra_group_mappings")
+}
+
+// ============================================
+// ASSETS (OWN ASSETS)
+// ============================================
+
+model Asset {
+  id              String         @id @default(uuid())
+  tenantId        String
+  assetCode       String         // e.g., AST-001 (auto-generated)
+  name            String
+  assetType       AssetType
+  description     String?
+  departmentId    String
+  department      Department     @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  ownerId         String?
+  status          AssetStatus    @default(ACTIVE)
+  compliance      AssetCompliance @default(NOT_STARTED)
+  criticality     Criticality    @default(MEDIUM)
+  hostingLocation String
+  internetFacing  Boolean        @default(false)
+  vendorName      String?        // for vendor-hosted asset types
+  dataCategories  String[]       // array of data category strings
+
+  // Computed fields (updated by scoring engine)
+  compliantControls Int          @default(0)
+  totalControls     Int          @default(0)
+  openTasks         Int          @default(0)
+  riskScore         Float?
+
+  registeredAt    DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  piiRecords           PiiRecord[]
+  assessmentAssets     AssessmentAsset[]
+  complianceTasks      ComplianceTask[]
+  assetRiskSnapshots   AssetRiskSnapshot[]
+
+  @@unique([tenantId, assetCode])
+  @@map("assets")
+}
+
+// ============================================
+// PII RECORDS
+// Separate table, linked to assets
+// ============================================
+
+model PiiRecord {
+  id                    String       @id @default(uuid())
+  tenantId              String
+  assetId               String
+  asset                 Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  categories            String[]     // array of PII category strings
+  sensitivity           Sensitivity
+  purpose               String
+  legalBasis            LegalBasis
+  retention             String
+  deletionMechanism     String?
+  volume                Int          // number of data principals
+  crossBorderTransfer   Boolean      @default(false)
+  crossBorderDest       String?      // required if crossBorderTransfer = true
+  principalType         PrincipalType
+  sharedWithThirdParties Boolean     @default(false)
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@map("pii_records")
+}
+
+// ============================================
+// SUPPLIERS
+// ============================================
+
+model Supplier {
+  id                 String       @id @default(uuid())
+  tenantId           String
+  name               String
+  supplierType       String       // Cloud Provider, Analytics, Payroll, etc.
+  contactName        String?
+  contactEmail       String
+  countryOfOperation String       @default("India")
+  dpaSigned          Boolean      @default(false)
+  dpaReference       String?
+  criticality        Criticality  @default(MEDIUM)
+  status             AssetStatus  @default(ACTIVE)
+  departmentId       String
+  department         Department   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  // Relations
+  supplierAssets     SupplierAsset[]
+
+  @@map("suppliers")
+}
+
+// ============================================
+// SUPPLIER ASSETS (VENDOR ASSETS)
+// ============================================
+
+model SupplierAsset {
+  id              String      @id @default(uuid())
+  tenantId        String
+  supplierId      String
+  supplier        Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  name            String
+  assetType       AssetType
+  description     String?
+  criticality     Criticality @default(MEDIUM)
+  hostingLocation String?
+  internetFacing  Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  piiRecords      SupplierPiiRecord[]
+
+  @@map("supplier_assets")
+}
+
+// ============================================
+// SUPPLIER PII RECORDS
+// ============================================
+
+model SupplierPiiRecord {
+  id                    String        @id @default(uuid())
+  tenantId              String
+  supplierAssetId       String
+  supplierAsset         SupplierAsset @relation(fields: [supplierAssetId], references: [id], onDelete: Cascade)
+  categories            String[]
+  sensitivity           Sensitivity
+  purpose               String
+  legalBasis            LegalBasis
+  retention             String
+  deletionMechanism     String?
+  volume                Int
+  crossBorderTransfer   Boolean       @default(false)
+  crossBorderDest       String?
+  principalType         PrincipalType
+  sharedWithThirdParties Boolean      @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("supplier_pii_records")
+}
+
+// ============================================
+// ASSESSMENTS
+// ============================================
+
+model Assessment {
+  id           String           @id @default(uuid())
+  tenantId     String
+  name         String
+  description  String?
+  status       AssessmentStatus @default(ACTIVE)
+  departmentId String
+  department   Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdById  String
+  startDate    DateTime
+  endDate      DateTime
+
+  // Computed fields (updated by scoring engine)
+  totalControls     Int          @default(0)
+  compliantControls Int          @default(0)
+  openTasks         Int          @default(0)
+
+  closedAt     DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  assets           AssessmentAsset[]
+  regulations      AssessmentRegulation[]
+  controls         AssessmentControl[]
+  complianceTasks  ComplianceTask[]
+
+  @@map("assessments")
+}
+
+// Junction: Assessment <-> Asset (many-to-many)
+model AssessmentAsset {
+  assessmentId String
+  assetId      String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  asset        Asset      @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  addedAt      DateTime   @default(now())
+
+  @@id([assessmentId, assetId])
+  @@map("assessment_assets")
+}
+
+// Junction: Assessment <-> Regulation (many-to-many)
+model AssessmentRegulation {
+  assessmentId String
+  regulationId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  addedAt      DateTime   @default(now())
+
+  @@id([assessmentId, regulationId])
+  @@map("assessment_regulations")
+}
+
+// Junction: Assessment <-> Control (many-to-many)
+// Also tracks per-control compliance status within this assessment
+// and records exclusion reasons if CO unchecked a control
+model AssessmentControl {
+  id             String                 @id @default(uuid())
+  assessmentId   String
+  assessment     Assessment             @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  controlId      String
+  isExcluded     Boolean                @default(false)
+  exclusionReason String?               // required if isExcluded = true
+  complianceStatus ControlComplianceStatus @default(NOT_STARTED)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@unique([assessmentId, controlId])
+  @@map("assessment_controls")
+}
+
+// ============================================
+// COMPLIANCE TASKS
+// Auto-created from control predefined actions
+// when assessment is created
+// ============================================
+
+model ComplianceTask {
+  id              String      @id @default(uuid())
+  tenantId        String
+  taskCode        String      // e.g., ACT-001 (auto-generated)
+  title           String
+  description     String
+  instructions    String?     // CO instructions for IT Admin
+  evidenceRequired String?    // what evidence is needed
+
+  // Linkage (mandatory triad)
+  assessmentId    String
+  assessment      Assessment  @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  controlId       String      // FK to Control (from super admin schema)
+  assetId         String
+  asset           Asset       @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  // Assignment
+  assignedToId    String?
+  assignedTo      User?       @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdById     String?
+  createdBy       User?       @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Review
+  reviewedById    String?
+  reviewedBy      User?       @relation("ReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  // Status and priority
+  status          TaskStatus  @default(PENDING)
+  priority        Priority    @default(HIGH)
+  dueDate         DateTime
+
+  // Timestamps for state transitions
+  startedAt       DateTime?   // when IT Admin clicked Start Working
+  submittedAt     DateTime?   // when evidence submitted
+  reviewedAt      DateTime?   // when IA reviewed
+  approvedAt      DateTime?   // when IA approved
+  signedOffAt     DateTime?   // when EA signed off
+  rejectedAt      DateTime?
+
+  // Auto-delegation info
+  autoAssigned    Boolean     @default(false)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  evidence        Evidence[]
+  reviewNotes     TaskReviewNote[]
+  statusHistory   TaskStatusHistory[]
+
+  @@unique([tenantId, taskCode])
+  @@map("compliance_tasks")
+}
+
+// Immutable status history log per task
+model TaskStatusHistory {
+  id          String     @id @default(uuid())
+  taskId      String
+  task        ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  changedById String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+
+  @@map("task_status_history")
+}
+
+// Review notes (IA feedback, CO decisions, EA notes)
+model TaskReviewNote {
+  id        String     @id @default(uuid())
+  taskId    String
+  task      ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String?
+  role      TenantRole
+  note      String
+  // CO decision type when handling rejections
+  // redelegate | new_task | escalate | null
+  decisionType String?
+  createdAt DateTime   @default(now())
+
+  @@map("task_review_notes")
+}
+
+// ============================================
+// EVIDENCE
+// ============================================
+
+model Evidence {
+  id           String       @id @default(uuid())
+  tenantId     String
+  taskId       String
+  task         ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title        String
+  type         EvidenceType
+  description  String?
+
+  // File storage
+  // For FILE, SCREENSHOT, CONFIG, DOCUMENT, LOG:
+  fileUrl      String?      // Azure Blob Storage URL
+  fileName     String?
+  fileSize     Int?         // bytes
+
+  // For LINK type
+  linkUrl      String?
+
+  // For TEXT_NOTE type
+  textContent  String?
+
+  submittedById String?
+  submittedBy   User?       @relation(fields: [submittedById], references: [id], onDelete: SetNull)
+
+  // Review status
+  reviewStatus  TaskStatus? // mirrors task status at time of review
+
+  // Version tracking
+  version      Int          @default(1)
+  parentId     String?      // FK to previous version of this evidence
+  isLatest     Boolean      @default(true)
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  versions     EvidenceVersion[]
+
+  @@map("evidence")
+}
+
+// Immutable version history for evidence
+// Every time evidence is updated a new version record is created
+model EvidenceVersion {
+  id           String    @id @default(uuid())
+  evidenceId   String
+  evidence     Evidence  @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  version      Int
+  fileUrl      String?
+  fileName     String?
+  linkUrl      String?
+  textContent  String?
+  uploadedById String?
+  uploadedAt   DateTime  @default(now())
+
+  @@map("evidence_versions")
+}
+
+// ============================================
+// RISK SNAPSHOTS
+// Daily computed risk scores for trend charts
+// ============================================
+
+model RiskSnapshot {
+  id           String   @id @default(uuid())
+  tenantId     String
+  snapshotDate DateTime @db.Date
+  entityType   String   // "org" | "department" | "asset" | "regulation"
+  entityId     String   // ID of the org/dept/asset/regulation
+  entityName   String
+  riskScore    Float    // 0-100
+  riskLevel    String   // Low | Moderate | High | Critical | Severe
+
+  // Contributing factors stored as JSON
+  // { nonCompliantControls, overdueTasks, piiSensitivity,
+  //   assetCriticality, regulationWeight }
+  factors      Json?
+
+  createdAt    DateTime @default(now())
+
+  // One snapshot per entity per day
+  @@unique([tenantId, entityType, entityId, snapshotDate])
+  @@map("risk_snapshots")
+}
+
+// Asset-level risk (separate for efficient querying)
+model AssetRiskSnapshot {
+  id           String   @id @default(uuid())
+  tenantId     String
+  assetId      String
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  snapshotDate DateTime @db.Date
+  riskScore    Float
+  riskLevel    String
+  factors      Json?
+  createdAt    DateTime @default(now())
+
+  @@unique([tenantId, assetId, snapshotDate])
+  @@map("asset_risk_snapshots")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id         String               @id @default(uuid())
+  tenantId   String
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  priority   NotificationPriority @default(MEDIUM)
+  title      String
+  body       String
+  // Link to the relevant record
+  linkType   String?              // "task" | "asset" | "assessment" | "evidence"
+  linkId     String?
+  isRead     Boolean              @default(false)
+  readAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  @@map("notifications")
+}
+
+// ============================================
+// TENANT AUDIT LOG
+// Immutable. No updates, no deletes ever.
+// ============================================
+
+model TenantAuditLog {
+  id         String            @id @default(uuid())
+  tenantId   String
+  userId     String?
+  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role       TenantRole?
+  action     TenantAuditAction
+  targetType String
+  targetId   String?
+  targetName String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime          @default(now())
+
+  @@map("tenant_audit_logs")
+}
+
+// ============================================
+// LMS ENROLLMENTS
+// Tracks which users are enrolled in courses
+// ============================================
+
+model LmsEnrollment {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+  courseId    String    // FK to LmsCourse (super admin schema)
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  isCompleted Boolean   @default(false)
+
+  // Relations
+  lessonProgress LmsLessonProgress[]
+  quizAttempts   QuizAttempt[]
+
+  @@unique([tenantId, userId, courseId])
+  @@map("lms_enrollments")
+}
+
+// ============================================
+// LMS LESSON PROGRESS
+// Tracks progress per lesson per user
+// ============================================
+
+model LmsLessonProgress {
+  id           String        @id @default(uuid())
+  tenantId     String
+  enrollmentId String
+  enrollment   LmsEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId     String        // FK to LmsLesson (super admin schema)
+  isCompleted  Boolean       @default(false)
+  completedAt  DateTime?
+  // For video lessons
+  watchedSeconds Int?
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lms_lesson_progress")
+}
+
+// ============================================
+// QUIZ ATTEMPTS
+// ============================================
+
+model QuizAttempt {
+  id           String        @id @default(uuid())
+  tenantId     String
+  enrollmentId String
+  enrollment   LmsEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId       String        // FK to LmsQuiz (super admin schema)
+  attemptNumber Int
+  score        Float         // percentage e.g., 85.5
+  totalMarks   Int
+  earnedMarks  Int
+  passed       Boolean
+  timeTakenS   Int?          // time taken in seconds
+  startedAt    DateTime      @default(now())
+  completedAt  DateTime?
+
+  // Relations
+  answers      QuizAttemptAnswer[]
+
+  @@map("quiz_attempts")
+}
+
+// ============================================
+// QUIZ ATTEMPT ANSWERS
+// Individual question answers per attempt
+// ============================================
+
+model QuizAttemptAnswer {
+  id            String      @id @default(uuid())
+  attemptId     String
+  attempt       QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId    String      // FK to QuizQuestion (super admin schema)
+  // MCQ: selected option ID
+  selectedOptionId String?
+  // True-False: true or false
+  tfAnswer      Boolean?
+  // Descriptive: text response
+  textAnswer    String?
+  isCorrect     Boolean?    // null for descriptive (manual grading)
+  marksAwarded  Float?
+  createdAt     DateTime    @default(now())
+
+  @@map("quiz_attempt_answers")
+}
+
+// ============================================
+// ISSUED CERTIFICATES
+// ============================================
+
+model IssuedCertificate {
+  id                  String    @id @default(uuid())
+  tenantId            String
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  courseId            String    // FK to LmsCourse (super admin schema)
+  certificateTemplateId String? // FK to CertificateTemplate (super admin schema)
+  certificateCode     String    @unique // e.g., CERT-2025-001
+  issuedAt            DateTime  @default(now())
+  isRevoked           Boolean   @default(false)
+  revokedAt           DateTime?
+  revocationReason    String?
+  // PDF stored in Azure Blob Storage
+  pdfUrl              String?
+
+  @@map("issued_certificates")
+}

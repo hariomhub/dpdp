@@ -1,0 +1,503 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../../node_modules/@prisma/super-admin-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum OrgStatus {
+  ONBOARDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Plan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum ControlStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ApplicableTo {
+  DATA_FIDUCIARY
+  SIGNIFICANT_DF
+  BOTH
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EvidenceType {
+  FILE
+  SCREENSHOT
+  CONFIG
+  DOCUMENT
+  LINK
+  TEXT_NOTE
+  LOG
+}
+
+enum LessonType {
+  VIDEO
+  READING
+  ASSIGNMENT
+}
+
+enum VideoSource {
+  UPLOAD
+  EMBED
+}
+
+enum ReadingContentType {
+  RICH_TEXT
+  FILE
+}
+
+enum AssignmentSubmissionType {
+  TEXT_RESPONSE
+  FILE_UPLOAD
+  BOTH
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  DESCRIPTIVE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseCategory {
+  DPDP_COMPLIANCE
+  PORTAL_USAGE
+  ROLE_SPECIFIC
+  GENERAL
+}
+
+enum CertLayout {
+  CLASSIC
+  MODERN
+  MINIMAL
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum RegulationStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AuditAction {
+  ORG_CREATED
+  ORG_UPDATED
+  ORG_SUSPENDED
+  ORG_ACTIVATED
+  ORG_DELETED
+  REGULATION_CREATED
+  REGULATION_UPDATED
+  REGULATION_ARCHIVED
+  CONTROL_CREATED
+  CONTROL_UPDATED
+  CONTROL_PUBLISHED
+  CONTROL_DEACTIVATED
+  COURSE_CREATED
+  COURSE_UPDATED
+  COURSE_PUBLISHED
+  COURSE_ARCHIVED
+  QUESTION_CREATED
+  QUESTION_UPDATED
+  QUESTION_ARCHIVED
+  CERT_TEMPLATE_CREATED
+  CERT_TEMPLATE_UPDATED
+  CERTIFICATE_REVOKED
+  LICENSE_CREATED
+  LICENSE_RENEWED
+  LICENSE_REVOKED
+  SUPER_ADMIN_LOGIN
+  SUPER_ADMIN_LOGOUT
+  SETTINGS_UPDATED
+}
+
+// ============================================
+// SUPER ADMINS
+// ============================================
+
+model SuperAdmin {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  auditLogs    PlatformAuditLog[]
+
+  @@map("super_admins")
+}
+
+// ============================================
+// TENANTS (CLIENT ORGANIZATIONS)
+// ============================================
+
+model Tenant {
+  id           String    @id @default(uuid())
+  tenantCode   String    @unique
+  name         String
+  industry     String
+  orgSize      String
+  address      String
+  country      String    @default("India")
+  website      String?
+  contactEmail String
+  dpoName      String
+  dpoEmail     String
+  dpoPhone     String?
+  panNumber    String?
+  gstNumber    String?
+  classification  String  @default("Data Fiduciary")
+  classUncertain  Boolean @default(false)
+  ceoName      String
+  ceoEmail     String
+  plan         Plan      @default(STARTER)
+  status       OrgStatus @default(ONBOARDING)
+  internalNotes String?
+
+  // Deployment fields (Option A — managed deployment)
+  tenantPortalUrl    String?   // e.g., https://compliance.technova.in
+  deployedAt         DateTime? // when deployment confirmed live
+  deploymentNotes    String?   // internal notes about their Azure setup
+  currentVersion     String?   // e.g., "1.0.0"
+
+  // Invitation tracking
+  inviteToken        String?   @unique
+  inviteExpiresAt    DateTime?
+  inviteAcceptedAt   DateTime?
+  
+  onboardedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  licenseKey   LicenseKey?
+  auditLogs    PlatformAuditLog[]
+
+  @@map("tenants")
+}
+
+// ============================================
+// LICENSE KEYS
+// ============================================
+
+model LicenseKey {
+  id             String        @id @default(uuid())
+  tenantId       String        @unique
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key            String        @unique @default(uuid())
+  plan           Plan
+  status         LicenseStatus @default(ACTIVE)
+  maxUsers       Int           @default(10)
+  maxAssessments Int           @default(5)
+  storageGb      Int           @default(10)
+  activatedAt    DateTime?
+  expiresAt      DateTime
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("license_keys")
+}
+
+// ============================================
+// REGULATIONS
+// ============================================
+
+model Regulation {
+  id               String           @id @default(uuid())
+  name             String
+  shortCode        String           @unique
+  issuingAuthority String
+  description      String
+  jurisdiction     String           @default("India")
+  effectiveDate    DateTime
+  status           RegulationStatus @default(DRAFT)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  controlMappings  ControlRegulation[]
+  chapters         RegulationChapter[]
+
+  @@map("regulations")
+}
+
+model RegulationChapter {
+  id           String     @id @default(uuid())
+  regulationId String
+  regulation   Regulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  name         String     // e.g., "Chapter 2"
+  title        String?    // e.g., "Obligations of Data Fiduciary"
+  orderIndex   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  controls     Control[]
+
+  @@unique([regulationId, name])
+  @@map("regulation_chapters")
+}
+
+// ============================================
+// CONTROLS
+// ============================================
+
+model Control {
+  id               String        @id @default(uuid())
+  title            String
+  description      String
+  chapterId String?
+  chapter          RegulationChapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  sectionReference String?
+  applicableTo     ApplicableTo  @default(BOTH)
+  status           ControlStatus @default(DRAFT)
+  isCustom         Boolean       @default(false)
+  tenantId         String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  regulationMappings  ControlRegulation[]
+  predefinedActions   ControlPredefinedAction[]
+
+  @@map("controls")
+}
+
+model ControlRegulation {
+  controlId    String
+  regulationId String
+  control      Control    @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  regulation   Regulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+
+  @@id([controlId, regulationId])
+  @@map("control_regulations")
+}
+
+model ControlPredefinedAction {
+  id               String       @id @default(uuid())
+  controlId        String
+  control          Control      @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  evidenceTypes    EvidenceType[]
+  suggestedDueDays Int          @default(30)
+  priority         Priority     @default(HIGH)
+  orderIndex       Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("control_predefined_actions")
+}
+
+// ============================================
+// CERTIFICATE TEMPLATES
+// ============================================
+
+model CertificateTemplate {
+  id           String     @id @default(uuid())
+  name         String
+  layout       CertLayout @default(CLASSIC)
+  titleText    String     @default("Certificate of Completion")
+  bodyText     String
+  signatory    String?
+  designation  String?
+  signatureUrl String?
+  logoUrl      String?
+  bgColor      String     @default("#FFFFFF")
+  isDefault    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  courses      LmsCourse[]
+
+  @@map("certificate_templates")
+}
+
+// ============================================
+// LMS COURSES
+// ============================================
+
+model LmsCourse {
+  id                    String               @id @default(uuid())
+  title                 String
+  description           String
+  category              CourseCategory
+  difficulty            CourseDifficulty
+  estimatedHours        Int                  @default(0)
+  estimatedMinutes      Int                  @default(0)
+  thumbnailUrl          String?
+  status                CourseStatus         @default(DRAFT)
+  certificateTemplateId String?
+  certificateTemplate   CertificateTemplate? @relation(fields: [certificateTemplateId], references: [id], onDelete: SetNull)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  sections              LmsSection[]
+
+  @@map("lms_courses")
+}
+
+// ============================================
+// LMS SECTIONS
+// ============================================
+
+model LmsSection {
+  id          String     @id @default(uuid())
+  courseId    String
+  course      LmsCourse  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  orderIndex  Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  lessons     LmsLesson[]
+  quiz        LmsQuiz?
+
+  @@map("lms_sections")
+}
+
+// ============================================
+// LMS LESSONS
+// ============================================
+
+model LmsLesson {
+  id                       String                    @id @default(uuid())
+  sectionId                String
+  section                  LmsSection                @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title                    String
+  description              String?
+  type                     LessonType
+  orderIndex               Int                       @default(0)
+  videoSource              VideoSource?
+  videoUrl                 String?
+  videoDurationS           Int?
+  readingContentType       ReadingContentType?
+  readingContent           String?
+  assignmentInstructions   String?
+  assignmentSubmissionType AssignmentSubmissionType?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  @@map("lms_lessons")
+}
+
+// ============================================
+// LMS QUIZ
+// ============================================
+
+model LmsQuiz {
+  id            String     @id @default(uuid())
+  sectionId     String     @unique
+  section       LmsSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title         String
+  passThreshold Int        @default(70)
+  timeLimitMins Int?
+  totalMarks    Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  questions     QuizQuestion[]
+
+  @@map("lms_quizzes")
+}
+
+// ============================================
+// QUESTION BANK
+// ============================================
+
+model QuizQuestion {
+  id              String       @id @default(uuid())
+  quizId          String?
+  quiz            LmsQuiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  questionText    String
+  type            QuestionType
+  marks           Int          @default(1)
+  difficulty      Difficulty   @default(MEDIUM)
+  topic           String?
+  orderIndex      Int          @default(0)
+  tfCorrectAnswer Boolean?
+  modelAnswer     String?
+  wordLimit       Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  options         QuestionOption[]
+
+  @@map("quiz_questions")
+}
+
+model QuestionOption {
+  id         String       @id @default(uuid())
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  optionText String
+  isCorrect  Boolean      @default(false)
+  orderIndex Int          @default(0)
+
+  @@map("question_options")
+}
+
+// ============================================
+// PLATFORM AUDIT LOG
+// ============================================
+
+model PlatformAuditLog {
+  id           String      @id @default(uuid())
+  superAdminId String?
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: SetNull)
+  tenantId     String?
+  tenant       Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  action       AuditAction
+  targetType   String
+  targetId     String?
+  targetName   String?
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  @@map("platform_audit_logs")
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@dpdp/shared",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./mockData": "./src/mockData.ts",
+    "./context": "./src/AppContext.tsx"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

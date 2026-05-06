@@ -1,0 +1,583 @@
+import { getSuperAdminPrisma } from '@dpdp/database'
+import {
+  CourseStatus, CourseDifficulty, CourseCategory,
+  LessonType, VideoSource, ReadingContentType,
+  AssignmentSubmissionType, QuestionType, Difficulty,
+  CertLayout, AuditAction, Prisma
+} from '@prisma/super-admin-client'
+import { parsePagination, buildMeta } from '../../utils/pagination'
+import { logAuditAction } from '../../utils/audit-logger'
+
+const db = getSuperAdminPrisma()
+
+export const lmsService = {
+  // ─── COURSES ───────────────────────────────────────────
+
+  async listCourses(query: Record<string, unknown>) {
+    const { page, limit, skip } = parsePagination(query)
+
+    const where: Prisma.LmsCourseWhereInput = {}
+    if (query.status) where.status = query.status as CourseStatus
+    if (query.category) where.category = query.category as CourseCategory
+    if (query.difficulty) where.difficulty = query.difficulty as CourseDifficulty
+    if (query.search) {
+      where.OR = [
+        { title: { contains: String(query.search), mode: 'insensitive' } },
+        { description: { contains: String(query.search), mode: 'insensitive' } },
+      ]
+    }
+
+    const [courses, total] = await Promise.all([
+      db.lmsCourse.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          certificateTemplate: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { sections: true },
+          },
+        },
+      }),
+      db.lmsCourse.count({ where }),
+    ])
+
+    return { data: courses, meta: buildMeta(total, page, limit) }
+  },
+
+  async getCourseById(id: string) {
+    const course = await db.lmsCourse.findUnique({
+      where: { id },
+      include: {
+        sections: {
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            lessons: { orderBy: { orderIndex: 'asc' } },
+            quiz: {
+              include: {
+                questions: {
+                  orderBy: { orderIndex: 'asc' },
+                  include: { options: { orderBy: { orderIndex: 'asc' } } },
+                },
+              },
+            },
+          },
+        },
+        certificateTemplate: true,
+      },
+    })
+    if (!course) throw new Error('Course not found')
+    return course
+  },
+
+  async createCourse(params: {
+    title: string
+    description: string
+    category: CourseCategory
+    difficulty: CourseDifficulty
+    estimatedHours: number
+    estimatedMinutes: number
+    thumbnailUrl?: string
+    status: CourseStatus
+    certificateTemplateId?: string
+    adminId: string
+  }) {
+    const course = await db.lmsCourse.create({
+      data: {
+        title: params.title,
+        description: params.description,
+        category: params.category,
+        difficulty: params.difficulty,
+        estimatedHours: params.estimatedHours,
+        estimatedMinutes: params.estimatedMinutes,
+        thumbnailUrl: params.thumbnailUrl,
+        status: params.status,
+        certificateTemplateId: params.certificateTemplateId,
+      },
+    })
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.COURSE_CREATED,
+      targetType: 'lms_course',
+      targetId: course.id,
+      targetName: course.title,
+      details: { status: course.status } as Prisma.InputJsonValue,
+    })
+
+    return course
+  },
+
+  async updateCourse(params: {
+    id: string
+    data: Partial<{
+      title: string
+      description: string
+      category: CourseCategory
+      difficulty: CourseDifficulty
+      estimatedHours: number
+      estimatedMinutes: number
+      thumbnailUrl: string
+      status: CourseStatus
+      certificateTemplateId: string
+    }>
+    adminId: string
+  }) {
+    const existing = await db.lmsCourse.findUnique({ where: { id: params.id } })
+    if (!existing) throw new Error('Course not found')
+
+    const updated = await db.lmsCourse.update({
+      where: { id: params.id },
+      data: params.data,
+    })
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.COURSE_UPDATED,
+      targetType: 'lms_course',
+      targetId: params.id,
+      targetName: updated.title,
+      details: { changes: params.data } as Prisma.InputJsonValue,
+    })
+
+    return updated
+  },
+
+  async publishCourse(id: string, adminId: string) {
+    const existing = await db.lmsCourse.findUnique({ where: { id } })
+    if (!existing) throw new Error('Course not found')
+
+    const updated = await db.lmsCourse.update({
+      where: { id },
+      data: { status: CourseStatus.PUBLISHED },
+    })
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.COURSE_PUBLISHED,
+      targetType: 'lms_course',
+      targetId: id,
+      targetName: existing.title,
+    })
+
+    return updated
+  },
+
+  async archiveCourse(id: string, adminId: string) {
+    const existing = await db.lmsCourse.findUnique({ where: { id } })
+    if (!existing) throw new Error('Course not found')
+
+    const updated = await db.lmsCourse.update({
+      where: { id },
+      data: { status: CourseStatus.ARCHIVED },
+    })
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.COURSE_ARCHIVED,
+      targetType: 'lms_course',
+      targetId: id,
+      targetName: existing.title,
+    })
+
+    return updated
+  },
+
+  // ─── SECTIONS ──────────────────────────────────────────
+
+  async createSection(params: {
+    courseId: string
+    title: string
+    description?: string
+    orderIndex: number
+  }) {
+    const course = await db.lmsCourse.findUnique({
+      where: { id: params.courseId },
+    })
+    if (!course) throw new Error('Course not found')
+
+    return db.lmsSection.create({
+      data: {
+        courseId: params.courseId,
+        title: params.title,
+        description: params.description,
+        orderIndex: params.orderIndex,
+      },
+    })
+  },
+
+  async updateSection(id: string, data: Partial<{
+    title: string
+    description: string
+    orderIndex: number
+  }>) {
+    const existing = await db.lmsSection.findUnique({ where: { id } })
+    if (!existing) throw new Error('Section not found')
+    return db.lmsSection.update({ where: { id }, data })
+  },
+
+  async deleteSection(id: string) {
+    const existing = await db.lmsSection.findUnique({ where: { id } })
+    if (!existing) throw new Error('Section not found')
+    await db.lmsSection.delete({ where: { id } })
+    return { message: 'Section deleted' }
+  },
+
+  // ─── LESSONS ───────────────────────────────────────────
+
+  async createLesson(params: {
+    sectionId: string
+    title: string
+    description?: string
+    type: LessonType
+    orderIndex: number
+    videoSource?: VideoSource
+    videoUrl?: string
+    videoDurationS?: number
+    readingContentType?: ReadingContentType
+    readingContent?: string
+    assignmentInstructions?: string
+    assignmentSubmissionType?: AssignmentSubmissionType
+  }) {
+    const section = await db.lmsSection.findUnique({
+      where: { id: params.sectionId },
+    })
+    if (!section) throw new Error('Section not found')
+
+    return db.lmsLesson.create({ data: params })
+  },
+
+  async updateLesson(id: string, data: Partial<{
+    title: string
+    description: string
+    orderIndex: number
+    videoSource: VideoSource
+    videoUrl: string
+    videoDurationS: number
+    readingContentType: ReadingContentType
+    readingContent: string
+    assignmentInstructions: string
+    assignmentSubmissionType: AssignmentSubmissionType
+  }>) {
+    const existing = await db.lmsLesson.findUnique({ where: { id } })
+    if (!existing) throw new Error('Lesson not found')
+    return db.lmsLesson.update({ where: { id }, data })
+  },
+
+  async deleteLesson(id: string) {
+    const existing = await db.lmsLesson.findUnique({ where: { id } })
+    if (!existing) throw new Error('Lesson not found')
+    await db.lmsLesson.delete({ where: { id } })
+    return { message: 'Lesson deleted' }
+  },
+
+  // ─── QUIZ ──────────────────────────────────────────────
+
+  async createQuiz(params: {
+    sectionId: string
+    title: string
+    passThreshold: number
+    timeLimitMins?: number
+  }) {
+    const section = await db.lmsSection.findUnique({
+      where: { id: params.sectionId },
+    })
+    if (!section) throw new Error('Section not found')
+
+    const existing = await db.lmsQuiz.findUnique({
+      where: { sectionId: params.sectionId },
+    })
+    if (existing) throw new Error('Section already has a quiz')
+
+    return db.lmsQuiz.create({
+      data: {
+        sectionId: params.sectionId,
+        title: params.title,
+        passThreshold: params.passThreshold,
+        timeLimitMins: params.timeLimitMins,
+      },
+    })
+  },
+
+  async updateQuiz(id: string, data: Partial<{
+    title: string
+    passThreshold: number
+    timeLimitMins: number
+  }>) {
+    const existing = await db.lmsQuiz.findUnique({ where: { id } })
+    if (!existing) throw new Error('Quiz not found')
+    return db.lmsQuiz.update({ where: { id }, data })
+  },
+
+  // ─── QUESTIONS ─────────────────────────────────────────
+
+  async listQuestions(query: Record<string, unknown>) {
+    const { page, limit, skip } = parsePagination(query)
+
+    const where: Prisma.QuizQuestionWhereInput = {}
+    if (query.type) where.type = query.type as QuestionType
+    if (query.difficulty) where.difficulty = query.difficulty as Difficulty
+    if (query.topic) where.topic = { contains: String(query.topic), mode: 'insensitive' }
+    if (query.quizId) where.quizId = String(query.quizId)
+    if (query.bankOnly === 'true') where.quizId = null
+    if (query.search) {
+      where.questionText = { contains: String(query.search), mode: 'insensitive' }
+    }
+
+    const [questions, total] = await Promise.all([
+      db.quizQuestion.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          options: { orderBy: { orderIndex: 'asc' } },
+          _count: { select: { options: true } },
+        },
+      }),
+      db.quizQuestion.count({ where }),
+    ])
+
+    return { data: questions, meta: buildMeta(total, page, limit) }
+  },
+
+  async createQuestion(params: {
+    quizId?: string
+    questionText: string
+    type: QuestionType
+    marks: number
+    difficulty: Difficulty
+    topic?: string
+    orderIndex?: number
+    tfCorrectAnswer?: boolean
+    modelAnswer?: string
+    wordLimit?: number
+    options?: { optionText: string; isCorrect: boolean; orderIndex: number }[]
+    adminId: string
+  }) {
+    if (params.type === QuestionType.MCQ) {
+      if (!params.options || params.options.length < 2) {
+        throw new Error('MCQ questions require at least 2 options')
+      }
+      const hasCorrect = params.options.some(o => o.isCorrect)
+      if (!hasCorrect) {
+        throw new Error('MCQ questions must have one correct answer')
+      }
+    }
+
+    if (params.type === QuestionType.TRUE_FALSE &&
+      params.tfCorrectAnswer === undefined) {
+      throw new Error('True/False questions require a correct answer')
+    }
+
+    if (params.type === QuestionType.DESCRIPTIVE && !params.modelAnswer) {
+      throw new Error('Descriptive questions require a model answer')
+    }
+
+    const question = await db.quizQuestion.create({
+      data: {
+        quizId: params.quizId,
+        questionText: params.questionText,
+        type: params.type,
+        marks: params.marks,
+        difficulty: params.difficulty,
+        topic: params.topic,
+        orderIndex: params.orderIndex ?? 0,
+        tfCorrectAnswer: params.tfCorrectAnswer,
+        modelAnswer: params.modelAnswer,
+        wordLimit: params.wordLimit,
+        options: params.options
+          ? { create: params.options }
+          : undefined,
+      },
+      include: {
+        options: { orderBy: { orderIndex: 'asc' } },
+      },
+    })
+
+    if (params.quizId) {
+      const totalMarks = await db.quizQuestion.aggregate({
+        where: { quizId: params.quizId },
+        _sum: { marks: true },
+      })
+      await db.lmsQuiz.update({
+        where: { id: params.quizId },
+        data: { totalMarks: totalMarks._sum.marks ?? 0 },
+      })
+    }
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.QUESTION_CREATED,
+      targetType: 'quiz_question',
+      targetId: question.id,
+      targetName: question.questionText.slice(0, 50),
+      details: { type: params.type } as Prisma.InputJsonValue,
+    })
+
+    return question
+  },
+
+  async updateQuestion(params: {
+    id: string
+    data: Partial<{
+      questionText: string
+      marks: number
+      difficulty: Difficulty
+      topic: string
+      tfCorrectAnswer: boolean
+      modelAnswer: string
+      wordLimit: number
+    }>
+    adminId: string
+  }) {
+    const existing = await db.quizQuestion.findUnique({
+      where: { id: params.id },
+    })
+    if (!existing) throw new Error('Question not found')
+
+    const updated = await db.quizQuestion.update({
+      where: { id: params.id },
+      data: params.data,
+      include: { options: { orderBy: { orderIndex: 'asc' } } },
+    })
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.QUESTION_UPDATED,
+      targetType: 'quiz_question',
+      targetId: params.id,
+      targetName: existing.questionText.slice(0, 50),
+      details: { changes: params.data } as Prisma.InputJsonValue,
+    })
+
+    return updated
+  },
+
+  async addQuestionToQuiz(quizId: string, questionId: string) {
+    const quiz = await db.lmsQuiz.findUnique({ where: { id: quizId } })
+    if (!quiz) throw new Error('Quiz not found')
+
+    const question = await db.quizQuestion.findUnique({
+      where: { id: questionId },
+    })
+    if (!question) throw new Error('Question not found')
+
+    const orderIndex = await db.quizQuestion.count({ where: { quizId } })
+
+    const updated = await db.quizQuestion.update({
+      where: { id: questionId },
+      data: { quizId, orderIndex },
+    })
+
+    const totalMarks = await db.quizQuestion.aggregate({
+      where: { quizId },
+      _sum: { marks: true },
+    })
+    await db.lmsQuiz.update({
+      where: { id: quizId },
+      data: { totalMarks: totalMarks._sum.marks ?? 0 },
+    })
+
+    return updated
+  },
+
+  // ─── CERTIFICATE TEMPLATES ─────────────────────────────
+
+  async listCertificateTemplates() {
+    return db.certificateTemplate.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { courses: true } },
+      },
+    })
+  },
+
+  async createCertificateTemplate(params: {
+    name: string
+    layout: CertLayout
+    titleText: string
+    bodyText: string
+    signatory?: string
+    designation?: string
+    bgColor: string
+    isDefault: boolean
+    adminId: string
+  }) {
+    if (params.isDefault) {
+      await db.certificateTemplate.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      })
+    }
+
+    const template = await db.certificateTemplate.create({
+      data: {
+        name: params.name,
+        layout: params.layout,
+        titleText: params.titleText,
+        bodyText: params.bodyText,
+        signatory: params.signatory,
+        designation: params.designation,
+        bgColor: params.bgColor,
+        isDefault: params.isDefault,
+      },
+    })
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.CERT_TEMPLATE_CREATED,
+      targetType: 'certificate_template',
+      targetId: template.id,
+      targetName: template.name,
+    })
+
+    return template
+  },
+
+  async updateCertificateTemplate(params: {
+    id: string
+    data: Partial<{
+      name: string
+      layout: CertLayout
+      titleText: string
+      bodyText: string
+      signatory: string
+      designation: string
+      bgColor: string
+      isDefault: boolean
+    }>
+    adminId: string
+  }) {
+    const existing = await db.certificateTemplate.findUnique({
+      where: { id: params.id },
+    })
+    if (!existing) throw new Error('Certificate template not found')
+
+    if (params.data.isDefault) {
+      await db.certificateTemplate.updateMany({
+        where: { isDefault: true, id: { not: params.id } },
+        data: { isDefault: false },
+      })
+    }
+
+    const updated = await db.certificateTemplate.update({
+      where: { id: params.id },
+      data: params.data,
+    })
+
+    await logAuditAction({
+      superAdminId: params.adminId,
+      action: AuditAction.CERT_TEMPLATE_UPDATED,
+      targetType: 'certificate_template',
+      targetId: params.id,
+      targetName: existing.name,
+      details: { changes: params.data } as Prisma.InputJsonValue,
+    })
+
+    return updated
+  },
+}

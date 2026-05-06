@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/tenant" },
+    { "path": "./apps/super-admin" },
+    { "path": "./packages/ui" },
+    { "path": "./packages/shared" }
+  ]
+}

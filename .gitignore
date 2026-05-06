@@ -1,0 +1,8 @@
+dist/
+*/dist/
+apps/*/dist/
+apps/*/imports/
+src/**/*.png
+node_modules/
+.turbo/
+*.local

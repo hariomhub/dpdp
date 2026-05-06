@@ -1,0 +1,16 @@
+{
+  "name": "@dpdp/ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./components/*": "./src/components/*"
+  },
+  "dependencies": {
+    "lucide-react": "0.487.0"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  }
+}
