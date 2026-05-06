@@ -6,3 +6,7 @@ src/**/*.png
 node_modules/
 .turbo/
 *.local
+.env
+.env.*
+**/.env
+**/.env.*
