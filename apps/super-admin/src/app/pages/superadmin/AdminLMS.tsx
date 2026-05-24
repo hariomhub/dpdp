@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import {
-  useCourses, useCreateCourse,
+  useCourses, useCourse, useCreateCourse, useUpdateCourse, useSyncCourseContent,
   useQuestions, useCreateQuestion,
   useCertificateTemplates, useCreateCertificateTemplate,
+  useDesignations, useCreateDesignation, useUpdateDesignation, useDeleteDesignation,
+  useCourseDesignations, useSetCourseDesignations
 } from '../../../hooks/useLms';
 import toast from 'react-hot-toast';
 
@@ -422,18 +424,78 @@ type CourseFormStep = 1 | 2 | 3;
 type SectionItem = { id: string; title: string; items: { id: string; type: string; title: string }[] };
 type QuizQuestion = { id: string; text: string; type: string; marks: number; difficulty: string };
 
-function CourseForm({ onClose }: { onClose: () => void }) {
+function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => void }) {
+  const { data: fullCourseData, isLoading: isLoadingCourse } = useCourse(courseId || '');
   const [step, setStep] = useState<CourseFormStep>(1);
   const [form, setForm] = useState({ title: '', desc: '', category: 'DPDP Compliance', difficulty: 'Beginner', durationH: '', durationM: '', status: 'Draft', certTemplate: '' });
+  
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [includeQuiz, setIncludeQuiz] = useState(false);
+  const [quizTitle, setQuizTitle] = useState('End of Course Quiz');
+  const [passThreshold, setPassThreshold] = useState(70);
+  const [timeLimit, setTimeLimit] = useState('');
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+
+  React.useEffect(() => {
+    if (courseId && fullCourseData) {
+      setForm({
+        title: fullCourseData.title || '',
+        desc: fullCourseData.description || '',
+        category: fullCourseData.category?.replace('_', ' ') || 'DPDP Compliance',
+        difficulty: fullCourseData.difficulty || 'Beginner',
+        durationH: String(fullCourseData.estimatedHours || ''),
+        durationM: String(fullCourseData.estimatedMinutes || ''),
+        status: fullCourseData.status === 'PUBLISHED' ? 'Published' : 'Draft',
+        certTemplate: (fullCourseData as any).certificateTemplate?.name || ''
+      });
+
+      if ((fullCourseData as any).sections && (fullCourseData as any).sections.length > 0) {
+        setSections((fullCourseData as any).sections.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          items: (s.lessons || []).map((l: any) => ({ id: l.id, type: l.type.replace('_', '-').toLowerCase(), title: l.title }))
+        })));
+
+        const lastSection = (fullCourseData as any).sections[(fullCourseData as any).sections.length - 1];
+        if (lastSection.quiz) {
+          setIncludeQuiz(true);
+          setQuizTitle(lastSection.quiz.title);
+          setPassThreshold(lastSection.quiz.passThreshold);
+          setTimeLimit(lastSection.quiz.timeLimitMins ? String(lastSection.quiz.timeLimitMins) : '');
+          setQuizQuestions((lastSection.quiz.questions || []).map((q: any) => ({
+            id: q.id,
+            text: q.questionText,
+            type: q.type === 'TRUE_FALSE' ? 'True-False' : q.type.charAt(0) + q.type.slice(1).toLowerCase(),
+            marks: q.marks,
+            difficulty: q.difficulty.charAt(0) + q.difficulty.slice(1).toLowerCase()
+          })));
+        }
+      }
+    }
+  }, [fullCourseData, courseId]);
+
   const up = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
   const { mutate: createCourse, isPending: savingCourse } = useCreateCourse();
+  const { mutate: updateCourse, isPending: updatingCourse } = useUpdateCourse();
+  const { mutate: syncContent, isPending: syncingContent } = useSyncCourseContent();
   const { data: certTemplatesData } = useCertificateTemplates();
   const certTemplates = certTemplatesData ?? [];
+
+  const { data: designations = [] } = useDesignations();
+  const { data: courseDesignations = [] } = useCourseDesignations(courseId || '');
+  const { mutate: setCourseDesignations } = useSetCourseDesignations();
+  const [selectedDesignations, setSelectedDesignations] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (courseDesignations.length > 0) {
+      setSelectedDesignations(new Set(courseDesignations.map((d: any) => d.designationId)));
+    }
+  }, [courseDesignations]);
 
   const handleSaveCourse = (status: 'DRAFT' | 'PUBLISHED') => {
     if (!form.title) { toast.error('Course title is required'); return; }
     const selectedTemplate = certTemplates.find((t: any) => t.name === form.certTemplate);
-    createCourse({
+    const payload = {
       title: form.title,
       description: form.desc,
       category: form.category.toUpperCase().replace(/ /g, '_') as any,
@@ -442,14 +504,49 @@ function CourseForm({ onClose }: { onClose: () => void }) {
       estimatedMinutes: parseInt(form.durationM || '0'),
       status,
       certificateTemplateId: selectedTemplate?.id ?? undefined,
-    } as any, { onSuccess: () => onClose() });
+    };
+    
+    const contentPayload = {
+      sections,
+      quiz: includeQuiz ? {
+        title: quizTitle,
+        passThreshold,
+        timeLimit,
+        questions: quizQuestions
+      } : null
+    };
+
+    if (courseId) {
+      updateCourse({ id: courseId, ...payload } as any, { onSuccess: () => {
+        syncContent({ courseId: courseId, data: contentPayload }, { onSuccess: () => {
+          if (selectedDesignations.size >= 0) {
+            setCourseDesignations({ courseId: courseId, targets: Array.from(selectedDesignations).map(id => ({ designationId: id, isMandatory: true })) });
+          }
+          toast.success('Course saved successfully');
+          onClose();
+        }});
+      }});
+    } else {
+      createCourse(payload as any, { onSuccess: (res: any) => {
+        if (res?.data?.id) {
+          syncContent({ courseId: res.data.id, data: contentPayload }, { onSuccess: () => {
+            if (selectedDesignations.size > 0) {
+              setCourseDesignations({ courseId: res.data.id, targets: Array.from(selectedDesignations).map(id => ({ designationId: id, isMandatory: true })) });
+            }
+            toast.success('Course created successfully');
+            onClose();
+          }});
+        } else {
+          onClose();
+        }
+      }});
+    }
   };
 
-  // Step 2 state
-  const [sections, setSections] = useState<SectionItem[]>([
-    { id: 'sec-1', title: 'Introduction to DPDP Act', items: [{ id: 'l-1', type: 'video', title: 'What is DPDP?' }, { id: 'l-2', type: 'reading', title: 'Key Definitions' }] },
-    { id: 'sec-2', title: 'Data Fiduciary Obligations', items: [{ id: 'l-3', type: 'video', title: 'Chapter 2 Overview' }] },
-  ]);
+
+  const [showQForm, setShowQForm] = useState(false);
+  const totalMarks = quizQuestions.reduce((s, q) => s + q.marks, 0);
+
   const [contentModal, setContentModal] = useState<{ type: ContentModal['type']; sectionId: string | null }>({ type: null, sectionId: null });
 
   const addToSection = (sectionId: string, item: any) => {
@@ -458,19 +555,6 @@ function CourseForm({ onClose }: { onClose: () => void }) {
   const addSection = (item: any) => {
     setSections(p => [...p, { id: String(Date.now()), title: item.title, items: [] }]);
   };
-
-  // Step 3 — Quiz state
-  const [includeQuiz, setIncludeQuiz] = useState(false);
-  const [quizTitle, setQuizTitle] = useState('End of Course Quiz');
-  const [passThreshold, setPassThreshold] = useState(70);
-  const [timeLimit, setTimeLimit] = useState('');
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([
-    { id: 'q1', text: 'What is the primary purpose of the DPDP Act 2023?', type: 'MCQ', marks: 2, difficulty: 'Easy' },
-    { id: 'q2', text: 'A Data Fiduciary must appoint a DPO if classified as SDF.', type: 'True-False', marks: 1, difficulty: 'Medium' },
-    { id: 'q3', text: 'Explain the concept of purpose limitation under DPDP.', type: 'Descriptive', marks: 5, difficulty: 'Hard' },
-  ]);
-  const [showQForm, setShowQForm] = useState(false);
-  const totalMarks = quizQuestions.reduce((s, q) => s + q.marks, 0);
 
   const STEPS = ['Course Details', 'Build Content', 'Add Quiz'];
 
@@ -493,9 +577,13 @@ function CourseForm({ onClose }: { onClose: () => void }) {
       {showQForm && <QuestionFormModal onClose={() => setShowQForm(false)} onSave={q => setQuizQuestions(p => [...p, { ...q, id: String(Date.now()) }])} />}
 
       <div className="w-[860px] h-full bg-white border-l border-slate-200 overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {isLoadingCourse ? (
+          <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+        ) : (
+          <>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-4">
-            <p className="text-[15px] font-bold text-slate-900">Create Course</p>
+            <p className="text-[15px] font-bold text-slate-900">{courseId ? 'Edit Course' : 'Create Course'}</p>
             <div className="flex items-center gap-2">
               {STEPS.map((s, i) => (
                 <React.Fragment key={s}>
@@ -564,6 +652,27 @@ function CourseForm({ onClose }: { onClose: () => void }) {
                 <div className="h-24 px-3 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-[12px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
                   <Image className="w-5 h-5 mb-1" />
                   Drag and drop or click to upload. Recommended: 1280×720px
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Target Designations</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2.5">
+                  {(designations as any[]).map((d: any) => (
+                    <label key={d.id} className="flex items-center gap-2 text-[12.5px] text-slate-700 cursor-pointer">
+                      <input type="checkbox" checked={selectedDesignations.has(d.id)}
+                        onChange={(e) => {
+                          const newSet = new Set(selectedDesignations);
+                          if (e.target.checked) newSet.add(d.id);
+                          else newSet.delete(d.id);
+                          setSelectedDesignations(newSet);
+                        }} 
+                        className="accent-slate-800"
+                      />
+                      <span className="font-medium text-slate-900">{d.name}</span> 
+                      <span className="text-[11px] text-slate-400">— {d.description}</span>
+                    </label>
+                  ))}
+                  {(designations as any[]).length === 0 && <p className="text-[11px] text-slate-400 p-1">No designations available.</p>}
                 </div>
               </div>
               <div>
@@ -739,15 +848,206 @@ function CourseForm({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
-      </div>
+        </>
+      )}
+    </div>
     </div>
   );
 }
 
 //  Main LMS Page 
+// ─── Designations Tab ─────────────────────────────────────────────────────────
+function DesignationsTab() {
+  const { data: designations = [], isLoading } = useDesignations()
+  const createMut = useCreateDesignation()
+  const updateMut = useUpdateDesignation()
+  const deleteMut = useDeleteDesignation()
+
+  const [showForm, setShowForm]   = useState(false)
+  const [editItem, setEditItem]   = useState<any>(null)
+  const [name, setName]           = useState('')
+  const [desc, setDesc]           = useState('')
+  const [order, setOrder]         = useState(0)
+
+  const openCreate = () => { setEditItem(null); setName(''); setDesc(''); setOrder(0); setShowForm(true) }
+  const openEdit   = (d: any) => { setEditItem(d); setName(d.name); setDesc(d.description ?? ''); setOrder(d.displayOrder); setShowForm(true) }
+
+  const handleSave = async () => {
+    if (!name.trim()) return
+    if (editItem) await updateMut.mutateAsync({ id: editItem.id, name: name.trim(), description: desc || undefined, displayOrder: order })
+    else          await createMut.mutateAsync({ name: name.trim(), description: desc || undefined, displayOrder: order })
+    setShowForm(false)
+  }
+
+  const ROLE_SUGGESTION: Record<string, string> = {
+    CEO: 'Chief Executive Officer', CFO: 'Chief Financial Officer',
+    CISO: 'Chief Information Security Officer', CTO: 'Chief Technology Officer',
+    COO: 'Chief Operating Officer', CLO: 'Chief Legal Officer',
+    CPO: 'Chief Privacy Officer', DPO: 'Data Protection Officer',
+    IT_LEAD: 'IT Team Lead', MANAGER: 'Department Manager',
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>LMS Designations</h2>
+          <p className="text-[12px] text-slate-400 mt-0.5">Define business roles for LMS learning paths. Tenants assign these to their users.</p>
+        </div>
+        <button onClick={openCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800">
+          + New Designation
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-[420px] p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <p className="text-[15px] font-bold text-slate-900">{editItem ? 'Edit' : 'New'} Designation</p>
+            <div>
+              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Name (e.g. CISO) *</label>
+              <input value={name} onChange={e => setName(e.target.value.toUpperCase())} placeholder="CISO"
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] font-mono focus:outline-none focus:border-slate-700" />
+              {ROLE_SUGGESTION[name] && <p className="text-[11px] text-blue-600 mt-1">Full form: {ROLE_SUGGESTION[name]}</p>}
+            </div>
+            <div>
+              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Description</label>
+              <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2}
+                placeholder="Who is this for and what courses should they take..."
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[12.5px] resize-none focus:outline-none focus:border-slate-700" />
+            </div>
+            <div>
+              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Display Order</label>
+              <input type="number" value={order} onChange={e => setOrder(Number(e.target.value))} min={0}
+                className="w-24 h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg">Cancel</button>
+              <button onClick={handleSave} disabled={!name.trim() || createMut.isPending || updateMut.isPending}
+                className="flex-1 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50">
+                {editItem ? 'Save' : 'Create'} →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-32"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-[12.5px]">
+            <thead><tr className="border-b border-slate-100 bg-slate-50 text-slate-500 text-left">
+              {['Designation', 'Description', 'Courses', 'Order', 'Status', ''].map(h => (
+                <th key={h} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {(designations as any[]).length === 0 && (
+                <tr><td colSpan={6} className="py-12 text-center text-slate-400">No designations yet. Create one above.</td></tr>
+              )}
+              {(designations as any[]).map((d: any) => (
+                <tr key={d.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">{d.name}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 max-w-xs">{d.description ?? <span className="text-slate-300">—</span>}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-[11px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                      {d._count?.courses ?? 0} courses
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-400">{d.displayOrder}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {d.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(d)} className="text-[11.5px] px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 text-slate-600">Edit</button>
+                      <button onClick={() => deleteMut.mutate(d.id)} disabled={d._count?.courses > 0}
+                        className="text-[11.5px] px-2 py-1 border border-red-100 rounded hover:bg-red-50 text-red-400 disabled:opacity-30 disabled:cursor-not-allowed">Del</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <p className="text-[12.5px] font-semibold text-blue-800 mb-1">How Designations Work</p>
+        <p className="text-[12px] text-blue-600">
+          Assign these designations to LMS courses (in the Courses tab → Edit → Target Designations).
+          Tenant CO/CEO assigns a designation to each user. When assigned, users are auto-enrolled in all
+          mandatory courses for that designation.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function CoursePreviewModal({ courseId, onClose }: { courseId: string; onClose: () => void }) {
+  const { data: course, isLoading } = useCourse(courseId);
+
+  if (isLoading) return <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>;
+  if (!course) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50" onClick={onClose}>
+       <div className="bg-white rounded-xl shadow-xl w-[600px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
+             <h2 className="text-[16px] font-bold text-slate-900">Preview: {course.title}</h2>
+             <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-600" /></button>
+           </div>
+           <div className="p-5 space-y-4 overflow-y-auto">
+             <div className="flex gap-2">
+               <span className="px-2 py-1 bg-slate-100 rounded text-[11px] font-medium">{course.category?.replace('_', ' ')}</span>
+               <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-[11px] font-medium">{course.difficulty}</span>
+               <span className="px-2 py-1 bg-slate-100 rounded text-[11px] font-medium">{course.estimatedHours}h {course.estimatedMinutes}m</span>
+             </div>
+             <p className="text-[13px] text-slate-600">{course.description}</p>
+             
+             <div className="mt-4 border border-slate-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+                  <p className="text-[12px] font-bold text-slate-800">Course Curriculum</p>
+                </div>
+                {(course as any).sections?.length === 0 && <div className="p-4 text-center text-[12px] text-slate-400">No content added yet.</div>}
+                {(course as any).sections?.map((sec: any, i: number) => (
+                  <div key={sec.id} className="border-b border-slate-100 last:border-0">
+                    <div className="px-4 py-2 bg-slate-50/50">
+                       <p className="text-[12.5px] font-semibold text-slate-800">Section {i+1}: {sec.title}</p>
+                    </div>
+                    {sec.lessons?.map((l: any, j: number) => (
+                       <div key={l.id} className="px-5 py-2 flex items-center gap-2 hover:bg-slate-50">
+                          <Play className="w-3 h-3 text-blue-500" />
+                          <p className="text-[12px] text-slate-600">{j+1}. {l.title}</p>
+                          <span className="ml-auto text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">{l.type}</span>
+                       </div>
+                    ))}
+                    {sec.quiz && (
+                       <div className="px-5 py-2 flex items-center gap-2 hover:bg-slate-50 border-t border-slate-100">
+                          <Award className="w-3.5 h-3.5 text-amber-500" />
+                          <p className="text-[12px] text-slate-600">{sec.quiz.title} ({sec.quiz.questions?.length} Questions) - Passing: {sec.quiz.passThreshold}%</p>
+                       </div>
+                    )}
+                  </div>
+                ))}
+             </div>
+           </div>
+       </div>
+    </div>
+  )
+}
+
+
 export function AdminLMSPage() {
-  const [activeTab, setActiveTab] = useState<'Courses' | 'Question Bank' | 'Analytics' | 'Certificates'>('Courses');
+  const [activeTab, setActiveTab] = useState<'Courses' | 'Question Bank' | 'Analytics' | 'Certificates' | 'Designations'>('Courses');
   const [showCourseForm, setShowCourseForm] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [previewCourse, setPreviewCourse] = useState<any>(null);
   const [showQForm, setShowQForm] = useState(false);
   const [showCertBuilder, setShowCertBuilder] = useState(false);
   const [search, setSearch] = useState('');
@@ -774,7 +1074,8 @@ export function AdminLMSPage() {
 
   return (
     <div className="space-y-4">
-      {showCourseForm && <CourseForm onClose={() => setShowCourseForm(false)} />}
+      {(showCourseForm || editingCourse) && <CourseForm courseId={editingCourse?.id} onClose={() => { setShowCourseForm(false); setEditingCourse(null); }} />}
+      {previewCourse && <CoursePreviewModal courseId={previewCourse.id} onClose={() => setPreviewCourse(null)} />}
       {showQForm && <QuestionFormModal onClose={() => setShowQForm(false)} onSave={() => {}} />}
       {showCertBuilder && <CertTemplateBuilder onClose={() => setShowCertBuilder(false)} />}
 
@@ -801,7 +1102,7 @@ export function AdminLMSPage() {
       </div>
 
       <div className="flex border-b border-slate-200 gap-0">
-        {(['Courses', 'Question Bank', 'Analytics', 'Certificates'] as const).map(tab => (
+        {(['Courses', 'Question Bank', 'Analytics', 'Certificates', 'Designations'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-5 py-2 text-[12.5px] font-medium border-b-2 transition-colors -mb-px ${activeTab === tab ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
             {tab}
@@ -827,8 +1128,8 @@ export function AdminLMSPage() {
                 <p className="text-[13px] font-bold text-slate-900 leading-tight mb-1">{c.title}</p>
                 <p className="text-[10.5px] text-slate-400 mb-2">{c._count?.sections ?? 0} sections · {c.estimatedHours}h {c.estimatedMinutes}m</p>
                 <div className="flex gap-2">
-                  <button className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"><Edit2 className="w-3 h-3" /> Edit</button>
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"><Eye className="w-3 h-3" /> Preview</button>
+                  <button onClick={() => setEditingCourse(c)} className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"><Edit2 className="w-3 h-3" /> Edit</button>
+                  <button onClick={() => setPreviewCourse(c)} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"><Eye className="w-3 h-3" /> Preview</button>
                 </div>
               </div>
             </div>
@@ -939,6 +1240,9 @@ export function AdminLMSPage() {
         </div>
       )}
 
+      {/* Designations Tab */}
+      {activeTab === 'Designations' && <DesignationsTab />}
+
       {/* Certificates Tab */}
       {activeTab === 'Certificates' && (
         <div className="space-y-5">
@@ -1041,5 +1345,3 @@ export function AdminLMSPage() {
     </div>
   );
 }
-
-

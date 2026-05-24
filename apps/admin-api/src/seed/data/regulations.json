@@ -1,0 +1,75 @@
+[
+  {
+    "name": "Digital Personal Data Protection Act 2023",
+    "shortCode": "DPDP-2023",
+    "issuingAuthority": "Ministry of Electronics and Information Technology, Government of India",
+    "description": "India's primary data protection legislation governing the processing of digital personal data. It establishes rights of Data Principals, obligations of Data Fiduciaries, and creates the Data Protection Board of India.",
+    "jurisdiction": "India",
+    "effectiveDate": "2023-08-11",
+    "status": "PUBLISHED",
+    "chapters": [
+      {
+        "name": "Chapter 1",
+        "title": "Preliminary",
+        "orderIndex": 1,
+        "sections": [
+          { "name": "Section 1", "title": "Short Title, Extent and Commencement", "orderIndex": 1 },
+          { "name": "Section 2", "title": "Definitions", "orderIndex": 2 }
+        ]
+      },
+      {
+        "name": "Chapter 2",
+        "title": "Obligations of Data Fiduciary",
+        "orderIndex": 2,
+        "sections": [
+          { "name": "Section 4", "title": "Application of Act", "orderIndex": 1 },
+          { "name": "Section 5", "title": "Grounds for Processing Personal Data", "orderIndex": 2 },
+          { "name": "Section 6", "title": "Consent", "orderIndex": 3 },
+          { "name": "Section 7", "title": "Certain Legitimate Uses", "orderIndex": 4 },
+          { "name": "Section 8", "title": "General Obligations of Data Fiduciary", "orderIndex": 5 },
+          { "name": "Section 9", "title": "Processing of Personal Data of Children", "orderIndex": 6 },
+          { "name": "Section 10", "title": "Processing of Personal Data of Persons with Disabilities", "orderIndex": 7 }
+        ]
+      },
+      {
+        "name": "Chapter 3",
+        "title": "Rights and Duties of Data Principal",
+        "orderIndex": 3,
+        "sections": [
+          { "name": "Section 11", "title": "Right of Access to Personal Data", "orderIndex": 1 },
+          { "name": "Section 12", "title": "Right of Correction, Completion, Updation and Erasure", "orderIndex": 2 },
+          { "name": "Section 13", "title": "Right of Grievance Redressal", "orderIndex": 3 },
+          { "name": "Section 14", "title": "Right to Nominate", "orderIndex": 4 },
+          { "name": "Section 15", "title": "Duties of Data Principal", "orderIndex": 5 }
+        ]
+      },
+      {
+        "name": "Chapter 4",
+        "title": "Special Provisions",
+        "orderIndex": 4,
+        "sections": [
+          { "name": "Section 16", "title": "Significant Data Fiduciary", "orderIndex": 1 },
+          { "name": "Section 17", "title": "Exemptions", "orderIndex": 2 }
+        ]
+      },
+      {
+        "name": "Chapter 5",
+        "title": "Data Protection Board of India",
+        "orderIndex": 5,
+        "sections": [
+          { "name": "Section 18", "title": "Establishment of Data Protection Board", "orderIndex": 1 },
+          { "name": "Section 19", "title": "Composition of Board", "orderIndex": 2 },
+          { "name": "Section 27", "title": "Functions of Board", "orderIndex": 3 }
+        ]
+      },
+      {
+        "name": "Chapter 6",
+        "title": "Penalties",
+        "orderIndex": 6,
+        "sections": [
+          { "name": "Section 33", "title": "Penalties", "orderIndex": 1 }
+        ]
+      }
+    ]
+  }
+]

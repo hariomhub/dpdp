@@ -11,6 +11,8 @@ import controlRoutes from './modules/controls/controls.routes'
 import lmsRoutes from './modules/lms/lms.routes'
 import auditRoutes from './modules/audit/audit.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
+import controlFamilyRoutes from './modules/control-families/control-families.routes'
+import productFamilyRoutes from './modules/product-families/product-families.routes'
 
 
 const app = express()
@@ -48,6 +50,8 @@ app.use('/api/v1/controls', controlRoutes)
 app.use('/api/v1/lms', lmsRoutes)
 app.use('/api/v1/audit-logs', auditRoutes)
 app.use('/api/v1/dashboard', dashboardRoutes)
+app.use('/api/v1/control-families', controlFamilyRoutes)
+app.use('/api/v1/product-families', productFamilyRoutes)
 
 // Error handler (must be last)
 app.use(errorHandler)

@@ -12,16 +12,19 @@ interface PredefinedActionInput {
   suggestedDueDays: number
   priority: Priority
   orderIndex?: number
+  productIds?: string[]   // product IDs to link to this action
 }
 
 interface CreateControlParams {
   title: string
   description: string
-  chapterId?: string
-  sectionReference?: string
   applicableTo: ApplicableTo
   status: ControlStatus
-  regulationIds: string[]
+  regulationMappings: {
+    regulationId: string
+    chapterId?: string
+    sectionId?: string
+  }[]
   predefinedActions: PredefinedActionInput[]
   adminId: string
   ipAddress?: string
@@ -32,10 +35,13 @@ interface UpdateControlParams {
   data: Partial<{
     title: string
     description: string
-    chapterReference: string
-    sectionReference: string
     applicableTo: ApplicableTo
     status: ControlStatus
+    regulationMappings: {
+      regulationId: string
+      chapterId?: string
+      sectionId?: string
+    }[]
   }>
   adminId: string
 }
@@ -71,31 +77,28 @@ export const controlsService = {
         skip,
         take: limit,
         orderBy: [
-          { chapterId: 'asc' },
           { createdAt: 'asc' },
         ],
         include: {
-          regulationMappings: {
+          predefinedActions: {
+            orderBy: { orderIndex: 'asc' },
             include: {
-              regulation: {
-                select: {
-                  id: true,
-                  name: true,
-                  shortCode: true,
-                },
+              products: {
+                include: { product: { select: { id: true, name: true, vendor: true, logoUrl: true } } },
               },
             },
           },
-          chapter: {             
-            select: {
-              id: true,
-              name: true,
-              title: true,
-              orderIndex: true,
+          regulationMappings: {
+            include: {
+              regulation: { select: { id: true, name: true, shortCode: true } },
+              chapter:    { select: { id: true, name: true, title: true } },
+              section:    { select: { id: true, name: true, title: true } },
             },
           },
-          predefinedActions: {
-            orderBy: { orderIndex: 'asc' },
+          families: {
+            include: {
+              controlFamily: { select: { id: true, name: true, color: true, icon: true } },
+            },
           },
           _count: {
             select: { predefinedActions: true },
@@ -118,18 +121,26 @@ export const controlsService = {
         regulationMappings: {
           include: {
             regulation: true,
-          },
-        },
-        chapter: {
-          select: {
-            id: true,
-            name: true,
-            title: true,
-            orderIndex: true,
+            chapter: {
+              select: {
+                id: true,
+                name: true,
+                title: true,
+                orderIndex: true,
+              },
+            },
           },
         },
         predefinedActions: {
           orderBy: { orderIndex: 'asc' },
+          include: {
+            products: {
+              include: { product: { select: { id: true, name: true, vendor: true, logoUrl: true } } },
+            },
+          },
+        },
+        families: {
+          include: { controlFamily: { select: { id: true, name: true, color: true, icon: true } } },
         },
       },
     })
@@ -143,15 +154,16 @@ export const controlsService = {
       throw new Error('At least one predefined action is required')
     }
 
-    if (params.regulationIds.length === 0) {
-      throw new Error('At least one regulation is required')
+    if (params.regulationMappings.length === 0) {
+      throw new Error('At least one regulation mapping is required')
     }
 
+    const regIds = params.regulationMappings.map(r => r.regulationId)
     const regulations = await db.regulation.findMany({
-      where: { id: { in: params.regulationIds } },
+      where: { id: { in: regIds } },
     })
 
-    if (regulations.length !== params.regulationIds.length) {
+    if (regulations.length !== regIds.length) {
       throw new Error('One or more regulation IDs are invalid')
     }
 
@@ -159,14 +171,14 @@ export const controlsService = {
       data: {
         title: params.title,
         description: params.description,
-        chapterId: params.chapterId,
-        sectionReference: params.sectionReference,
         applicableTo: params.applicableTo,
         status: params.status,
         isCustom: false,
         regulationMappings: {
-          create: params.regulationIds.map(regulationId => ({
-            regulationId,
+          create: params.regulationMappings.map(mapping => ({
+            regulationId: mapping.regulationId,
+            chapterId: mapping.chapterId || undefined,
+            sectionId: mapping.sectionId || undefined,
           })),
         },
         predefinedActions: {
@@ -177,6 +189,9 @@ export const controlsService = {
             suggestedDueDays: action.suggestedDueDays,
             priority: action.priority,
             orderIndex: action.orderIndex ?? index,
+            ...(action.productIds && action.productIds.length > 0
+              ? { products: { create: action.productIds.map(productId => ({ productId })) } }
+              : {}),
           })),
         },
       },
@@ -190,11 +205,19 @@ export const controlsService = {
                 shortCode: true,
               },
             },
+            chapter: true,
           },
         },
-        chapter: true,
         predefinedActions: {
           orderBy: { orderIndex: 'asc' },
+          include: {
+            products: {
+              include: { product: { select: { id: true, name: true, vendor: true, logoUrl: true } } },
+            },
+          },
+        },
+        families: {
+          include: { controlFamily: { select: { id: true, name: true, color: true, icon: true } } },
         },
       },
     })
@@ -206,7 +229,7 @@ export const controlsService = {
       targetId: control.id,
       targetName: control.title,
       details: {
-        regulationIds: params.regulationIds,
+        regulationIds: params.regulationMappings.map(m => m.regulationId),
         actionsCount: params.predefinedActions.length,
         status: params.status,
       } as Prisma.InputJsonValue,
@@ -223,9 +246,23 @@ export const controlsService = {
     if (!existing) throw new Error('Control not found')
     if (existing.isCustom) throw new Error('Cannot update custom controls via this endpoint')
 
+    const { regulationMappings, ...restData } = params.data
+
     const updated = await db.control.update({
       where: { id: params.id },
-      data: params.data,
+      data: {
+        ...restData,
+        ...(regulationMappings ? {
+          regulationMappings: {
+            deleteMany: {},
+            create: regulationMappings.map(mapping => ({
+              regulationId: mapping.regulationId,
+              chapterId: mapping.chapterId || undefined,
+              sectionId: mapping.sectionId || undefined,
+            })),
+          }
+        } : {}),
+      },
       include: {
         regulationMappings: {
           include: {
@@ -236,10 +273,26 @@ export const controlsService = {
                 shortCode: true,
               },
             },
+            chapter: {
+              select: {
+                id: true,
+                name: true,
+                title: true,
+                orderIndex: true,
+              },
+            },
           },
         },
         predefinedActions: {
           orderBy: { orderIndex: 'asc' },
+          include: {
+            products: {
+              include: { product: { select: { id: true, name: true, vendor: true, logoUrl: true } } },
+            },
+          },
+        },
+        families: {
+          include: { controlFamily: { select: { id: true, name: true, color: true, icon: true } } },
         },
       },
     })
@@ -372,3 +425,114 @@ export const controlsService = {
     return { message: 'Predefined action removed' }
   },
 }
+// ─── Appended: delete, updateAction, masterEvidence ──────────────────────────
+// These are added to the controlsService object via Object.assign below
+
+const controlsServiceExtension = {
+
+  async deleteControl(id: string, adminId: string) {
+    const ctrl = await db.control.findUnique({ where: { id } })
+    if (!ctrl) throw new Error('Control not found')
+    if (ctrl.isCustom) throw new Error('Cannot delete custom controls via this endpoint')
+
+    await db.control.delete({ where: { id } })
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.CONTROL_DEACTIVATED,
+      targetType: 'control',
+      targetId: id,
+      targetName: ctrl.title,
+      details: { deleted: true } as Prisma.InputJsonValue,
+    })
+
+    return { success: true }
+  },
+
+  async updateAction(params: {
+    controlId: string; actionId: string; adminId: string
+    data: {
+      title?: string; description?: string; evidenceTypes?: EvidenceType[]
+      suggestedDueDays?: number; priority?: Priority; orderIndex?: number
+    }
+  }) {
+    const action = await db.controlPredefinedAction.findFirst({
+      where: { id: params.actionId, controlId: params.controlId },
+    })
+    if (!action) throw new Error('Action not found')
+
+    return db.controlPredefinedAction.update({
+      where: { id: params.actionId },
+      data: params.data,
+    })
+  },
+
+  async setActionProducts(params: {
+    controlId: string; actionId: string; productIds: string[]; adminId: string
+  }) {
+    const action = await db.controlPredefinedAction.findFirst({
+      where: { id: params.actionId, controlId: params.controlId },
+    })
+    if (!action) throw new Error('Action not found')
+
+    // Validate product IDs
+    if (params.productIds.length > 0) {
+      const found = await db.product.count({ where: { id: { in: params.productIds } } })
+      if (found !== params.productIds.length) throw new Error('One or more product IDs invalid')
+    }
+
+    await db.actionProduct.deleteMany({ where: { predefinedActionId: params.actionId } })
+    if (params.productIds.length > 0) {
+      await db.actionProduct.createMany({
+        data: params.productIds.map(productId => ({ predefinedActionId: params.actionId, productId })),
+      })
+    }
+    return { actionId: params.actionId, productIds: params.productIds }
+  },
+
+  async createMasterEvidence(params: {
+    controlId: string; actionId: string; productId: string
+    adminId: string
+    data: { title: string; description?: string; file?: { fileName: string; fileSize: number; mimeType: string; fileUrl: string; storageProvider: string } }
+  }) {
+    const action = await db.controlPredefinedAction.findFirst({
+      where: { id: params.actionId, controlId: params.controlId },
+    })
+    if (!action) throw new Error('Action not found')
+
+    return db.masterEvidence.create({
+      data: {
+        predefinedActionId: params.actionId,
+        productId: params.productId,
+        title: params.data.title,
+        description: params.data.description ?? null,
+        fileName: params.data.file?.fileName ?? null,
+        fileSize: params.data.file?.fileSize ?? null,
+        mimeType: params.data.file?.mimeType ?? null,
+        fileUrl: params.data.file?.fileUrl ?? null,
+        storageProvider: params.data.file?.storageProvider ?? 'local',
+        uploadedById: params.adminId,
+      },
+    })
+  },
+
+  async deleteMasterEvidence(params: {
+    controlId: string; actionId: string; evidenceId: string; adminId: string
+  }) {
+    const evidence = await db.masterEvidence.findFirst({
+      where: { id: params.evidenceId, predefinedActionId: params.actionId },
+    })
+    if (!evidence) throw new Error('Master evidence not found')
+
+    // Delete file from storage
+    if (evidence.fileUrl) {
+      const { deleteFile } = await import('../../utils/storage')
+      await deleteFile(evidence.fileUrl, evidence.storageProvider).catch(() => { })
+    }
+
+    await db.masterEvidence.delete({ where: { id: params.evidenceId } })
+    return { success: true }
+  },
+}
+
+Object.assign(controlsService, controlsServiceExtension)

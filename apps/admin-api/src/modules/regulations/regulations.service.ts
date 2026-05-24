@@ -46,7 +46,7 @@ export const regulationsService = {
       where: { regulationId },
       orderBy: { orderIndex: 'asc' },
       include: {
-        _count: { select: { controls: true } },
+        _count: { select: { controlMappings: true } },
       },
     })
   },
@@ -120,13 +120,13 @@ export const regulationsService = {
   async deleteChapter(chapterId: string, adminId: string) {
     const chapter = await db.regulationChapter.findUnique({
       where: { id: chapterId },
-      include: { _count: { select: { controls: true } } },
+      include: { _count: { select: { controlMappings: true } } },
     })
     if (!chapter) throw new Error('Chapter not found')
 
-    if (chapter._count.controls > 0) {
+    if (chapter._count.controlMappings > 0) {
       throw new Error(
-        `Cannot delete chapter with ${chapter._count.controls} controls. Move or delete controls first.`
+        `Cannot delete chapter with ${chapter._count.controlMappings} controls. Move or delete controls first.`
       )
     }
 
@@ -188,9 +188,7 @@ export const regulationsService = {
             },
           },
           orderBy: {
-            control: {
-              chapterId: 'asc',
-            },
+            chapterId: 'asc',
           },
         },
         _count: {
@@ -368,5 +366,43 @@ export const regulationsService = {
     })
 
     return { message: 'Control removed from regulation' }
+  },
+}
+// ─── Sections (appended) ──────────────────────────────────────────────────────
+
+export const regulationSectionsService = {
+  async listSections(chapterId: string) {
+    return getSuperAdminPrisma().regulationSection.findMany({
+      where: { chapterId }, orderBy: { orderIndex: 'asc' },
+    })
+  },
+
+  async createSection(params: { chapterId: string; name: string; title?: string }) {
+    const db = getSuperAdminPrisma()
+    const chapter = await db.regulationChapter.findUnique({ where: { id: params.chapterId } })
+    if (!chapter) throw new Error('Chapter not found')
+    const existing = await db.regulationSection.findFirst({
+      where: { chapterId: params.chapterId, name: params.name.trim() },
+    })
+    if (existing) throw new Error(`Section "${params.name}" already exists in this chapter`)
+    return db.regulationSection.create({
+      data: { chapterId: params.chapterId, name: params.name.trim(), title: params.title?.trim() ?? null, orderIndex: 0 },
+    })
+  },
+
+  async updateSection(id: string, data: { name?: string; title?: string }) {
+    const db = getSuperAdminPrisma()
+    const existing = await db.regulationSection.findUnique({ where: { id } })
+    if (!existing) throw new Error('Section not found')
+    return db.regulationSection.update({ where: { id }, data })
+  },
+
+  async deleteSection(id: string) {
+    const db = getSuperAdminPrisma()
+    // Check if any controls are mapped to this section
+    const mapped = await db.controlRegulation.count({ where: { sectionId: id } })
+    if (mapped > 0) throw new Error(`Cannot delete: ${mapped} control(s) mapped to this section`)
+    await db.regulationSection.delete({ where: { id } })
+    return { success: true }
   },
 }

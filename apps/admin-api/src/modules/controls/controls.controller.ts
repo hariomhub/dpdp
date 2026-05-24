@@ -16,21 +16,26 @@ const predefinedActionSchema = z.object({
 const createControlSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(10, 'Description is required'),
-  chapterId: z.string().uuid().optional(),
-  sectionReference: z.string().optional(),
   applicableTo: z.nativeEnum(ApplicableTo).default(ApplicableTo.BOTH),
   status: z.nativeEnum(ControlStatus).default(ControlStatus.DRAFT),
-  regulationIds: z.array(z.string().uuid()).min(1, 'At least one regulation required'),
+  regulationMappings: z.array(z.object({
+    regulationId: z.string().uuid(),
+    chapterId: z.string().uuid().optional(),
+    sectionId: z.string().uuid().optional()
+  })).min(1, 'At least one regulation mapping required'),
   predefinedActions: z.array(predefinedActionSchema).min(1, 'At least one action required'),
 })
 
 const updateControlSchema = z.object({
   title: z.string().min(5).optional(),
   description: z.string().min(10).optional(),
-  chapterReference: z.string().optional(),
-  sectionReference: z.string().optional(),
   applicableTo: z.nativeEnum(ApplicableTo).optional(),
   status: z.nativeEnum(ControlStatus).optional(),
+  regulationMappings: z.array(z.object({
+    regulationId: z.string().uuid(),
+    chapterId: z.string().uuid().optional(),
+    sectionId: z.string().uuid().optional()
+  })).optional(),
 })
 
 export const controlsController = {
@@ -153,3 +158,63 @@ export const controlsController = {
     }
   },
 }
+// ─── Appended controller methods ─────────────────────────────────────────────
+
+export const controlsControllerExtension = {
+  async deleteControl(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await (controlsService as any).deleteControl(req.params.id, req.adminId!)
+      res.json({ success: true, message: 'Control deleted' })
+    } catch (err) { next(err) }
+  },
+
+  async updateAction(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await (controlsService as any).updateAction({
+        controlId: req.params.id, actionId: req.params.actionId,
+        data: req.body, adminId: req.adminId!,
+      })
+      res.json({ success: true, data: result })
+    } catch (err) { next(err) }
+  },
+
+  async setActionProducts(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { productIds } = req.body
+      const result = await (controlsService as any).setActionProducts({
+        controlId: req.params.id, actionId: req.params.actionId,
+        productIds: productIds ?? [], adminId: req.adminId!,
+      })
+      res.json({ success: true, data: result })
+    } catch (err) { next(err) }
+  },
+
+  async createMasterEvidence(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      let fileData: any = undefined
+      if (req.file) {
+        const { uploadFile } = await import('../../utils/storage')
+        fileData = await uploadFile(req.file, `master-evidence/${req.params.actionId}`)
+      }
+      const result = await (controlsService as any).createMasterEvidence({
+        controlId: req.params.id, actionId: req.params.actionId,
+        productId: req.params.productId,
+        adminId: req.adminId!,
+        data: { title: req.body.title, description: req.body.description, file: fileData },
+      })
+      res.status(201).json({ success: true, data: result })
+    } catch (err) { next(err) }
+  },
+
+  async deleteMasterEvidence(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await (controlsService as any).deleteMasterEvidence({
+        controlId: req.params.id, actionId: req.params.actionId,
+        evidenceId: req.params.evidenceId, adminId: req.adminId!,
+      })
+      res.json({ success: true, message: 'Master evidence deleted' })
+    } catch (err) { next(err) }
+  },
+}
+
+Object.assign(controlsController, controlsControllerExtension)

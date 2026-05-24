@@ -133,3 +133,28 @@ export function useCreateChapter() {
     },
   })
 }
+// ─── Section hooks ────────────────────────────────────────────────────────────
+
+export function useRegulationSections(regulationId: string, chapterId: string) {
+  return useQuery({
+    queryKey: ['regulations', regulationId, 'chapters', chapterId, 'sections'],
+    queryFn:  () =>
+      apiClient
+        .get<{ success: boolean; data: any[] }>(`/regulations/${regulationId}/chapters/${chapterId}/sections`)
+        .then(r => r.data),
+    enabled: !!chapterId && !!regulationId,
+  })
+}
+
+export function useCreateSection() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ regulationId, chapterId, name, title }: { regulationId: string; chapterId: string; name: string; title?: string }) =>
+      apiClient.post(`/regulations/${regulationId}/chapters/${chapterId}/sections`, { name, title }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['regulations', vars.regulationId, 'chapters', vars.chapterId, 'sections'] })
+      toast.success('Section created')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to create section'),
+  })
+}

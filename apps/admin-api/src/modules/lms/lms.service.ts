@@ -146,6 +146,170 @@ export const lmsService = {
     return updated
   },
 
+  async syncCourseContent(courseId: string, data: any, adminId: string) {
+    const existingCourse = await db.lmsCourse.findUnique({ where: { id: courseId } });
+    if (!existingCourse) throw new Error('Course not found');
+
+    return db.$transaction(async (tx) => {
+      // 1. Fetch current sections and quizzes
+      const existingSections = await tx.lmsSection.findMany({
+        where: { courseId },
+        include: { lessons: true }
+      });
+      
+      const payloadSectionIds = (data.sections || []).map((s: any) => s.id).filter(Boolean);
+      const sectionsToDelete = existingSections.filter(s => !payloadSectionIds.includes(s.id));
+      
+      if (sectionsToDelete.length > 0) {
+        await tx.lmsSection.deleteMany({
+          where: { id: { in: sectionsToDelete.map(s => s.id) } }
+        });
+      }
+
+      let lastSectionId = null;
+
+      // 2. Upsert sections & lessons
+      for (let i = 0; i < (data.sections || []).length; i++) {
+        const secPayload = data.sections[i];
+        let sectionId = secPayload.id;
+
+        if (sectionId && existingSections.find(s => s.id === sectionId)) {
+          await tx.lmsSection.update({
+            where: { id: sectionId },
+            data: { title: secPayload.title, description: secPayload.desc, orderIndex: i }
+          });
+        } else {
+          const newSec = await tx.lmsSection.create({
+            data: { courseId, title: secPayload.title, description: secPayload.desc, orderIndex: i }
+          });
+          sectionId = newSec.id;
+        }
+        
+        lastSectionId = sectionId;
+
+        const existingLessons = existingSections.find(s => s.id === sectionId)?.lessons || [];
+        const payloadLessonIds = (secPayload.items || []).map((l: any) => l.id).filter(Boolean);
+        const lessonsToDelete = existingLessons.filter(l => !payloadLessonIds.includes(l.id));
+
+        if (lessonsToDelete.length > 0) {
+          await tx.lmsLesson.deleteMany({
+            where: { id: { in: lessonsToDelete.map(l => l.id) } }
+          });
+        }
+
+        for (let j = 0; j < (secPayload.items || []).length; j++) {
+          const item = secPayload.items[j];
+          // Ensure valid enum value
+          const lessonType = item.type.toUpperCase().replace('-', '_') as LessonType;
+          if (item.id && existingLessons.find(l => l.id === item.id)) {
+            await tx.lmsLesson.update({
+              where: { id: item.id },
+              data: { title: item.title, type: lessonType, orderIndex: j }
+            });
+          } else {
+            await tx.lmsLesson.create({
+              data: { sectionId, title: item.title, type: lessonType, orderIndex: j }
+            });
+          }
+        }
+      }
+
+      // 3. Upsert Quiz (attach to the last section, or delete if no quiz)
+      const existingQuizzes = await tx.lmsQuiz.findMany({
+        where: { section: { courseId } },
+        include: { questions: { include: { options: true } } }
+      });
+
+      if (!data.quiz || !lastSectionId) {
+        if (existingQuizzes.length > 0) {
+          await tx.lmsQuiz.deleteMany({ where: { id: { in: existingQuizzes.map(q => q.id) } } });
+        }
+      } else {
+        const quizPayload = data.quiz;
+        let quizId = existingQuizzes[0]?.id;
+        
+        if (existingQuizzes.length > 1) {
+            const toDelete = existingQuizzes.slice(1);
+            await tx.lmsQuiz.deleteMany({ where: { id: { in: toDelete.map(q => q.id) } } });
+        }
+
+        if (quizId) {
+          await tx.lmsQuiz.update({
+            where: { id: quizId },
+            data: {
+              sectionId: lastSectionId,
+              title: quizPayload.title,
+              passThreshold: quizPayload.passThreshold,
+              timeLimitMins: quizPayload.timeLimit ? parseInt(quizPayload.timeLimit) : null,
+              totalMarks: quizPayload.questions.reduce((sum: number, q: any) => sum + q.marks, 0)
+            }
+          });
+        } else {
+          const newQuiz = await tx.lmsQuiz.create({
+            data: {
+              sectionId: lastSectionId,
+              title: quizPayload.title,
+              passThreshold: quizPayload.passThreshold,
+              timeLimitMins: quizPayload.timeLimit ? parseInt(quizPayload.timeLimit) : null,
+              totalMarks: quizPayload.questions.reduce((sum: number, q: any) => sum + q.marks, 0)
+            }
+          });
+          quizId = newQuiz.id;
+        }
+
+        // Upsert Questions
+        const existingQuestions = existingQuizzes[0]?.questions || [];
+        const payloadQIds = quizPayload.questions.map((q: any) => q.id).filter(Boolean);
+        const qToDelete = existingQuestions.filter(q => !payloadQIds.includes(q.id));
+        
+        if (qToDelete.length > 0) {
+            await tx.quizQuestion.deleteMany({ where: { id: { in: qToDelete.map(q => q.id) } } });
+        }
+        
+        for (let k = 0; k < quizPayload.questions.length; k++) {
+            const qPayload = quizPayload.questions[k];
+            const qType = qPayload.type === 'True-False' || qPayload.type === 'TRUE_FALSE' ? 'TRUE_FALSE' : qPayload.type.toUpperCase().replace('-', '_') as QuestionType;
+            const qDiff = qPayload.difficulty.toUpperCase() as Difficulty;
+
+            if (qPayload.id && existingQuestions.find(q => q.id === qPayload.id)) {
+                await tx.quizQuestion.update({
+                    where: { id: qPayload.id },
+                    data: {
+                        questionText: qPayload.text,
+                        type: qType,
+                        marks: qPayload.marks,
+                        difficulty: qDiff,
+                        orderIndex: k
+                    }
+                });
+            } else {
+                await tx.quizQuestion.create({
+                    data: {
+                        quizId,
+                        questionText: qPayload.text,
+                        type: qType,
+                        marks: qPayload.marks,
+                        difficulty: qDiff,
+                        orderIndex: k
+                    }
+                });
+            }
+        }
+      }
+      
+      await logAuditAction({
+        superAdminId: adminId,
+        action: AuditAction.COURSE_UPDATED,
+        targetType: 'lms_course',
+        targetId: courseId,
+        targetName: existingCourse.title,
+        details: { action: 'content_synced' } as Prisma.InputJsonValue,
+      });
+
+      return { success: true };
+    });
+  },
+
   async publishCourse(id: string, adminId: string) {
     const existing = await db.lmsCourse.findUnique({ where: { id } })
     if (!existing) throw new Error('Course not found')
@@ -579,5 +743,93 @@ export const lmsService = {
     })
 
     return updated
+  },
+}
+// ─── LMS Designation methods (appended) ──────────────────────────────────────
+
+export const lmsDesignationService = {
+
+  async listDesignations() {
+    return getSuperAdminPrisma().lmsDesignation.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: { select: { courses: true } },
+        courses: {
+          include: {
+            course: { select: { id: true, title: true, status: true } },
+          },
+        },
+      },
+    })
+  },
+
+  async createDesignation(data: {
+    name: string; description?: string; displayOrder?: number
+  }) {
+    const existing = await getSuperAdminPrisma().lmsDesignation.findFirst({
+      where: { name: data.name.trim() },
+    })
+    if (existing) throw new Error(`Designation "${data.name}" already exists`)
+    return getSuperAdminPrisma().lmsDesignation.create({
+      data: {
+        name:         data.name.trim().toUpperCase(),
+        description:  data.description?.trim() ?? null,
+        displayOrder: data.displayOrder ?? 0,
+      },
+    })
+  },
+
+  async updateDesignation(id: string, data: {
+    name?: string; description?: string; displayOrder?: number; isActive?: boolean
+  }) {
+    const existing = await getSuperAdminPrisma().lmsDesignation.findUnique({ where: { id } })
+    if (!existing) throw new Error('Designation not found')
+    return getSuperAdminPrisma().lmsDesignation.update({ where: { id }, data })
+  },
+
+  async deleteDesignation(id: string) {
+    const db = getSuperAdminPrisma()
+    const existing = await db.lmsDesignation.findUnique({
+      where:   { id },
+      include: { _count: { select: { courses: true } } },
+    })
+    if (!existing) throw new Error('Designation not found')
+    if (existing._count.courses > 0) {
+      throw new Error(`Cannot delete: designation is assigned to ${existing._count.courses} course(s)`)
+    }
+    await db.lmsDesignation.delete({ where: { id } })
+    return { success: true }
+  },
+
+  // ── Course ↔ Designation targeting ─────────────────────────────────────────
+
+  async setCourseDesignations(courseId: string, targets: Array<{
+    designationId: string; isMandatory: boolean
+  }>) {
+    const db = getSuperAdminPrisma()
+    const course = await db.lmsCourse.findUnique({ where: { id: courseId } })
+    if (!course) throw new Error('Course not found')
+
+    // Replace strategy
+    await db.lmsCourseDesignation.deleteMany({ where: { courseId } })
+    if (targets.length > 0) {
+      await db.lmsCourseDesignation.createMany({
+        data: targets.map(t => ({
+          courseId,
+          designationId: t.designationId,
+          isMandatory:   t.isMandatory,
+        })),
+      })
+    }
+    return { courseId, targets: targets.length }
+  },
+
+  async getCourseDesignations(courseId: string) {
+    return getSuperAdminPrisma().lmsCourseDesignation.findMany({
+      where: { courseId },
+      include: {
+        designation: { select: { id: true, name: true, description: true } },
+      },
+    })
   },
 }

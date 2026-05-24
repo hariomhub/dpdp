@@ -21,6 +21,7 @@ import { ReportsPage } from './pages/reports/Reports';
 import { AlertsPage } from './pages/alerts/Alerts';
 import { LMSPage } from './pages/lms/LMS';
 import { UsersPage } from './pages/users/Users';
+import { AuthCallbackPage } from './pages/auth/AuthCallback';
 import { SettingsPage } from './pages/settings/Settings';
 
 const T = (C: React.ComponentType) => () => <AppLayout><C /></AppLayout>;
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <SetPasswordPage /> },
   { path: '/set-password', element: <SetPasswordPage /> },
   { path: '/invite/:token', element: <SetPasswordPage /> },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/org/onboarding', element: <OnboardingPage /> },
 
   // Tenant Portal

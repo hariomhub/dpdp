@@ -7,7 +7,7 @@ import {
   Search, ChevronDown, AlertTriangle, CheckSquare,
   TrendingDown, FileText
 } from 'lucide-react';
-import { useApp, ROLE_LABELS, ROLE_COLORS, ROLE_INITIALS, ROLE_NAMES, TenantRole } from '../../context/AppContext';
+import { useApp, ROLE_LABELS, ROLE_COLORS, ROLE_INITIALS, TenantRole } from '../../context/AppContext';
 import { NOTIFICATIONS } from '../../data/mockData';
 
 // ─── Nav Structure ────────────────────────────────────────────────────────────
@@ -46,9 +46,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
   const unreadCount = NOTIFICATIONS.filter(n => n.unread).length;
 
-  const roleColor = ROLE_COLORS[role];
-  const roleName = ROLE_NAMES[role];
-  const roleInitials = ROLE_INITIALS[role];
+  const roleColor    = ROLE_COLORS[role];
+  const roleName     = ROLE_LABELS[role];
+  const displayName  = useApp().userName || ROLE_LABELS[role];
+  const displayEmail = useApp().userEmail;
+  const roleInitials = displayName
+    .split(' ')
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || ROLE_INITIALS[role];
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -159,30 +166,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-slate-200 p-2 flex-shrink-0">
           {!sidebarCollapsed ? (
             <div>
-              <div className="flex items-center gap-2 mb-1 p-1.5 rounded-md hover:bg-slate-100 cursor-pointer" onClick={() => setRoleOpen(v => !v)}>
+              <div className="flex items-center gap-2 mb-1 p-1.5 rounded-md">
                 <span className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
                   style={{ background: `${roleColor}20`, color: roleColor, border: `1px solid ${roleColor}40` }}>
                   {roleInitials}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-slate-800 truncate">{roleName}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{ROLE_LABELS[role]}</p>
+                  <p className="text-[11px] font-medium text-slate-800 truncate">{displayName}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{displayEmail || roleName}</p>
                 </div>
-                <ChevronDown className="w-3 h-3 text-slate-400 flex-shrink-0" />
               </div>
-              {roleOpen && (
-                <div className="bg-white border border-slate-200 rounded-md p-1 mb-1 shadow-lg">
-                  <p className="text-[10px] text-slate-400 px-2 py-1 uppercase tracking-widest">Demo: Switch Role</p>
-                  {(['ceo','co','it_admin','internal_auditor','external_auditor'] as TenantRole[]).map(r => (
-                    <button key={r} onClick={() => { setRole(r); setRoleOpen(false); }}
-                      className={`w-full text-left px-2 py-1.5 rounded text-[12px] flex items-center gap-2 transition-colors
-                        ${role === r ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ROLE_COLORS[r] }} />
-                      {ROLE_LABELS[r]}
-                    </button>
-                  ))}
-                </div>
-              )}
               <button onClick={() => navigate('/login')} className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-slate-500 hover:text-slate-800 rounded-md hover:bg-slate-100 transition-colors">
                 <LogOut className="w-3 h-3" /> Logout
               </button>

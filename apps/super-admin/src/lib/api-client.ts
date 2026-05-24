@@ -59,7 +59,7 @@ async function request<T>(
     return fetch(`${BASE_URL}${endpoint}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...options.headers,
       },
@@ -98,6 +98,18 @@ export const apiClient = {
     request<T>(endpoint, {
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
+    }),
+
+  put: <T>(endpoint: string, body?: unknown) =>
+    request<T>(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+
+  postFormData: <T>(endpoint: string, formData: FormData) =>
+    request<T>(endpoint, {
+      method: 'POST',
+      body: formData,
     }),
 
   delete: <T>(endpoint: string) =>

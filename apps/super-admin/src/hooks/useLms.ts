@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../lib/api-client'
 import { queryKeys } from '../lib/query-keys'
+import toast from 'react-hot-toast'
 
 interface Course {
   id: string
@@ -48,9 +49,8 @@ export function useCourses(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: queryKeys.lms.courses(params),
     queryFn: () => {
-      const searchParams = new URLSearchParams(
-        params as Record<string, string>
-      ).toString()
+      const cleanParams = Object.fromEntries(Object.entries(params || {}).filter(([_, v]) => v !== undefined));
+      const searchParams = new URLSearchParams(cleanParams as Record<string, string>).toString()
       const endpoint = `/lms/courses${searchParams ? `?${searchParams}` : ''}`
       return apiClient.get<{
         success: boolean
@@ -87,6 +87,35 @@ export function useCreateCourse() {
   })
 }
 
+export function useUpdateCourse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: Partial<Course> & { id: string }) =>
+      apiClient.patch<{ success: boolean; data: Course }>(`/lms/courses/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lms', 'courses'] })
+      import('react-hot-toast').then(({ default: toast }) => toast.success('Course updated successfully'))
+    },
+    onError: (err: Error) => {
+      import('react-hot-toast').then(({ default: toast }) => toast.error(err.message || 'Failed to update course'))
+    },
+  })
+}
+
+export function useSyncCourseContent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ courseId, data }: { courseId: string; data: any }) =>
+      apiClient.put(`/lms/courses/${courseId}/sync-content`, data),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['lms', 'course', vars.courseId] })
+    },
+    onError: (err: Error) => {
+      import('react-hot-toast').then(({ default: toast }) => toast.error(err.message || 'Failed to sync content'))
+    },
+  })
+}
+
 export function usePublishCourse() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -106,9 +135,8 @@ export function useQuestions(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: queryKeys.lms.questions(params),
     queryFn: () => {
-      const searchParams = new URLSearchParams(
-        params as Record<string, string>
-      ).toString()
+      const cleanParams = Object.fromEntries(Object.entries(params || {}).filter(([_, v]) => v !== undefined));
+      const searchParams = new URLSearchParams(cleanParams as Record<string, string>).toString()
       const endpoint = `/lms/questions${searchParams ? `?${searchParams}` : ''}`
       return apiClient.get<{
         success: boolean
@@ -166,5 +194,64 @@ export function useCreateCertificateTemplate() {
     onError: (err: Error) => {
       import('react-hot-toast').then(({ default: toast }) => toast.error(err.message || 'Failed to create template'))
     },
+  })
+}
+// ─── Designation hooks ────────────────────────────────────────────────────────
+
+export function useDesignations() {
+  return useQuery({
+    queryKey: ['lms', 'designations'],
+    queryFn:  () => apiClient.get<{ success: boolean; data: any[] }>('/lms/designations').then(r => r.data),
+    staleTime: 60_000,
+  })
+}
+
+export function useCreateDesignation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string; displayOrder?: number }) =>
+      apiClient.post('/lms/designations', data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lms', 'designations'] }); toast.success('Designation created') },
+    onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useUpdateDesignation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name?: string; description?: string; displayOrder?: number; isActive?: boolean }) =>
+      apiClient.patch(`/lms/designations/${id}`, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lms', 'designations'] }); toast.success('Updated') },
+    onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useDeleteDesignation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/lms/designations/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lms', 'designations'] }); toast.success('Deleted') },
+    onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useCourseDesignations(courseId: string) {
+  return useQuery({
+    queryKey: ['lms', 'courses', courseId, 'designations'],
+    queryFn:  () => apiClient.get<{ success: boolean; data: any[] }>(`/lms/courses/${courseId}/designations`).then(r => r.data),
+    enabled:  !!courseId,
+  })
+}
+
+export function useSetCourseDesignations() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ courseId, targets }: { courseId: string; targets: Array<{ designationId: string; isMandatory: boolean }> }) =>
+      apiClient.put(`/lms/courses/${courseId}/designations`, { targets }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['lms', 'courses', vars.courseId, 'designations'] })
+      toast.success('Course targeting saved')
+    },
+    onError: (err: Error) => toast.error(err.message),
   })
 }

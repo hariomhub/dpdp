@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import {
   useOrganizations,
+  useOrganization,
   useCreateOrganization,
   useSuspendOrganization,
   useActivateOrganization,
@@ -37,6 +38,10 @@ const STATUS_COLORS: Record<string, string> = {
   Onboarding: 'bg-blue-50 text-blue-700',
   Inactive: 'bg-slate-100 text-slate-500',
   Suspended: 'bg-red-50 text-red-700',
+  ACTIVE: 'bg-green-50 text-green-700',
+  ONBOARDING: 'bg-blue-50 text-blue-700',
+  INACTIVE: 'bg-slate-100 text-slate-500',
+  SUSPENDED: 'bg-red-50 text-red-700',
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -134,7 +139,18 @@ function OrgStructureTab() {
 
 function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState('Org Details');
-  const org = ORGS.find(o => o.id === orgId) || ORGS[0];
+  const { data: org, isLoading } = useOrganization(orgId);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
+      <Loader2 className="w-5 h-5 animate-spin" />
+      <span className="text-[13px]">Loading organization details...</span>
+    </div>;
+  }
+
+  if (!org) {
+    return <div className="p-8 text-center text-red-500">Organization not found</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -144,7 +160,7 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
         </button>
         <span className="text-slate-300">/</span>
         <span className="text-[13px] font-semibold text-slate-800">{org.name}</span>
-        <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${STATUS_COLORS[org.status]}`}>{org.status}</span>
+        <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${STATUS_COLORS[org.status] || 'bg-slate-100 text-slate-600'}`}>{org.status}</span>
       </div>
 
       {/* Header */}
@@ -156,14 +172,14 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
             </div>
             <div>
               <h2 className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{org.name}</h2>
-              <p className="text-[12px] text-slate-400">{org.industry} · <span className={`font-medium ${org.plan === 'Enterprise' ? 'text-violet-600' : org.plan === 'Professional' ? 'text-blue-600' : 'text-amber-600'}`}>{org.plan}</span> · CEO: {org.ceo} · Onboarded {org.onboardedDate}</p>
+              <p className="text-[12px] text-slate-400">{org.industry} · <span className={`font-medium ${org.plan === 'ENTERPRISE' ? 'text-violet-600' : org.plan === 'PROFESSIONAL' ? 'text-blue-600' : 'text-amber-600'}`}>{org.plan}</span> · CEO: {org.ceoName} · Onboarded {new Date(org.onboardedAt || org.createdAt).toLocaleDateString('en-IN')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
               <Headphones className="w-3.5 h-3.5" /> Support Access
             </button>
-            {org.status !== 'Suspended' ? (
+            {org.status !== 'SUSPENDED' ? (
               <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors">
                 <Ban className="w-3.5 h-3.5" /> Suspend Org
               </button>
@@ -194,8 +210,8 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
             <div className="grid grid-cols-3 gap-4 text-[12.5px]">
               {[
                 ['Organization Name', org.name], ['Industry', org.industry], ['Plan', org.plan],
-                ['Country', 'India'], ['Org Size', '201–1000'], ['Primary Email', 'contact@technova.in'],
-                ['Website', 'https://technova.in'], ['PAN', 'AABCT1234H'], ['GST', '29AABCT1234H1Z5'],
+                ['Country', org.country || 'India'], ['Org Size', 'N/A'], ['Primary Email', org.ceoEmail],
+                ['Tenant Code', org.tenantCode], ['PAN', 'N/A'], ['GST', 'N/A'],
               ].map(([k, v]) => (
                 <div key={k}>
                   <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
@@ -207,7 +223,7 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
           <div className="bg-white border border-slate-200 rounded-lg p-4">
             <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-3">DPO Details</p>
             <div className="grid grid-cols-3 gap-4 text-[12.5px]">
-              {[['DPO Name', 'Priya Sharma'], ['DPO Email', 'dpo@technova.in'], ['DPO Phone', '+91 98765 43210']].map(([k, v]) => (
+              {[['DPO Name', 'N/A'], ['DPO Email', 'N/A'], ['DPO Phone', 'N/A']].map(([k, v]) => (
                 <div key={k}>
                   <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
                   <p className="text-slate-800 font-medium">{v}</p>
@@ -297,7 +313,7 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
       {/* Tab 4: Assessments */}
       {activeTab === 'Assessments' && (
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-slate-100"><p className="text-[12px] text-slate-400">Read-only · {org.assessments} assessments</p></div>
+          <div className="px-4 py-2.5 border-b border-slate-100"><p className="text-[12px] text-slate-400">Read-only · 0 assessments</p></div>
           <table className="w-full text-[12px]">
             <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
               {['Assessment Name', 'Regulation', 'Department', 'Status', 'Compliance %', 'Period', 'Created By', 'Last Updated'].map(h => (
@@ -353,9 +369,9 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
             <div className="mt-4 space-y-3">
               <p className="text-[11.5px] font-semibold text-slate-700">Usage This Cycle</p>
               {[
-                { label: 'Users', used: org.users, limit: 'Unlimited', pct: 0, showBar: false },
-                { label: 'Active Assessments', used: org.assessments, limit: 'Unlimited', pct: 0, showBar: false },
-                { label: 'Storage Used', used: '2.1 GB', limit: '50 GB', pct: 4, showBar: true },
+                { label: 'Users', used: 0, limit: 'Unlimited', pct: 0, showBar: false },
+                { label: 'Active Assessments', used: 0, limit: 'Unlimited', pct: 0, showBar: false },
+                { label: 'Storage Used', used: '0 GB', limit: '50 GB', pct: 0, showBar: true },
               ].map(u => (
                 <div key={u.label}>
                   <div className="flex items-center justify-between mb-1 text-[12px]">

@@ -7,6 +7,8 @@ import { SetPasswordPage } from './pages/auth/SetPassword';
 import { AdminDashboardPage } from './pages/superadmin/AdminDashboard';
 import { AdminOrganizationsPage } from './pages/superadmin/AdminOrganizations';
 import { AdminControlsPage } from './pages/superadmin/AdminControls';
+import { AdminControlFamilies } from './pages/superadmin/AdminControlFamilies';
+import { AdminProductFamilies } from './pages/superadmin/AdminProductFamilies';
 import { AdminLMSPage } from './pages/superadmin/AdminLMS';
 import { AdminSettingsPage } from './pages/superadmin/AdminSettings';
 import { AdminBillingPage } from './pages/superadmin/AdminBilling';
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
   { path: '/admin/organizations/new', Component: Protected(AdminOrganizationsPage) },
   { path: '/admin/organizations/:id', Component: Protected(AdminOrganizationsPage) },
   { path: '/admin/controls', Component: Protected(AdminControlsPage) },
+  { path: '/admin/control-families', Component: Protected(AdminControlFamilies) },
+  { path: '/admin/product-families', Component: Protected(AdminProductFamilies) },
   { path: '/admin/lms', Component: Protected(AdminLMSPage) },
   { path: '/admin/settings', Component: Protected(AdminSettingsPage) },
   { path: '/admin/billing', Component: Protected(AdminBillingPage) },

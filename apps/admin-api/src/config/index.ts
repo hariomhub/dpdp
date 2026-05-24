@@ -24,6 +24,16 @@ export const config = {
     fromEmail: process.env.SMTP_FROM_EMAIL!,
   },
 
+  storage: {
+    provider: (process.env.STORAGE_PROVIDER || 'local') as 'local' | 'azure',
+    uploadDir: process.env.UPLOAD_DIR || 'uploads',
+    maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '25'),
+    azure: {
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
+      container:        process.env.AZURE_STORAGE_CONTAINER        || 'master-evidence',
+    },
+  },
+
   platform: {
     name: process.env.PLATFORM_NAME || 'DPDP CMS',
     url: process.env.PLATFORM_URL!,

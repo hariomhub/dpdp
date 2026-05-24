@@ -275,7 +275,8 @@ model RegulationChapter {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  controls     Control[]
+  controlMappings ControlRegulation[]
+  sections        RegulationSection[]
 
   @@unique([regulationId, name])
   @@map("regulation_chapters")
@@ -289,9 +290,6 @@ model Control {
   id               String        @id @default(uuid())
   title            String
   description      String
-  chapterId String?
-  chapter          RegulationChapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
-  sectionReference String?
   applicableTo     ApplicableTo  @default(BOTH)
   status           ControlStatus @default(DRAFT)
   isCustom         Boolean       @default(false)
@@ -301,15 +299,20 @@ model Control {
 
   regulationMappings  ControlRegulation[]
   predefinedActions   ControlPredefinedAction[]
+  families            ControlFamilyMember[]
 
   @@map("controls")
 }
 
 model ControlRegulation {
-  controlId    String
-  regulationId String
-  control      Control    @relation(fields: [controlId], references: [id], onDelete: Cascade)
-  regulation   Regulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  controlId        String
+  regulationId     String
+  chapterId        String?
+  sectionId        String?
+  control          Control             @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  regulation       Regulation          @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  chapter          RegulationChapter?  @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  section          RegulationSection?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
   @@id([controlId, regulationId])
   @@map("control_regulations")
@@ -325,6 +328,7 @@ model ControlPredefinedAction {
   suggestedDueDays Int          @default(30)
   priority         Priority     @default(HIGH)
   orderIndex       Int          @default(0)
+  products         ActionProduct[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -375,6 +379,7 @@ model LmsCourse {
   updatedAt             DateTime             @updatedAt
 
   sections              LmsSection[]
+  designations          LmsCourseDesignation[]
 
   @@map("lms_courses")
 }
@@ -500,4 +505,171 @@ model PlatformAuditLog {
   createdAt    DateTime    @default(now())
 
   @@map("platform_audit_logs")
+}
+// ============================================
+// CONTROL FAMILIES
+// Cross-cutting grouping of controls,
+// independent of regulation chapters.
+// One control can belong to multiple families.
+// ============================================
+
+model ControlFamily {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  icon        String?   // emoji or icon identifier for UI display
+  color       String?   // hex color e.g. "#3B82F6"
+  status      String    @default("ACTIVE")
+  controls    ControlFamilyMember[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("control_families")
+}
+
+model ControlFamilyMember {
+  controlFamilyId String
+  controlId       String
+  controlFamily   ControlFamily @relation(fields: [controlFamilyId], references: [id], onDelete: Cascade)
+  control         Control       @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  addedAt         DateTime      @default(now())
+
+  @@id([controlFamilyId, controlId])
+  @@map("control_family_members")
+}
+
+// ============================================
+// PRODUCT FAMILIES + PRODUCTS
+// Tools/software that implement control actions.
+// ProductFamily groups related products.
+// A product belongs to one family OR is standalone.
+// ============================================
+
+model ProductFamily {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  category    String?   // e.g. "IAM", "Data Protection", "Monitoring", "SIEM"
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("product_families")
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  name            String
+  description     String?
+  vendor          String?        // company name e.g. "Microsoft", "AWS"
+  website         String?
+  logoUrl         String?
+  category        String?
+  productFamilyId String?        // null = standalone product not in any family
+  productFamily   ProductFamily? @relation(fields: [productFamilyId], references: [id], onDelete: SetNull)
+  actions         ActionProduct[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("products")
+}
+
+// Junction: ControlPredefinedAction <-> Product
+// An action can be implemented by multiple products.
+model ActionProduct {
+  predefinedActionId String
+  productId          String
+  predefinedAction   ControlPredefinedAction @relation(fields: [predefinedActionId], references: [id], onDelete: Cascade)
+  product            Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  addedAt            DateTime                @default(now())
+  masterEvidences    MasterEvidence[]
+
+  @@id([predefinedActionId, productId])
+  @@map("action_products")
+}
+
+
+// ============================================
+// REGULATION SECTIONS
+// Sub-divisions of regulation chapters.
+// Chapter required, section optional on control mapping.
+// ============================================
+
+model RegulationSection {
+  id        String            @id @default(uuid())
+  chapterId String
+  chapter   RegulationChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  name      String            // e.g., "Section 6"
+  title     String?           // e.g., "Consent"
+  orderIndex Int              @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  controlMappings ControlRegulation[]
+
+  @@unique([chapterId, name])
+  @@map("regulation_sections")
+}
+
+// ============================================
+// MASTER EVIDENCE
+// Template/expected evidence per action-product pair.
+// Storage: local disk now, Azure Blob when configured.
+// To migrate to Azure: set STORAGE_PROVIDER=azure + Azure env vars.
+// No code changes needed beyond config.
+// ============================================
+
+model MasterEvidence {
+  id              String       @id @default(uuid())
+  predefinedActionId String
+  productId          String
+  title           String       // "Sample Azure AD MFA Configuration"
+  description     String?      // "Screenshot showing MFA policy with all users enforced"
+  fileName        String?
+  fileSize        Int?
+  mimeType        String?
+  fileUrl         String?      // local path or blob URL
+  storageProvider String       @default("local")
+  uploadedById    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  actionProduct   ActionProduct @relation(fields: [predefinedActionId, productId], references: [predefinedActionId, productId], onDelete: Cascade)
+
+  @@map("master_evidences")
+}
+
+
+// ============================================
+// LMS DESIGNATIONS
+// Business roles / designations (CISO, DPO, etc.)
+// Super admin manages catalog, courses are tagged to designations.
+// Tenants assign designations to users (stored as string reference).
+// ============================================
+
+model LmsDesignation {
+  id           String   @id @default(uuid())
+  name         String   @unique  // "CISO", "DPO", "CTO" etc.
+  description  String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  courses      LmsCourseDesignation[]
+
+  @@map("lms_designations")
+}
+
+model LmsCourseDesignation {
+  courseId      String
+  designationId String
+  isMandatory   Boolean  @default(true)  // true = auto-enroll, false = optional/recommended
+  addedAt       DateTime @default(now())
+
+  course        LmsCourse      @relation(fields: [courseId],      references: [id], onDelete: Cascade)
+  designation   LmsDesignation @relation(fields: [designationId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, designationId])
+  @@map("lms_course_designations")
 }

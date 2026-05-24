@@ -1,0 +1,878 @@
+[
+  {
+    "title": "Consent Capture and Management",
+    "description": "Data Fiduciary must obtain free, specific, informed, unconditional and unambiguous consent from the Data Principal before processing personal data. Consent must be given through an affirmative action and the request must be presented clearly and plainly in simple language.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 6" }],
+    "actions": [
+      {
+        "title": "Implement consent capture interface",
+        "description": "Deploy a mechanism that captures explicit, informed consent before any personal data collection. Must present purpose clearly and record timestamp.",
+        "evidenceTypes": ["SCREENSHOT", "CONFIG"],
+        "suggestedDueDays": 30,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "Cookiebot", "TrustArc", "Axeptio"]
+      },
+      {
+        "title": "Implement consent versioning and audit trail",
+        "description": "Maintain a versioned history of all consents given, withdrawn or modified by each Data Principal with timestamps.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "TrustArc"]
+      },
+      {
+        "title": "Deploy consent storage and retrieval system",
+        "description": "Build or configure a system to store consent records and retrieve them for regulatory audits.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 3,
+        "products": ["OneTrust", "Splunk", "Elasticsearch"]
+      }
+    ]
+  },
+  {
+    "title": "Privacy Notice Implementation",
+    "description": "Before collecting personal data, the Data Fiduciary must provide a clear notice describing what data is collected, the purpose of processing, how to exercise rights, and how to contact the grievance officer.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 5" }],
+    "actions": [
+      {
+        "title": "Draft and publish compliant privacy notice",
+        "description": "Create a privacy notice in plain language covering data categories, processing purposes, retention period, and Data Principal rights.",
+        "evidenceTypes": ["DOCUMENT", "LINK"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "TrustArc", "Termly"]
+      },
+      {
+        "title": "Implement notice update notification system",
+        "description": "Build a mechanism to inform Data Principals whenever the privacy notice is materially updated.",
+        "evidenceTypes": ["SCREENSHOT", "CONFIG"],
+        "suggestedDueDays": 30,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["SendGrid", "Mailchimp", "Amazon SES"]
+      }
+    ]
+  },
+  {
+    "title": "Consent Withdrawal Mechanism",
+    "description": "Data Fiduciary must provide a simple and accessible mechanism for Data Principals to withdraw consent at any time. Withdrawal must be as easy as giving consent.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 6" }],
+    "actions": [
+      {
+        "title": "Build self-service consent withdrawal portal",
+        "description": "Provide an easily accessible interface for users to view and withdraw specific or all consents without contacting support.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "Cookiebot", "TrustArc"]
+      },
+      {
+        "title": "Automate post-withdrawal processing stop",
+        "description": "Ensure that withdrawal of consent automatically triggers cessation of the relevant data processing activities within specified timeframe.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "ServiceNow", "Zapier"]
+      }
+    ]
+  },
+  {
+    "title": "Legitimate Use Documentation",
+    "description": "Where processing is based on legitimate use (without consent) under Section 7, the Data Fiduciary must document and maintain records of the specific legitimate purpose relied upon.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 7" }],
+    "actions": [
+      {
+        "title": "Create legitimate use register",
+        "description": "Document all processing activities that rely on legitimate use, specifying which Section 7 ground applies and why.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "BigID", "Confluence"]
+      }
+    ]
+  },
+  {
+    "title": "Purpose Limitation Controls",
+    "description": "Personal data must be processed only for the specific purpose for which it was collected. The Data Fiduciary must implement technical and organizational controls to prevent data from being used for other purposes.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Retention & Minimization"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Define and document all processing purposes",
+        "description": "Create a formal register of all purposes for which personal data is processed across all systems.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "BigID", "TrustArc"]
+      },
+      {
+        "title": "Implement technical purpose limitation controls",
+        "description": "Configure database access controls and application logic to enforce purpose limitations at the technical level.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["Microsoft Purview", "IBM InfoSphere", "Varonis"]
+      }
+    ]
+  },
+  {
+    "title": "Data Minimization Policy",
+    "description": "Data Fiduciary shall collect only the personal data that is necessary for the specified purpose. Excessive or irrelevant data collection is prohibited.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Retention & Minimization"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Conduct data inventory and classification",
+        "description": "Identify all personal data collected across systems, classify by sensitivity and assess whether collection is truly necessary.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["BigID", "Microsoft Purview", "AWS Macie", "Varonis"]
+      },
+      {
+        "title": "Implement data collection restrictions",
+        "description": "Configure forms, APIs and systems to collect only required fields and block unnecessary data collection.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["Microsoft Purview", "Varonis", "Spirion"]
+      }
+    ]
+  },
+  {
+    "title": "Data Accuracy Maintenance",
+    "description": "Data Fiduciary must take reasonable steps to ensure personal data is accurate and up to date. Inaccurate data that could cause harm to the Data Principal must be corrected.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Retention & Minimization"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Implement data quality monitoring",
+        "description": "Set up automated checks to detect and flag inaccurate or outdated personal data across all systems.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "MEDIUM",
+        "orderIndex": 1,
+        "products": ["Informatica", "Talend", "IBM InfoSphere", "Ataccama"]
+      },
+      {
+        "title": "Build data correction workflow",
+        "description": "Create a process for Data Principals and internal teams to flag and correct inaccurate data with audit trail.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["ServiceNow", "OneTrust", "Freshdesk"]
+      }
+    ]
+  },
+  {
+    "title": "Data Retention and Deletion Policy",
+    "description": "Personal data must not be retained longer than necessary for the specified purpose. Data Fiduciary must define retention schedules and implement automated deletion when retention period expires.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Retention & Minimization"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Define retention schedules for all data categories",
+        "description": "Create a data retention matrix specifying how long each category of personal data is kept and the legal basis for the period.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["Microsoft Purview", "Veritas", "Commvault", "OneTrust"]
+      },
+      {
+        "title": "Automate data deletion at retention expiry",
+        "description": "Configure systems to automatically purge personal data when retention period expires, with deletion certificates.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["Microsoft Purview", "AWS Data Lifecycle Manager", "Blancco", "Spirion"]
+      }
+    ]
+  },
+  {
+    "title": "Security Safeguards for Personal Data",
+    "description": "Data Fiduciary must implement appropriate technical and organisational security safeguards to protect personal data from unauthorized access, disclosure, alteration or destruction.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Security & Breach Response"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Implement encryption at rest and in transit",
+        "description": "Encrypt all personal data stored in databases and all transmissions over networks using industry-standard algorithms.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["Azure Key Vault", "AWS KMS", "HashiCorp Vault", "Google Cloud KMS"]
+      },
+      {
+        "title": "Deploy access control and authentication",
+        "description": "Implement role-based access control, MFA, and principle of least privilege for all systems holding personal data.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 2,
+        "products": ["Microsoft Azure AD", "Okta", "AWS IAM", "Google Cloud Identity"]
+      },
+      {
+        "title": "Conduct vulnerability assessment and penetration testing",
+        "description": "Perform regular security assessments to identify and remediate vulnerabilities in systems processing personal data.",
+        "evidenceTypes": ["DOCUMENT", "FILE"],
+        "suggestedDueDays": 90,
+        "priority": "HIGH",
+        "orderIndex": 3,
+        "products": ["Rapid7", "Tenable", "Qualys", "Burp Suite"]
+      }
+    ]
+  },
+  {
+    "title": "Data Breach Detection System",
+    "description": "Data Fiduciary must implement monitoring systems capable of detecting personal data breaches in a timely manner to enable prompt notification to the Data Protection Board and affected Data Principals.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Security & Breach Response"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Deploy SIEM solution for threat monitoring",
+        "description": "Implement a Security Information and Event Management system to detect anomalous access patterns and potential data breaches in real time.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["Microsoft Sentinel", "Splunk", "IBM QRadar", "LogRhythm"]
+      },
+      {
+        "title": "Implement Data Loss Prevention solution",
+        "description": "Deploy DLP tools to detect and prevent unauthorized exfiltration of personal data from the organization.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["Microsoft Purview", "Symantec DLP", "Digital Guardian", "Forcepoint"]
+      }
+    ]
+  },
+  {
+    "title": "Data Breach Notification Process",
+    "description": "Upon becoming aware of a personal data breach, the Data Fiduciary must notify the Data Protection Board and affected Data Principals in the manner and within the time prescribed.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Security & Breach Response"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 6", "sectionName": "Section 33" }],
+    "actions": [
+      {
+        "title": "Define breach notification SOP",
+        "description": "Create a documented Standard Operating Procedure for identifying, assessing, and notifying breaches including internal escalation paths and timelines.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "ServiceNow", "IBM Resilient"]
+      },
+      {
+        "title": "Set up Data Protection Board notification mechanism",
+        "description": "Configure the workflow and templates to notify the Data Protection Board within the prescribed timeline after detecting a breach.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 14,
+        "priority": "CRITICAL",
+        "orderIndex": 2,
+        "products": ["OneTrust", "ServiceNow", "IBM Resilient"]
+      },
+      {
+        "title": "Configure Data Principal breach notification",
+        "description": "Build automated notification system to inform affected Data Principals about the nature of breach and remediation steps taken.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 14,
+        "priority": "CRITICAL",
+        "orderIndex": 3,
+        "products": ["SendGrid", "Mailchimp", "Twilio", "Amazon SNS"]
+      }
+    ]
+  },
+  {
+    "title": "Children Data Age Verification",
+    "description": "Before processing personal data of a child, the Data Fiduciary must verify the age of the Data Principal and obtain verifiable parental consent for any child under 18 years of age.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 9" }],
+    "actions": [
+      {
+        "title": "Implement age verification mechanism",
+        "description": "Deploy a reliable age verification system that confirms users are above 18 or triggers parental consent flow for minors.",
+        "evidenceTypes": ["SCREENSHOT", "CONFIG"],
+        "suggestedDueDays": 30,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["AgeID", "Yoti", "Veriff", "Jumio"]
+      },
+      {
+        "title": "Build verifiable parental consent workflow",
+        "description": "Create a process to obtain verifiable consent from the parent or legal guardian before processing a child's personal data.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "CRITICAL",
+        "orderIndex": 2,
+        "products": ["OneTrust", "TrustArc", "Yoti"]
+      }
+    ]
+  },
+  {
+    "title": "Children Data Processing Restrictions",
+    "description": "Data Fiduciary must not process personal data of children in a manner that is detrimental to their well-being, must not undertake tracking or behavioral monitoring of children.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 9" }],
+    "actions": [
+      {
+        "title": "Block behavioral tracking for minor accounts",
+        "description": "Configure analytics and advertising tools to disable behavioral profiling and targeted advertising for users identified as minors.",
+        "evidenceTypes": ["CONFIG", "SCREENSHOT"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "Cookiebot", "Google Analytics"]
+      },
+      {
+        "title": "Implement child-safe content and data controls",
+        "description": "Configure content filtering and data access restrictions to ensure children's data is not used for potentially harmful purposes.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["Securly", "ContentKeeper", "Bark"]
+      }
+    ]
+  },
+  {
+    "title": "Right of Access Implementation",
+    "description": "Data Fiduciary must provide Data Principals with a mechanism to obtain a summary of personal data being processed and identities of all Data Fiduciaries with whom data has been shared.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Principal Rights"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 3", "sectionName": "Section 11" }],
+    "actions": [
+      {
+        "title": "Build data access request portal",
+        "description": "Create a self-service portal where Data Principals can request a copy of all personal data held about them.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "ServiceNow", "BigID", "TrustArc"]
+      },
+      {
+        "title": "Automate data retrieval across systems",
+        "description": "Configure automated data discovery and compilation to fulfil access requests within the prescribed time limit.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["BigID", "Microsoft Purview", "Spirion", "OneTrust"]
+      }
+    ]
+  },
+  {
+    "title": "Right to Correction and Erasure",
+    "description": "Data Fiduciary must implement mechanisms allowing Data Principals to request correction, completion, updating or erasure of their personal data.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Principal Rights"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 3", "sectionName": "Section 12" }],
+    "actions": [
+      {
+        "title": "Implement correction and erasure request workflow",
+        "description": "Build a structured workflow for Data Principals to submit correction/erasure requests with identity verification.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "ServiceNow", "TrustArc"]
+      },
+      {
+        "title": "Automate erasure across all data stores",
+        "description": "Configure automated deletion workflows that propagate erasure requests across all systems, databases and backups.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["BigID", "Microsoft Purview", "Spirion", "Blancco"]
+      },
+      {
+        "title": "Generate deletion certificates",
+        "description": "Issue verifiable certificates confirming data has been permanently erased from all systems upon request completion.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "MEDIUM",
+        "orderIndex": 3,
+        "products": ["Blancco", "OneTrust", "Spirion"]
+      }
+    ]
+  },
+  {
+    "title": "Grievance Redressal Mechanism",
+    "description": "Data Fiduciary must establish an effective mechanism for Data Principals to submit grievances, and address such grievances within the prescribed timeline.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Principal Rights"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 3", "sectionName": "Section 13" }],
+    "actions": [
+      {
+        "title": "Set up grievance submission portal",
+        "description": "Create an accessible portal for Data Principals to submit privacy-related grievances with tracking and acknowledgment.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["ServiceNow", "Zendesk", "Freshdesk", "Jira Service Management"]
+      },
+      {
+        "title": "Define grievance resolution SLA and escalation",
+        "description": "Document and implement timelines and escalation paths ensuring grievances are resolved within the prescribed period.",
+        "evidenceTypes": ["DOCUMENT", "CONFIG"],
+        "suggestedDueDays": 14,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["ServiceNow", "Zendesk", "Jira Service Management"]
+      }
+    ]
+  },
+  {
+    "title": "Data Principal Nomination Feature",
+    "description": "Data Fiduciary must provide a mechanism for Data Principals to nominate another individual to exercise their rights in the event of death or incapacity.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Principal Rights"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 3", "sectionName": "Section 14" }],
+    "actions": [
+      {
+        "title": "Implement nomination registration interface",
+        "description": "Build a feature allowing Data Principals to designate a nominee with identity verification and consent from the nominee.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "MEDIUM",
+        "orderIndex": 1,
+        "products": ["OneTrust", "Custom Development"]
+      },
+      {
+        "title": "Build nominee rights exercise workflow",
+        "description": "Create a process for nominees to prove their nomination and exercise the Data Principal's rights after verification.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 60,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["ServiceNow", "OneTrust", "Custom Development"]
+      }
+    ]
+  },
+  {
+    "title": "Vendor and Processor Data Processing Agreements",
+    "description": "Data Fiduciary must ensure that any Data Processor engaged to process personal data on its behalf does so only on documented instructions and provides sufficient guarantees of compliance.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Third-Party & Vendor Management"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Create standard Data Processing Agreement template",
+        "description": "Draft a DPA template covering processing instructions, sub-processors, security obligations and breach notification.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "Ironclad", "DocuSign", "ContractPodAi"]
+      },
+      {
+        "title": "Conduct vendor privacy risk assessment",
+        "description": "Assess all vendors processing personal data against a defined risk framework and document assessment outcomes.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "BitSight", "SecurityScorecard", "ProcessUnity"]
+      },
+      {
+        "title": "Maintain vendor processing register",
+        "description": "Keep an up-to-date register of all vendors with access to personal data, their processing activities, and DPA status.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 30,
+        "priority": "MEDIUM",
+        "orderIndex": 3,
+        "products": ["OneTrust", "Vendr", "Prevalent", "TrustArc"]
+      }
+    ]
+  },
+  {
+    "title": "Data Inventory and Records of Processing Activities",
+    "description": "Data Fiduciary must maintain comprehensive Records of Processing Activities (ROPA) documenting all personal data processing operations including categories, purposes, recipients and retention periods.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Privacy Governance & Accountability"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Create comprehensive ROPA",
+        "description": "Document all processing activities in a Records of Processing Activities register covering data categories, purposes, legal basis, retention and recipients.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "TrustArc", "BigID", "DataGrail"]
+      },
+      {
+        "title": "Automate data discovery and mapping",
+        "description": "Use automated tools to discover personal data across all systems and generate data flow diagrams.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["BigID", "Microsoft Purview", "Varonis", "Spirion"]
+      }
+    ]
+  },
+  {
+    "title": "Employee Data Protection Training",
+    "description": "Data Fiduciary must ensure all employees who handle personal data receive regular training on data protection obligations, policies and procedures.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Privacy Governance & Accountability"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Conduct mandatory data protection awareness training",
+        "description": "Deliver and track completion of annual data protection training for all staff handling personal data.",
+        "evidenceTypes": ["SCREENSHOT", "DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["KnowBe4", "SANS Security Awareness", "Mimecast", "Proofpoint Security Awareness"]
+      },
+      {
+        "title": "Role-specific privacy training for high-risk roles",
+        "description": "Provide specialized training for roles with elevated access to personal data such as developers, data analysts and customer support.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 45,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["KnowBe4", "Cornerstone OnDemand", "LinkedIn Learning"]
+      }
+    ]
+  },
+  {
+    "title": "Privacy by Design Implementation",
+    "description": "Data Fiduciary must integrate privacy considerations into the design of systems and processes from inception rather than as an afterthought.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Privacy Governance & Accountability"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Integrate privacy impact assessment into development lifecycle",
+        "description": "Mandate and conduct Data Protection Impact Assessments for all new systems or significant changes that process personal data.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "TrustArc", "Osano"]
+      },
+      {
+        "title": "Implement privacy-preserving technical controls",
+        "description": "Deploy data masking, pseudonymization or anonymization where full personal data is not required for the processing purpose.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["Microsoft Presidio", "ARX", "IRI FieldShield", "Informatica"]
+      }
+    ]
+  },
+  {
+    "title": "Security Incident Response Plan",
+    "description": "Data Fiduciary must have a documented and tested incident response plan that enables rapid containment and investigation of security incidents involving personal data.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Security & Breach Response"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Define and document incident response playbooks",
+        "description": "Create detailed runbooks for different incident types covering detection, containment, eradication, recovery and post-incident review.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["IBM Resilient", "ServiceNow Security Operations", "PagerDuty", "Cortex XSOAR"]
+      },
+      {
+        "title": "Conduct incident response tabletop exercises",
+        "description": "Run regular simulated breach scenarios with relevant stakeholders to test and improve the incident response plan.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 90,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["Immersive Labs", "AttackIQ", "Cymulate"]
+      }
+    ]
+  },
+  {
+    "title": "Cookie and Tracking Consent Management",
+    "description": "Data Fiduciary operating digital platforms must obtain specific consent for cookies and tracking technologies before placing them on user devices, in line with the consent requirements of the Act.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Data Collection & Consent"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 6" }],
+    "actions": [
+      {
+        "title": "Deploy compliant cookie consent banner",
+        "description": "Implement a cookie consent management platform that provides granular control and records consent per category.",
+        "evidenceTypes": ["SCREENSHOT", "CONFIG"],
+        "suggestedDueDays": 14,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["Cookiebot", "OneTrust", "TrustArc", "Axeptio"]
+      },
+      {
+        "title": "Conduct cookie audit and categorization",
+        "description": "Scan all websites and apps to identify cookies and trackers, categorize them by purpose and update the cookie notice accordingly.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 21,
+        "priority": "MEDIUM",
+        "orderIndex": 2,
+        "products": ["Cookiebot", "OneTrust", "Osano"]
+      }
+    ]
+  },
+  {
+    "title": "Third-Party App and Integration Governance",
+    "description": "Data Fiduciary must assess and govern all third-party integrations and applications that are granted access to personal data.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Third-Party & Vendor Management"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Implement app permission review and approval process",
+        "description": "Establish a formal approval process for any third-party application requesting access to systems or data containing personal data.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["Okta", "Microsoft Azure AD", "BetterCloud", "Torii"]
+      },
+      {
+        "title": "Conduct third-party security assessments",
+        "description": "Regularly assess the security posture of third-party vendors with access to personal data.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["BitSight", "SecurityScorecard", "OneTrust", "Prevalent"]
+      }
+    ]
+  },
+  {
+    "title": "Privacy Accountability and Governance Framework",
+    "description": "Data Fiduciary must establish organizational accountability for data protection including appointing responsible personnel and implementing governance processes.",
+    "applicableTo": "BOTH",
+    "status": "PUBLISHED",
+    "families": ["Privacy Governance & Accountability"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 2", "sectionName": "Section 8" }],
+    "actions": [
+      {
+        "title": "Appoint and empower privacy point of contact",
+        "description": "Designate a responsible individual or team for data protection compliance and provide them adequate authority and resources.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 14,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["OneTrust", "ServiceNow", "TrustArc"]
+      },
+      {
+        "title": "Implement privacy governance policies",
+        "description": "Create, approve and publish internal data protection policies covering all key processing activities.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "MetricStream", "Confluence", "SharePoint"]
+      }
+    ]
+  },
+  {
+    "title": "Data Protection Impact Assessment (SDF)",
+    "description": "Significant Data Fiduciaries must conduct a Data Protection Impact Assessment for each new or significantly changed high-risk processing activity before commencement.",
+    "applicableTo": "SIGNIFICANT_DF",
+    "status": "PUBLISHED",
+    "families": ["Significant Data Fiduciary Obligations"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 4", "sectionName": "Section 16" }],
+    "actions": [
+      {
+        "title": "Develop DPIA methodology and templates",
+        "description": "Create a standardized DPIA process with risk assessment templates aligned to the DPDP Act requirements.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "TrustArc", "Osano", "DataGrail"]
+      },
+      {
+        "title": "Maintain DPIA register and outcomes",
+        "description": "Document all DPIAs conducted, their findings, risk mitigations implemented and residual risks accepted.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "ServiceNow", "MetricStream"]
+      }
+    ]
+  },
+  {
+    "title": "Periodic Compliance Audit (SDF)",
+    "description": "Significant Data Fiduciaries must conduct periodic audits of compliance with the DPDP Act and rules made thereunder, conducted by an independent data auditor.",
+    "applicableTo": "SIGNIFICANT_DF",
+    "status": "PUBLISHED",
+    "families": ["Significant Data Fiduciary Obligations"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 4", "sectionName": "Section 16" }],
+    "actions": [
+      {
+        "title": "Engage independent data auditor",
+        "description": "Appoint a qualified independent auditor to conduct annual data protection compliance audit.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "MetricStream", "RSA Archer"]
+      },
+      {
+        "title": "Implement audit findings remediation tracking",
+        "description": "Track and remediate all findings from the data audit with defined owners, timelines and evidence of completion.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["ServiceNow", "Jira", "MetricStream"]
+      }
+    ]
+  },
+  {
+    "title": "Data Protection Officer Appointment (SDF)",
+    "description": "Significant Data Fiduciaries must appoint a Data Protection Officer who is a key managerial person and serves as the point of contact for the Data Protection Board.",
+    "applicableTo": "SIGNIFICANT_DF",
+    "status": "PUBLISHED",
+    "families": ["Significant Data Fiduciary Obligations"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 4", "sectionName": "Section 16" }],
+    "actions": [
+      {
+        "title": "Formally appoint and register DPO",
+        "description": "Appoint a qualified DPO, document their mandate, authority, and register them with the Data Protection Board.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 21,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "ServiceNow"]
+      },
+      {
+        "title": "Set up DPO task management and reporting system",
+        "description": "Provide the DPO with tools to track compliance tasks, manage requests and report to senior management.",
+        "evidenceTypes": ["SCREENSHOT", "CONFIG"],
+        "suggestedDueDays": 30,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["OneTrust", "ServiceNow", "Jira"]
+      }
+    ]
+  },
+  {
+    "title": "Cross-Border Data Transfer Compliance (SDF)",
+    "description": "Significant Data Fiduciaries must comply with restrictions on transfer of personal data outside India as prescribed by the Central Government.",
+    "applicableTo": "SIGNIFICANT_DF",
+    "status": "PUBLISHED",
+    "families": ["Significant Data Fiduciary Obligations"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 4", "sectionName": "Section 16" }],
+    "actions": [
+      {
+        "title": "Map all cross-border data flows",
+        "description": "Identify and document all personal data transfers outside India, including cloud services, vendors and group entities.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 30,
+        "priority": "CRITICAL",
+        "orderIndex": 1,
+        "products": ["OneTrust", "BigID", "TrustArc"]
+      },
+      {
+        "title": "Implement data localization for restricted categories",
+        "description": "Configure cloud infrastructure and data stores to keep personal data of Indian citizens within India where required.",
+        "evidenceTypes": ["CONFIG", "DOCUMENT"],
+        "suggestedDueDays": 60,
+        "priority": "CRITICAL",
+        "orderIndex": 2,
+        "products": ["Microsoft Azure India Central", "AWS Mumbai", "Google Cloud Mumbai"]
+      }
+    ]
+  },
+  {
+    "title": "Algorithmic Transparency and Explainability (SDF)",
+    "description": "Significant Data Fiduciaries using automated decision-making systems must ensure transparency and provide explanations to Data Principals for decisions affecting them.",
+    "applicableTo": "SIGNIFICANT_DF",
+    "status": "PUBLISHED",
+    "families": ["Significant Data Fiduciary Obligations"],
+    "regulations": [{ "regulationShortCode": "DPDP-2023", "chapterName": "Chapter 4", "sectionName": "Section 16" }],
+    "actions": [
+      {
+        "title": "Audit automated decision-making systems",
+        "description": "Identify and assess all systems making automated decisions about individuals and document their logic and impact.",
+        "evidenceTypes": ["DOCUMENT"],
+        "suggestedDueDays": 45,
+        "priority": "HIGH",
+        "orderIndex": 1,
+        "products": ["IBM OpenScale", "Microsoft Responsible AI", "Arthur AI", "Fiddler AI"]
+      },
+      {
+        "title": "Implement explainability for automated decisions",
+        "description": "Build mechanisms to provide Data Principals with meaningful explanations when automated decisions significantly affect them.",
+        "evidenceTypes": ["DOCUMENT", "SCREENSHOT"],
+        "suggestedDueDays": 60,
+        "priority": "HIGH",
+        "orderIndex": 2,
+        "products": ["IBM OpenScale", "Arthur AI", "LIME", "SHAP"]
+      }
+    ]
+  }
+]

@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  ArrowUpRight, ArrowDownRight, TrendingUp, ArrowRight, CheckCircle2,
-  AlertTriangle, Clock, Shield, Database, FileCheck, Users, Zap,
-  BarChart2, XCircle, MoreHorizontal
+  ArrowUpRight, ArrowDownRight, ArrowRight, CheckCircle2,
+  AlertTriangle, Database, Users, Loader2, BarChart2, XCircle,
+  Shield, Zap, Plus
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Legend,
-  BarChart, Bar
 } from 'recharts';
-import { useApp, ROLE_COLORS, ROLE_INITIALS, ROLE_LABELS } from '../../context/AppContext';
+import { useApp, ROLE_COLORS, ROLE_LABELS } from '../../context/AppContext';
+import { useDashboardStats, type DashboardStats } from '../../../hooks/useDashboard';
 
-// ─── Shared data ──────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const RISK_LEVEL = (s: number) =>
   s <= 20 ? { label: 'Low', color: '#22C55E' }
   : s <= 40 ? { label: 'Moderate', color: '#EAB308' }
@@ -20,46 +20,10 @@ const RISK_LEVEL = (s: number) =>
   : s <= 80 ? { label: 'Critical', color: '#EF4444' }
   : { label: 'Severe', color: '#7F1D1D' };
 
-const TREND_DATA = [
-  { date: 'Feb 1', DPDP: 52, RBI: 44, SEBI: 31 },
-  { date: 'Feb 15', DPDP: 56, RBI: 46, SEBI: 33 },
-  { date: 'Mar 1', DPDP: 59, RBI: 49, SEBI: 36 },
-  { date: 'Mar 15', DPDP: 62, RBI: 52, SEBI: 38 },
-  { date: 'Apr 1', DPDP: 66, RBI: 56, SEBI: 41 },
-  { date: 'Apr 15', DPDP: 70, RBI: 59, SEBI: 44 },
-  { date: 'Apr 26', DPDP: 74, RBI: 61, SEBI: 47 },
-];
-
-const DEPT_COMPLIANCE = [
-  { name: 'Finance', compliant: 42, inProgress: 28, nonCompliant: 30, notStarted: 0 },
-  { name: 'Marketing', compliant: 55, inProgress: 25, nonCompliant: 15, notStarted: 5 },
-  { name: 'HR', compliant: 68, inProgress: 18, nonCompliant: 10, notStarted: 4 },
-  { name: 'Sales', compliant: 72, inProgress: 18, nonCompliant: 10, notStarted: 0 },
-  { name: 'Engineering', compliant: 74, inProgress: 15, nonCompliant: 8, notStarted: 3 },
-];
-
-const DONUT_DATA = {
-  DPDP: [{ name: 'Compliant', value: 35, color: '#22C55E' }, { name: 'In Progress', value: 28, color: '#3B82F6' }, { name: 'Non-Compliant', value: 12, color: '#F87171' }, { name: 'Not Started', value: 25, color: '#94A3B8' }],
-  RBI:  [{ name: 'Compliant', value: 42, color: '#22C55E' }, { name: 'In Progress', value: 31, color: '#3B82F6' }, { name: 'Non-Compliant', value: 8,  color: '#F87171' }, { name: 'Not Started', value: 19, color: '#94A3B8' }],
-  SEBI: [{ name: 'Compliant', value: 28, color: '#22C55E' }, { name: 'In Progress', value: 22, color: '#3B82F6' }, { name: 'Non-Compliant', value: 18, color: '#F87171' }, { name: 'Not Started', value: 32, color: '#94A3B8' }],
+const ROLE_MAP: Record<string, string> = {
+  CEO: 'ceo', CO: 'co', IT_ADMIN: 'it_admin',
+  INTERNAL_AUDITOR: 'internal_auditor', EXTERNAL_AUDITOR: 'external_auditor',
 };
-
-const ACTIVITY = [
-  { user: 'Manish Kumar', role: 'it_admin', initials: 'MK', action: 'submitted evidence for Data Encryption on', asset: 'Customer Database', time: '2h ago' },
-  { user: 'Rahul Mehta', role: 'internal_auditor', initials: 'RM', action: 'approved evidence for Consent Mechanism on', asset: 'HR Portal', time: '5h ago' },
-  { user: 'Priya Sharma', role: 'co', initials: 'PS', action: 'created new assessment:', asset: 'DPDP Q1 2025', time: '1 day ago' },
-  { user: 'Sunita Joshi', role: 'external_auditor', initials: 'SJ', action: 'provided final sign-off for', asset: 'AWS DPA Agreement', time: '2 days ago' },
-  { user: 'Manish Kumar', role: 'it_admin', initials: 'MK', action: 'started work on', asset: 'Parental Consent Flow implementation', time: '2 days ago' },
-  { user: 'Priya Sharma', role: 'co', initials: 'PS', action: 'created compliance task for', asset: 'Payment Gateway Data Flow', time: '3 days ago' },
-];
-
-const DEADLINES = [
-  { name: 'Q1 2025 DPDP Assessment', type: 'Assessment', dueDate: '2025-04-30', daysLeft: 4 },
-  { name: 'Parental Consent Flow', type: 'Task', dueDate: '2025-05-10', daysLeft: 14 },
-  { name: 'AWS Infrastructure Audit', type: 'Assessment', dueDate: '2025-05-15', daysLeft: 19 },
-  { name: 'Data Retention Schedule', type: 'Task', dueDate: '2025-05-20', daysLeft: 24 },
-  { name: 'Cross-Border Transfer Review', type: 'Task', dueDate: '2025-04-20', daysLeft: -6 },
-];
 
 // ─── Shared components ────────────────────────────────────────────────────────
 function MetricCard({ label, value, sub, color, trend, extraClass = '' }: {
@@ -83,7 +47,7 @@ function MetricCard({ label, value, sub, color, trend, extraClass = '' }: {
   );
 }
 
-function DonutChart({ data, label, total }: { data: typeof DONUT_DATA['DPDP']; label: string; total: number }) {
+function DonutChart({ data, label, total }: { data: { name: string; value: number; color: string }[]; label: string; total: number }) {
   const navigate = useNavigate();
   const pct = Math.round((data[0].value / total) * 100);
   return (
@@ -94,7 +58,7 @@ function DonutChart({ data, label, total }: { data: typeof DONUT_DATA['DPDP']; l
           <ResponsiveContainer width={80} height={80}>
             <PieChart>
               <Pie data={data} cx={35} cy={35} innerRadius={26} outerRadius={38} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
-                {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+                {data.map((d: { name: string; value: number; color: string }, i: number) => <Cell key={i} fill={d.color} />)}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
@@ -103,7 +67,7 @@ function DonutChart({ data, label, total }: { data: typeof DONUT_DATA['DPDP']; l
           </div>
         </div>
         <div className="space-y-1.5">
-          {data.map(d => (
+          {data.map((d: { name: string; value: number; color: string }) => (
             <div key={d.name} className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
               <span className="text-[11px] text-slate-600">{d.value} {d.name}</span>
@@ -135,19 +99,19 @@ function RiskGauge({ score, size = 'md' }: { score: number; size?: 'lg' | 'md' }
   );
 }
 
-function ActivityFeed({ items = ACTIVITY }: { items?: typeof ACTIVITY }) {
+function ActivityFeed({ items = [] }: { items?: DashboardStats['recentActivity'] }) {
   return (
     <div className="space-y-3">
       {items.slice(0, 8).map((item, i) => (
         <div key={i} className="flex items-start gap-3">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: `${ROLE_COLORS[item.role as keyof typeof ROLE_COLORS]}20`, color: ROLE_COLORS[item.role as keyof typeof ROLE_COLORS] }}>
-            {item.initials}
+            {item.user.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[12px] text-slate-700">
               <span className="font-semibold">{item.user}</span>
               <span className="text-slate-400 text-[10.5px] ml-1">({ROLE_LABELS[item.role as keyof typeof ROLE_LABELS]})</span>
-              {' '}{item.action} <span className="font-medium text-slate-800">{item.asset}</span>
+              {' '}{item.action} <span className="font-medium text-slate-800">{item.details}</span>
             </p>
             <p className="text-[10.5px] text-slate-400 mt-0.5">{item.time}</p>
           </div>
@@ -158,11 +122,12 @@ function ActivityFeed({ items = ACTIVITY }: { items?: typeof ACTIVITY }) {
   );
 }
 
-function UpcomingDeadlines() {
+function UpcomingDeadlines({ items = [] }: { items?: DashboardStats['upcomingDeadlines'] }) {
   const navigate = useNavigate();
   return (
     <div className="space-y-2">
-      {DEADLINES.sort((a, b) => a.daysLeft - b.daysLeft).map((d, i) => {
+      {items.length === 0 && <p className="text-[12px] text-slate-400 italic">No upcoming deadlines.</p>}
+      {[...items].sort((a, b) => a.daysLeft - b.daysLeft).map((d, i) => {
         const overdue = d.daysLeft < 0;
         const urgent = d.daysLeft >= 0 && d.daysLeft < 7;
         const warn = d.daysLeft >= 7 && d.daysLeft <= 14;
@@ -191,25 +156,29 @@ function UpcomingDeadlines() {
 }
 
 // ─── CEO Dashboard ─────────────────────────────────────────────────────────────
-function CEODashboard() {
+function CEODashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
+  const score = stats?.complianceScore ?? null;
+  const risk  = stats?.riskScore ?? 0;
+  const c     = stats?.counts;
+  const depts = stats?.deptCompliance ?? [];
+  const regs  = stats?.regulationCompliance ?? [];
+  const ah    = stats?.assetHealth;
+  const scoreDisplay = score !== null ? `${score}%` : 'N/A';
+
   return (
     <div className="space-y-5">
       {/* Row 1: KPI cards */}
       <div className="grid grid-cols-5 gap-3">
-        <MetricCard label="Overall Compliance Score" value="74%" sub="across all active assessments" color="#22C55E" trend="+4% vs last week" />
-        <MetricCard label="Active Assessments" value={2} sub="2 DPDP · 0 RBI · 0 SEBI" color="#3B82F6" />
-        <MetricCard label="Open Compliance Tasks" value={18} sub="6 pending · 8 in progress · 4 under review" color="#F97316" />
-        <MetricCard label="Overdue Actions" value={3} sub="Require immediate attention" color="#EF4444" />
+        <MetricCard label="Overall Compliance Score" value={scoreDisplay} sub="across all active assessments" color="#22C55E" />
+        <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
+        <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
+        <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(67).color }} />
+          <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(risk).color }} />
           <div className="p-4">
             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p>
-            <RiskGauge score={67} size="md" />
-            <div className="flex items-center gap-1 mt-1">
-              <ArrowDownRight className="w-3 h-3 text-red-500" />
-              <span className="text-[10.5px] text-slate-400">+3 vs last week</span>
-            </div>
+            <RiskGauge score={risk} size="md" />
           </div>
         </div>
       </div>
@@ -217,115 +186,105 @@ function CEODashboard() {
       {/* Row 2: Compliance by Regulation */}
       <div>
         <p className="text-[14px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Compliance by Regulation</p>
-        <div className="flex gap-3">
-          <DonutChart data={DONUT_DATA.DPDP} label="DPDP Act 2023" total={100} />
-          <DonutChart data={DONUT_DATA.RBI}  label="RBI Data Localisation" total={100} />
-          <DonutChart data={DONUT_DATA.SEBI} label="SEBI Cybersecurity" total={100} />
-        </div>
+        {regs.length > 0 ? (
+          <div className="flex gap-3">
+            {regs.slice(0, 3).map(r => {
+              const data = [
+                { name: 'Compliant', value: r.compliant, color: '#22C55E' },
+                { name: 'In Progress', value: r.inProgress, color: '#3B82F6' },
+                { name: 'Non-Compliant', value: r.nonCompliant, color: '#F87171' },
+                { name: 'Not Started', value: r.notStarted, color: '#94A3B8' },
+              ];
+              return <DonutChart key={r.name} data={data} label={r.name} total={r.total || 1} />;
+            })}
+          </div>
+        ) : (
+          <p className="text-[12px] text-slate-400 italic p-4 bg-slate-50 rounded-lg">No assessments yet — create one to see regulation compliance.</p>
+        )}
       </div>
 
       {/* Row 3: Dept Compliance + Risk Gauge */}
       <div className="grid grid-cols-5 gap-4">
         <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-[13px] font-semibold text-slate-800 mb-3">Department Compliance Overview</p>
-          <div className="space-y-2">
-            {DEPT_COMPLIANCE.sort((a, b) => a.compliant - b.compliant).map(d => (
-              <div key={d.name} className="flex items-center gap-3">
-                <p className="text-[11.5px] text-slate-600 w-20 flex-shrink-0">{d.name}</p>
-                <div className="flex-1 h-5 bg-slate-100 rounded flex overflow-hidden cursor-pointer hover:opacity-80" onClick={() => navigate('/org/assets')}>
-                  <div className="h-full" style={{ width: `${d.compliant}%`, background: '#22C55E' }} />
-                  <div className="h-full" style={{ width: `${d.inProgress}%`, background: '#3B82F6' }} />
-                  <div className="h-full" style={{ width: `${d.nonCompliant}%`, background: '#F87171' }} />
-                  <div className="h-full" style={{ width: `${d.notStarted}%`, background: '#94A3B8' }} />
+          {depts.length > 0 ? (
+            <div className="space-y-2">
+              {depts.sort((a, b) => a.compliant - b.compliant).map(d => (
+                <div key={d.name} className="flex items-center gap-3">
+                  <p className="text-[11.5px] text-slate-600 w-20 flex-shrink-0">{d.name}</p>
+                  <div className="flex-1 h-5 bg-slate-100 rounded flex overflow-hidden cursor-pointer hover:opacity-80" onClick={() => navigate('/org/assets')}>
+                    <div className="h-full" style={{ width: `${d.compliant}%`, background: '#22C55E' }} />
+                    <div className="h-full" style={{ width: `${d.inProgress}%`, background: '#3B82F6' }} />
+                    <div className="h-full" style={{ width: `${d.nonCompliant}%`, background: '#F87171' }} />
+                    <div className="h-full" style={{ width: `${d.notStarted}%`, background: '#94A3B8' }} />
+                  </div>
+                  <span className="text-[11.5px] font-semibold text-slate-700 w-8 text-right flex-shrink-0">{d.compliant}%</span>
                 </div>
-                <span className="text-[11.5px] font-semibold text-slate-700 w-8 text-right flex-shrink-0">{d.compliant}%</span>
-              </div>
-            ))}
-            <div className="flex gap-3 pt-2">
-              {[['#22C55E', 'Compliant'], ['#3B82F6', 'In Progress'], ['#F87171', 'Non-Compliant'], ['#94A3B8', 'Not Started']].map(([c, l]) => (
-                <div key={l} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: c }} /><span className="text-[10px] text-slate-400">{l}</span></div>
               ))}
             </div>
-          </div>
+          ) : (
+            <p className="text-[12px] text-slate-400 italic">No assessment data yet.</p>
+          )}
         </div>
         <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-[13px] font-semibold text-slate-800 mb-2">Risk Score</p>
           <div className="flex flex-col items-center py-2">
-            <RiskGauge score={67} size="lg" />
-            <p className="text-[11px] text-slate-400 mt-2">Overall Risk: {RISK_LEVEL(67).label}</p>
+            <RiskGauge score={risk} size="lg" />
+            <p className="text-[11px] text-slate-400 mt-2">Overall Risk: {RISK_LEVEL(risk).label}</p>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <p className="text-[11px] font-semibold text-slate-600 mb-1.5">Top Risk Driver</p>
-            <p className="text-[12px] font-semibold text-slate-800">Customer Database</p>
-            <p className="text-[11px] text-slate-400">Engineering · DPDP Act 2023</p>
-            <p className="text-[10.5px] text-slate-400 mt-0.5">14 non-compliant controls · 6 overdue actions</p>
-            <button className="text-[11.5px] text-blue-600 hover:text-blue-700 font-medium mt-1.5">View Asset →</button>
-          </div>
+          {stats?.riskiestAsset && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <p className="text-[11px] font-semibold text-slate-600 mb-1.5">Top Risk Driver</p>
+              <p className="text-[12px] font-semibold text-slate-800">{stats.riskiestAsset.name}</p>
+              <button className="text-[11.5px] text-blue-600 hover:text-blue-700 font-medium mt-1.5" onClick={() => navigate('/org/assets')}>View Asset →</button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Row 4: Trend + Asset Health */}
+      {/* Row 4: Asset Health + Activity */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[13px] font-semibold text-slate-800">Compliance Trend</p>
-            <div className="flex gap-1.5">
-              {['30d', '90d', '1y'].map(d => (
-                <button key={d} className={`px-2 py-0.5 rounded text-[10.5px] font-medium ${d === '90d' ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-500 hover:border-blue-300'}`}>{d}</button>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={TREND_DATA}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 6 }} />
-              <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-              <Line type="monotone" dataKey="DPDP" stroke="#3B82F6" strokeWidth={2} dot={false} name="DPDP" />
-              <Line type="monotone" dataKey="RBI" stroke="#10B981" strokeWidth={2} dot={false} name="RBI" />
-              <Line type="monotone" dataKey="SEBI" stroke="#8B5CF6" strokeWidth={2} dot={false} name="SEBI" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
         <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-[13px] font-semibold text-slate-800 mb-2">Asset Health Summary</p>
-          <p className="text-[30px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>6</p>
-          <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex mb-3">
-            {[{ w: 33, c: '#22C55E' }, { w: 33, c: '#3B82F6' }, { w: 17, c: '#F87171' }, { w: 17, c: '#94A3B8' }].map((s, i) => (
-              <div key={i} className="h-full" style={{ width: `${s.w}%`, background: s.c }} />
-            ))}
-          </div>
+          <p className="text-[30px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>{ah?.total ?? 0}</p>
+          {(ah?.total ?? 0) > 0 && (
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex mb-3">
+              {ah && [{ w: ah.fullyCompliant, c: '#22C55E' }, { w: ah.partiallyCompliant, c: '#3B82F6' }, { w: ah.nonCompliant, c: '#F87171' }, { w: ah.notStarted, c: '#94A3B8' }].map((s, i) => (
+                <div key={i} className="h-full" style={{ width: `${Math.round((s.w / (ah.total || 1)) * 100)}%`, background: s.c }} />
+              ))}
+            </div>
+          )}
           <div className="space-y-1 text-[11px]">
-            {[['#22C55E', '2 Fully Compliant'], ['#3B82F6', '2 Partially Compliant'], ['#F87171', '1 Non-Compliant'], ['#94A3B8', '1 Not Started']].map(([c, l]) => (
-              <div key={l} className="flex items-center gap-2"><span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }} /><span className="text-slate-600">{l}</span></div>
+            {ah && [['#22C55E', `${ah.fullyCompliant} Fully Compliant`], ['#3B82F6', `${ah.partiallyCompliant} Partially Compliant`], ['#F87171', `${ah.nonCompliant} Non-Compliant`], ['#94A3B8', `${ah.notStarted} Not Started`]].map(([color, label]) => (
+              <div key={label} className="flex items-center gap-2"><span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} /><span className="text-slate-600">{label}</span></div>
             ))}
           </div>
-          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-[11px] text-amber-700">⚠ 1 asset has no PII records. Controls cannot be accurately mapped.</p>
-            <button className="text-[11px] text-amber-700 font-medium mt-0.5" onClick={() => navigate('/org/assets')}>Review Assets →</button>
-          </div>
+          {(ah?.noPiiRecords ?? 0) > 0 && (
+            <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-[11px] text-amber-700">⚠ {ah!.noPiiRecords} asset(s) have no PII records. Controls cannot be accurately mapped.</p>
+              <button className="text-[11px] text-amber-700 font-medium mt-0.5" onClick={() => navigate('/org/assets')}>Review Assets →</button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Row 5: Activity + Deadlines */}
-      <div className="grid grid-cols-5 gap-4">
         <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-[13px] font-semibold text-slate-800 mb-3">Recent Activity</p>
-          <ActivityFeed />
+          <ActivityFeed items={stats?.recentActivity} />
         </div>
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
-          <UpcomingDeadlines />
-        </div>
+      </div>
+      {/* Row 5: Deadlines */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4">
+        <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
+        <UpcomingDeadlines items={stats?.upcomingDeadlines} />
       </div>
     </div>
   );
 }
 
 // ─── CO Dashboard ─────────────────────────────────────────────────────────────
-function CODashboard() {
+function CODashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
+  const c = stats?.counts;
+  const score = stats?.complianceScore ?? null;
   return (
     <div className="space-y-5">
       {/* Attention Banner */}
@@ -352,13 +311,13 @@ function CODashboard() {
 
       {/* Same KPI row as CEO */}
       <div className="grid grid-cols-5 gap-3">
-        <MetricCard label="Overall Compliance Score" value="74%" sub="across all active assessments" color="#22C55E" />
-        <MetricCard label="Active Assessments" value={2} sub="2 DPDP · 0 RBI" color="#3B82F6" />
-        <MetricCard label="Open Compliance Tasks" value={18} sub="6 pending · 8 in progress" color="#F97316" />
-        <MetricCard label="Overdue Actions" value={3} sub="Require immediate attention" color="#EF4444" />
+        <MetricCard label="Overall Compliance Score" value={score !== null ? `${score}%` : 'N/A'} sub="across all active assessments" color="#22C55E" />
+        <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
+        <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
+        <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(67).color }} />
-          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p><RiskGauge score={67} size="md" /></div>
+          <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(stats?.riskScore ?? 0).color }} />
+          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p><RiskGauge score={stats?.riskScore ?? 0} size="md" /></div>
         </div>
       </div>
 
@@ -421,32 +380,17 @@ function CODashboard() {
         <div className="col-span-3 bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <p className="text-[13px] font-semibold text-slate-800">Controls With No Action Assigned</p>
-            <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">3 gaps</span>
+            <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">{c?.unassignedTasks ?? 0} gaps</span>
           </div>
-          <table className="w-full text-[12px]">
-            <thead><tr className="border-b border-slate-100 bg-slate-50 text-slate-500 text-left">
-              {['Asset', 'Dept', 'Control', 'Regulation', ''].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {[
-                { asset: 'Customer Database', dept: 'Engineering', control: 'DPDP-CH3-001', reg: 'DPDP' },
-                { asset: 'Payment Gateway', dept: 'Finance', control: 'RBI-CH2-001', reg: 'RBI' },
-                { asset: 'CRM Portal', dept: 'Sales', control: 'DPDP-CH2-003', reg: 'DPDP' },
-              ].map((g, i) => (
-                <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{g.asset}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{g.dept}</td>
-                  <td className="px-3 py-2.5"><span className="font-mono text-[10.5px] text-slate-600">{g.control}</span></td>
-                  <td className="px-3 py-2.5"><span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-semibold">{g.reg}</span></td>
-                  <td className="px-3 py-2.5"><button className="text-[11px] text-blue-600 font-medium hover:text-blue-700">Create Task →</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {(c?.unassignedTasks ?? 0) === 0 ? (
+            <div className="py-8 text-center"><p className="text-[12px] text-slate-400">No unassigned controls — great work!</p></div>
+          ) : (
+            <div className="py-4 px-4"><p className="text-[12px] text-slate-500">View compliance tasks to assign team members to open controls.</p><button onClick={() => navigate('/org/compliance-tasks')} className="mt-2 text-[12px] text-blue-600 font-medium">Go to Tasks →</button></div>
+          )}
         </div>
         <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
-          <UpcomingDeadlines />
+          <UpcomingDeadlines items={stats?.upcomingDeadlines} />
         </div>
       </div>
     </div>
@@ -454,29 +398,23 @@ function CODashboard() {
 }
 
 // ─── IT Admin Dashboard ────────────────────────────────────────────────────────
-function ITAdminDashboard() {
+function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
-  const tasks = [
-    { id: 'TSK-001', title: 'Implement AES-256 encryption for Customer DB', asset: 'Customer Database', assetType: 'Data Asset', control: 'DPDP-CH2-006', reg: 'DPDP', priority: 'Critical', dueDate: '2025-05-15', daysLeft: 19, status: 'In Progress' },
-    { id: 'TSK-003', title: 'Fix consent withdrawal mechanism', asset: 'Customer Database', assetType: 'Data Asset', control: 'DPDP-CH2-002', reg: 'DPDP', priority: 'High', dueDate: '2025-04-30', daysLeft: 4, status: 'Pending' },
-    { id: 'TSK-005', title: 'Implement parental consent flow', asset: 'Customer Database', assetType: 'Data Asset', control: 'DPDP-CH4-001', reg: 'DPDP', priority: 'Critical', dueDate: '2025-04-10', daysLeft: -16, status: 'Rejected' },
-  ];
-  const rejected = tasks.filter(t => t.status === 'Rejected');
-
-  const PRIORITY_COLORS: Record<string, string> = { Critical: '#EF4444', High: '#F97316', Medium: '#EAB308', Low: '#22C55E' };
-  const STATUS_COLORS: Record<string, string> = { Pending: '#F59E0B', 'In Progress': '#3B82F6', Rejected: '#EF4444', Completed: '#22C55E' };
+  const c = stats?.counts;
+  const tasks = stats?.myTasks ?? [];
+  const PRIORITY_COLORS: Record<string, string> = { CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#EAB308', LOW: '#22C55E', Critical: '#EF4444', High: '#F97316', Medium: '#EAB308', Low: '#22C55E' };
+  const STATUS_COLORS: Record<string, string> = { PENDING: '#F59E0B', IN_PROGRESS: '#3B82F6', REJECTED: '#EF4444', COMPLIANT: '#22C55E', EVIDENCE_SUBMITTED: '#06B6D4', Pending: '#F59E0B', 'In Progress': '#3B82F6', Rejected: '#EF4444' };
+  const rejected = tasks.filter(t => t.status === 'REJECTED' || t.status === 'Rejected');
 
   return (
     <div className="space-y-5">
       {/* Row 1: KPIs */}
       <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Pending Tasks', value: 1, color: '#F59E0B', sub: 'Assigned, not started' },
-          { label: 'In Progress', value: 1, color: '#3B82F6', sub: 'Currently working on' },
-          { label: 'Submitted', value: 1, color: '#06B6D4', sub: 'Awaiting review' },
-          { label: 'Rejected', value: 1, color: '#EF4444', sub: 'Need rework' },
-        ].map(c => <MetricCard key={c.label} {...c} />)}
+        <MetricCard label="Pending Tasks" value={c?.myPendingTasks ?? 0} color="#F59E0B" sub="Assigned, not started" />
+        <MetricCard label="In Progress" value={c?.myInProgressTasks ?? 0} color="#3B82F6" sub="Currently working on" />
+        <MetricCard label="Submitted" value={c?.mySubmittedTasks ?? 0} color="#06B6D4" sub="Awaiting review" />
+        <MetricCard label="Rejected" value={c?.myRejectedTasks ?? 0} color="#EF4444" sub="Need rework" />
       </div>
 
       {/* Rejected section */}
@@ -519,8 +457,7 @@ function ITAdminDashboard() {
                   <p className="text-[11.5px] font-semibold text-slate-600">Work on: {t.asset}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-[11px] text-slate-400">{t.control}</p>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">{t.reg}</span>
+                  <p className="text-[11px] text-slate-400">Due: {t.dueDate}</p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
@@ -570,23 +507,18 @@ function ITAdminDashboard() {
 }
 
 // ─── Internal Auditor Dashboard ────────────────────────────────────────────────
-function IADashboard() {
+function IADashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
-  const QUEUE = [
-    { task: 'Implement AES-256 encryption for Customer DB', asset: 'Customer Database', assetType: 'Data Asset', dept: 'Engineering', submittedBy: 'Manish Kumar', elapsed: '2 days ago', reg: 'DPDP', control: 'DPDP-CH2-006' },
-    { task: 'Review AWS DPA agreement', asset: 'AWS Cloud Infra', assetType: 'Third-Party Vendor', dept: 'Engineering', submittedBy: 'Manish Kumar', elapsed: '4 days ago', reg: 'DPDP', control: 'DPDP-CH2-007' },
-    { task: 'Cookie consent banner update', asset: 'Consent Banner', assetType: 'Consent Mechanism', dept: 'Marketing', submittedBy: 'Kavya Reddy', elapsed: '5 days ago', reg: 'DPDP', control: 'DPDP-CH2-002' },
-  ];
+  const c = stats?.counts;
+  const queue = stats?.reviewQueue ?? [];
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Pending Review', value: 3, color: '#3B82F6', sub: 'Evidence awaiting your review' },
-          { label: 'Reviewed Today', value: 2, color: '#22C55E', sub: 'Processed today' },
-          { label: 'Approved Total', value: 14, color: '#10B981', sub: 'This assessment cycle' },
-          { label: 'Rejected Total', value: 3, color: '#EF4444', sub: 'Sent back for rework' },
-        ].map(c => <MetricCard key={c.label} {...c} />)}
+        <MetricCard label="Pending Review" value={c?.pendingReview ?? 0} color="#3B82F6" sub="Evidence awaiting your review" />
+        <MetricCard label="Reviewed Today" value={0} color="#22C55E" sub="Processed today" />
+        <MetricCard label="Approved Total" value={0} color="#10B981" sub="This assessment cycle" />
+        <MetricCard label="Rejected Total" value={0} color="#EF4444" sub="Sent back for rework" />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -594,7 +526,7 @@ function IADashboard() {
           <p className="text-[13px] font-semibold text-slate-800">Evidence Awaiting Your Review</p>
           <p className="text-[11px] text-slate-400">Oldest first — review in order of submission</p>
         </div>
-        {QUEUE.length === 0 ? (
+        {queue.length === 0 ? (
           <div className="py-12 text-center">
             <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" />
             <p className="text-[14px] font-semibold text-slate-600">All caught up!</p>
@@ -602,20 +534,15 @@ function IADashboard() {
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
-            {QUEUE.map((item, i) => (
+            {queue.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.task}</p>
+                  <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <Database className="w-3 h-3 text-blue-400" />
                     <span className="text-[11.5px] font-semibold text-blue-700">{item.asset}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{item.assetType}</span>
-                    <span className="text-[10.5px] text-slate-400">{item.dept}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10.5px] text-slate-400">Submitted by: <span className="font-medium text-slate-600">{item.submittedBy}</span> · {item.elapsed}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">{item.reg}</span>
-                  </div>
+                  <span className="text-[10.5px] text-slate-400">Submitted by: <span className="font-medium text-slate-600">{item.submittedBy}</span></span>
                 </div>
                 <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0">
                   Review Evidence <ArrowRight className="w-3.5 h-3.5" />
@@ -668,20 +595,19 @@ function IADashboard() {
 }
 
 // ─── External Auditor Dashboard ────────────────────────────────────────────────
-function EADashboard() {
+function EADashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
-  const QUEUE = [
-    { task: 'Data Retention Schedule', asset: 'Customer Database', dept: 'Engineering', ia: 'Rahul Mehta', iaDate: 'Apr 24, 2025', control: 'DPDP-CH2-005', reg: 'DPDP' },
-    { task: 'AWS DPA Agreement 2025', asset: 'AWS Cloud Infra', dept: 'Engineering', ia: 'Rahul Mehta', iaDate: 'Apr 22, 2025', control: 'DPDP-CH2-007', reg: 'DPDP' },
-  ];
+  const c = stats?.counts;
+  const queue = stats?.finalSignOffQueue ?? [];
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-3 gap-3">
-        <MetricCard label="Pending Sign-Off" value={2} sub="Internally approved, awaiting final sign-off" color="#F59E0B" />
-        <MetricCard label="Signed Off This Cycle" value={6} sub="Final approvals given" color="#22C55E" />
+        <MetricCard label="Pending Sign-Off" value={c?.finalReview ?? 0} sub="Internally approved, awaiting final sign-off" color="#F59E0B" />
+        <MetricCard label="Signed Off This Cycle" value={0} sub="Final approvals given" color="#22C55E" />
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="h-0.5 bg-green-500 w-full" />
-          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Overall Compliance Score</p><RiskGauge score={74} size="md" /></div>
+          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Overall Compliance Score</p><RiskGauge score={stats?.complianceScore ?? 0} size="md" /></div>
         </div>
       </div>
 
@@ -690,30 +616,26 @@ function EADashboard() {
           <p className="text-[13px] font-semibold text-slate-800">Items Ready for Final Sign-Off</p>
         </div>
         <div className="divide-y divide-slate-50">
-          {QUEUE.map((item, i) => (
+          {queue.map((item, i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50">
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.task}</p>
+                <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Database className="w-3 h-3 text-blue-400" />
                   <span className="text-[11.5px] font-semibold text-blue-700">{item.asset}</span>
-                  <span className="text-[10.5px] text-slate-400">{item.dept}</span>
                 </div>
-                <p className="text-[11px] text-slate-400">Approved by: <span className="font-medium text-slate-600">{item.ia}</span> on {item.iaDate} · <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-semibold">{item.reg}</span></p>
-              </div>
-              <div className="text-right flex-shrink-0 ml-4">
-                <span className="text-[9.5px] text-slate-400 uppercase tracking-wider border border-slate-200 px-1.5 py-0.5 rounded">View Only</span>
               </div>
               <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors flex-shrink-0">
-                Review & Sign Off <ArrowRight className="w-3.5 h-3.5" />
+                Review &amp; Sign Off <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
-          {QUEUE.length === 0 && (
+          {queue.length === 0 && (
             <div className="py-12 text-center"><CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" /><p className="text-[13px] text-slate-500">No items pending your sign-off</p></div>
           )}
         </div>
       </div>
+
 
       {/* Read-only compliance overview */}
       <div className="flex items-start gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg">
@@ -721,9 +643,67 @@ function EADashboard() {
         <span className="text-[9.5px] border border-slate-300 text-slate-400 px-1.5 py-0.5 rounded ml-auto flex-shrink-0">View Only</span>
       </div>
       <div className="flex gap-3">
-        <DonutChart data={DONUT_DATA.DPDP} label="DPDP Act 2023" total={100} />
-        <DonutChart data={DONUT_DATA.RBI}  label="RBI Data Localisation" total={100} />
-        <DonutChart data={DONUT_DATA.SEBI} label="SEBI Cybersecurity" total={100} />
+        {stats?.regulationCompliance && stats.regulationCompliance.length > 0 ? stats.regulationCompliance.slice(0,3).map(r => {
+          const d = [{ name:'Compliant',value:r.compliant,color:'#22C55E'},{name:'In Progress',value:r.inProgress,color:'#3B82F6'},{name:'Non-Compliant',value:r.nonCompliant,color:'#F87171'},{name:'Not Started',value:r.notStarted,color:'#94A3B8'}];
+          return <DonutChart key={r.name} data={d} label={r.name} total={r.total||1} />;
+        }) : <p className="text-[12px] text-slate-400 italic">No assessment data yet.</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+function DashSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="grid grid-cols-5 gap-3">
+        {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-slate-200 rounded-lg" />)}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {[...Array(3)].map((_, i) => <div key={i} className="h-32 bg-slate-200 rounded-lg" />)}
+      </div>
+      <div className="grid grid-cols-5 gap-3">
+        <div className="col-span-3 h-48 bg-slate-200 rounded-lg" />
+        <div className="col-span-2 h-48 bg-slate-200 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Get-started CTA ─────────────────────────────────────────────────────────
+function GetStartedCTA() {
+  const navigate = useNavigate();
+  return (
+    <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex items-start gap-5">
+      <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+        <Shield className="w-6 h-6 text-white" />
+      </div>
+      <div className="flex-1">
+        <p className="text-[15px] font-bold text-slate-900 mb-1">Create your first assessment to see compliance data</p>
+        <p className="text-[12.5px] text-slate-500 leading-relaxed mb-4">Your organization is set up. Start an assessment to track compliance controls, assign tasks to your team, and measure progress across regulations.</p>
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/org/assessments/new')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors">
+            <Plus className="w-4 h-4" /> Create First Assessment
+          </button>
+          <button onClick={() => navigate('/org/assets')}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 text-[12.5px] font-medium rounded-lg hover:bg-white transition-colors">
+            View Assets
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+        {[
+          { icon: BarChart2, label: 'Assessments', desc: 'Track compliance' },
+          { icon: Users, label: 'Team', desc: 'Assign tasks' },
+          { icon: Zap, label: 'Controls', desc: 'Map regulations' },
+        ].map(({ icon: Icon, label, desc }) => (
+          <div key={label} className="text-center p-3 bg-white rounded-lg border border-blue-100">
+            <Icon className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+            <p className="text-[11px] font-bold text-slate-800">{label}</p>
+            <p className="text-[10px] text-slate-400">{desc}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -732,14 +712,7 @@ function EADashboard() {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function DashboardPage() {
   const { role, orgName } = useApp();
-
-  const ROLE_DASH: Record<string, React.ReactNode> = {
-    ceo: <CEODashboard />,
-    co: <CODashboard />,
-    it_admin: <ITAdminDashboard />,
-    internal_auditor: <IADashboard />,
-    external_auditor: <EADashboard />,
-  };
+  const { data: stats, isLoading } = useDashboardStats();
 
   const TITLES: Record<string, string> = {
     ceo: 'Executive Overview',
@@ -749,13 +722,28 @@ export function DashboardPage() {
     external_auditor: 'Final Sign-Off Dashboard',
   };
 
+  const ROLE_DASH: Record<string, React.ReactNode> = {
+    ceo: <CEODashboard stats={stats} />,
+    co: <CODashboard stats={stats} />,
+    it_admin: <ITAdminDashboard stats={stats} />,
+    internal_auditor: <IADashboard stats={stats} />,
+    external_auditor: <EADashboard stats={stats} />,
+  };
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{TITLES[role]}</h1>
-        <p className="text-[12px] text-slate-400 mt-0.5">{orgName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <p className="text-[12px] text-slate-400 mt-0.5">
+          {stats?.orgName || orgName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
-      {ROLE_DASH[role]}
+      {isLoading ? <DashSkeleton /> : (
+        <>
+          {stats && !stats.hasData && role === 'co' && <GetStartedCTA />}
+          {ROLE_DASH[role]}
+        </>
+      )}
     </div>
   );
 }

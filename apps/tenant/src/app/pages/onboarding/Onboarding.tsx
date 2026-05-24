@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ShieldCheck, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown,
   Plus, Trash2, Info, Building2, Package, Truck, AlertCircle,
   Shield, Scale, BarChart3, Users, Edit2, Check, X, Zap, AlertTriangle,
+  Loader2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { OrgStructureStep, Department, InviteUser, uid } from '../../components/onboarding/OrgStructureGraph';
+import { TeamInviteStep } from '../../components/onboarding/TeamInviteStep';
+import {
+  useOnboardingStatus,
+  useSaveOrgDetails,
+  useSaveClassification,
+  useSaveStructure,
+  useInviteTeamMembers,
+  useCompleteOnboarding,
+} from '../../../hooks/useOnboarding';
 
 const STEPS = [
   { label: 'Org Details',     short: '1' },
   { label: 'Classification',  short: '2' },
   { label: 'Structure',       short: '3' },
-  { label: 'Team',            short: '4' },
+  { label: 'Team Invites',    short: '4' },
   { label: 'Review',          short: '5' },
 ];
 
@@ -28,29 +39,67 @@ const JURISDICTIONS = ['India', 'United States', 'United Kingdom', 'European Uni
 const ROLES      = ['Compliance Officer', 'IT Admin', 'Internal Auditor', 'External Auditor'];
 const DEPT_ROLES = ['IT Admin', 'Internal Auditor'];
 
-const MOCK_ENTRA_GROUPS = ['GRP-ComplianceOfficers', 'GRP-ExternalAuditors', 'GRP-IT-Engineering', 'GRP-IT-HR', 'GRP-Auditors-Engineering', 'GRP-Auditors-HR', 'GRP-All-Admins'];
-const MOCK_GROUP_COUNTS: Record<string, number> = {
-  'GRP-ComplianceOfficers': 8, 'GRP-ExternalAuditors': 2, 'GRP-IT-Engineering': 12,
-  'GRP-IT-HR': 9, 'GRP-Auditors-Engineering': 6, 'GRP-Auditors-HR': 5, 'GRP-All-Admins': 15,
-};
-
-type Invite = { id: string; email: string; role: string; departments?: string[]; note?: string; status: 'Pending' | 'Sent' };
-
 export function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
+  // ── API hooks ─────────────────────────────────────────────────────────────
+  const { data: statusData }        = useOnboardingStatus();
+  const saveOrgDetails              = useSaveOrgDetails();
+  const saveClassification          = useSaveClassification();
+  const saveStructure               = useSaveStructure();
+  const inviteTeamMembers           = useInviteTeamMembers();
+  const completeOnboarding          = useCompleteOnboarding();
+
+  /** frontendId → DB UUID mapping returned by saveStructure */
+  const [deptIdMap, setDeptIdMap]   = useState<Record<string, string>>({});
+  const [isSaving,  setIsSaving]    = useState(false);
+
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Resume from last completed step on mount
+  useEffect(() => {
+    if (!statusData) return;
+    if (statusData.isComplete) { navigate('/org/dashboard'); return; }
+    
+    if (!hasInitialized) {
+      const s = statusData.steps;
+      if      (!s.orgDetails)    setStep(0);
+      else if (!s.orgStructure)  setStep(1); // Force classification step even if default is set
+      else                       setStep(3);
+      setHasInitialized(true);
+    }
+
+    // Pre-populate org name from saved data
+    if (statusData.tenant.name)     setOrgName(statusData.tenant.name);
+    if (statusData.tenant.industry) setIndustry(statusData.tenant.industry);
+    if (statusData.tenant.orgSize)  setOrgSize(statusData.tenant.orgSize);
+    if (statusData.tenant.address)  setAddress(statusData.tenant.address);
+    if (statusData.tenant.dpoName)  setDpoName(statusData.tenant.dpoName);
+    if (statusData.tenant.dpoEmail) setDpoEmail(statusData.tenant.dpoEmail);
+    if (statusData.tenant.contactEmail) setContactEmail(statusData.tenant.contactEmail);
+    if (statusData.tenant.classification)
+      setClassification(statusData.tenant.classification as any);
+
+    // Store dept IDs from previously saved structure
+    if (statusData.departments.length > 0) {
+      const map: Record<string, string> = {};
+      statusData.departments.forEach(d => { map[d.name] = d.id; });
+      setDeptIdMap(map);
+    }
+  }, [statusData]);
+
   // ── Step 1 ────────────────────────────────────────────────────────────────
-  const [orgName,    setOrgName]    = useState('TechNova Solutions Pvt. Ltd.');
-  const [industry,   setIndustry]   = useState('Technology');
-  const [orgSize,    setOrgSize]    = useState('201–1000');
-  const [address,    setAddress]    = useState('101 Tech Park, Whitefield, Bengaluru - 560066, Karnataka');
+  const [orgName,    setOrgName]    = useState('');
+  const [industry,   setIndustry]   = useState('');
+  const [orgSize,    setOrgSize]    = useState('');
+  const [address,    setAddress]    = useState('');
   const [jurisdiction, setJurisdiction] = useState('India');
-  const [dpoName,    setDpoName]    = useState('Priya Sharma');
-  const [dpoEmail,   setDpoEmail]   = useState('dpo@technova.in');
-  const [dpoPhone,   setDpoPhone]   = useState('+91 98765 43210');
-  const [website,    setWebsite]    = useState('https://technova.in');
-  const [contactEmail, setContactEmail] = useState('amit.rao@technova.in');
+  const [dpoName,    setDpoName]    = useState('');
+  const [dpoEmail,   setDpoEmail]   = useState('');
+  const [dpoPhone,   setDpoPhone]   = useState('');
+  const [website,    setWebsite]    = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [panNumber,  setPanNumber]  = useState('');
   const [gstNumber,  setGstNumber]  = useState('');
 
@@ -60,61 +109,10 @@ export function OnboardingPage() {
   const [helpExpanded,    setHelpExpanded]    = useState(false);
 
   // ── Step 3 ────────────────────────────────────────────────────────────────
-  const [departments, setDepartments] = useState<Department[]>([{
-    id: uid(), name: 'Engineering', description: 'Software development and infrastructure', owner: 'Manish Kumar',
-    assets: [{
-      id: uid(), name: 'Customer Database', assetType: 'Database / Data Store',
-      description: 'Primary PostgreSQL database storing customer PII', assetOwner: 'Manish Kumar',
-      hostingLocation: 'India', vendorName: '', criticality: 'High', internetFacing: false,
-      status: 'Active',
-      piiRecords: [{
-        id: uid(), categories: ['Email', 'Name', 'Phone'], sensitivity: 'High',
-        purpose: 'Customer account management', legalBasis: 'Consent',
-        retention: '3 years', deletionMechanism: 'Hard delete + audit log',
-        volume: '500,000', crossBorderTransfer: false, crossBorderDestination: '',
-        principalType: 'Customer', sharedWithThirdParties: false,
-      }],
-    }],
-    suppliers: [],
-  }]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   // ── Step 4 ────────────────────────────────────────────────────────────────
-  const [invites, setInvites]     = useState<Invite[]>([{ id: uid(), email: 'priya@technova.in', role: 'Compliance Officer', status: 'Sent' }]);
-  const [newEmail, setNewEmail]   = useState('');
-  const [newRole,  setNewRole]    = useState('Compliance Officer');
-  const [newDepts, setNewDepts]   = useState<string[]>([]);
-  const [inviteNote, setInviteNote] = useState('');
-
-  // Entra ID multi-step state
-  const [entraState, setEntraState] = useState<'idle' | 'mapping' | 'preview' | 'sent'>('idle');
-  const [entraTenantId, setEntraTenantId] = useState('your-org.onmicrosoft.com');
-  const [entraGroupMappings, setEntraGroupMappings] = useState<{
-    complianceOfficer: string; externalAuditor: string;
-    deptMappings: { deptId: string; itAdmin: string; auditor: string }[];
-  }>({ complianceOfficer: '', externalAuditor: '', deptMappings: [] });
-
-  const startEntraMapping = () => {
-    setEntraGroupMappings(prev => ({
-      ...prev,
-      deptMappings: departments.map(d => ({
-        deptId: d.id,
-        itAdmin: prev.deptMappings.find(m => m.deptId === d.id)?.itAdmin || '',
-        auditor: prev.deptMappings.find(m => m.deptId === d.id)?.auditor || '',
-      })),
-    }));
-    setEntraState('mapping');
-  };
-
-  const addInvite = () => {
-    if (!newEmail.trim()) return;
-    setInvites(prev => [...prev, {
-      id: uid(), email: newEmail.trim(), role: newRole,
-      departments: DEPT_ROLES.includes(newRole) ? newDepts : [],
-      note: inviteNote || undefined, status: 'Sent',
-    }]);
-    setNewEmail(''); setNewDepts([]); setInviteNote('');
-  };
-  const removeInvite = (id: string) => setInvites(prev => prev.filter(i => i.id !== id));
+  const [invites, setInvites] = useState<InviteUser[]>([]);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   const totalAssets    = departments.reduce((s, d) => s + d.assets.length, 0);
@@ -124,7 +122,72 @@ export function OnboardingPage() {
     + d.suppliers.reduce((ss, sup) => ss + sup.assets.reduce((sa, a) => sa + a.piiRecords.length, 0), 0), 0);
   const estimatedControls = classification === 'Significant Data Fiduciary' ? 58 : 33;
 
-  const goNext = () => setStep(s => Math.min(4, s + 1));
+  const goNext = async () => {
+    if (step === 0) {
+      if (!orgSize) {
+        toast.error('Please select an Organization Size');
+        return;
+      }
+      setIsSaving(true);
+      try {
+        await saveOrgDetails.mutateAsync({
+          name: orgName, industry, orgSize, address,
+          country: jurisdiction, website: website || undefined,
+          contactEmail, panNumber: panNumber || undefined,
+          gstNumber: gstNumber || undefined,
+          dpoName, dpoEmail, dpoPhone: dpoPhone || undefined,
+          ceoName: orgName.split(' ')[0] || 'CEO',
+        });
+        setStep(1);
+      } catch { /* toast shown by hook */ } finally { setIsSaving(false); }
+      return;
+    }
+    if (step === 1) {
+      setIsSaving(true);
+      try {
+        await saveClassification.mutateAsync({ classification, classUncertain });
+        setStep(2);
+      } catch { /* toast shown by hook */ } finally { setIsSaving(false); }
+      return;
+    }
+    if (step === 3) {
+      if (invites.length > 0) {
+        setIsSaving(true);
+        try {
+          await inviteTeamMembers.mutateAsync({ invites });
+          setStep(4);
+        } catch { /* toast shown by hook */ } finally { setIsSaving(false); }
+      } else {
+        setStep(4);
+      }
+      return;
+    }
+    setStep(s => Math.min(4, s + 1));
+  };
+
+  const handleSaveStructure = async () => {
+    setIsSaving(true);
+    try {
+      const result = await saveStructure.mutateAsync({ departments });
+      // Store frontendId → dbId mapping
+      const map: Record<string, string> = { ...deptIdMap };
+      result.departments.forEach(d => { map[d.frontendId] = d.dbId; });
+      // Also map by name as fallback
+      result.departments.forEach(d => { map[d.name] = d.dbId; });
+      setDeptIdMap(map);
+      setStep(3);
+    } catch { /* toast shown by hook */ } finally { setIsSaving(false); }
+  };
+
+  const handleComplete = async () => {
+    setIsSaving(true);
+    try {
+      await completeOnboarding.mutateAsync();
+      toast.success("Setup complete! Let's add your team — connect Entra ID or invite manually.");
+      navigate('/org/users?setup=entra');
+    } catch { /* toast shown by hook */ } finally { setIsSaving(false); }
+  };
+
   const goBack = () => setStep(s => Math.max(0, s - 1));
 
   return (
@@ -170,11 +233,11 @@ export function OnboardingPage() {
 
         {/* Left: Persistent progress panel (always visible) */}
         <div className="w-[280px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
-          <ProgressPanel step={step} setStep={setStep} departments={departments} invites={invites} />
+          <ProgressPanel step={step} setStep={setStep} departments={departments} />
         </div>
 
         {/* Right: Step content */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        <form id="onboarding-form" onSubmit={(e) => { e.preventDefault(); goNext(); }} className="flex-1 flex flex-col overflow-hidden bg-slate-50">
           {step !== 2 ? (
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto px-8 py-8">
@@ -194,7 +257,7 @@ export function OnboardingPage() {
                     <label className="block text-[12px] font-semibold text-slate-700 mb-2">Organization Size <span className="text-red-500">*</span></label>
                     <div className="grid grid-cols-4 gap-2">
                       {ORG_SIZES.map(s => (
-                        <button key={s} onClick={() => setOrgSize(s)}
+                        <button key={s} type="button" onClick={() => setOrgSize(s)}
                           className={`py-2 px-3 rounded-lg text-[12.5px] font-medium border transition-all
                             ${orgSize === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400 hover:text-blue-600'}`}>
                           {s}
@@ -354,264 +417,18 @@ export function OnboardingPage() {
               </div>
             )}
 
-            {/* ═══════════════ STEP 4: Invite Team Members ════════════════════ */}
-            {step === 3 && (() => {
-              const previewRows = [
-                ...(entraGroupMappings.complianceOfficer ? [{ label: 'Compliance Officer', group: entraGroupMappings.complianceOfficer }] : []),
-                ...(entraGroupMappings.externalAuditor ? [{ label: 'External Auditor', group: entraGroupMappings.externalAuditor }] : []),
-                ...entraGroupMappings.deptMappings.flatMap(dm => {
-                  const d = departments.find(d => d.id === dm.deptId);
-                  return [
-                    ...(dm.itAdmin  ? [{ label: `IT Admin · ${d?.name}`,    group: dm.itAdmin  }] : []),
-                    ...(dm.auditor  ? [{ label: `Int. Auditor · ${d?.name}`, group: dm.auditor  }] : []),
-                  ];
-                }),
-              ];
-              const previewTotal = previewRows.reduce((s, r) => s + (MOCK_GROUP_COUNTS[r.group] || 0), 0);
-              const showDeptField = DEPT_ROLES.includes(newRole);
-              return (
-                <div>
-                  <StepHeader title="Invite Team Members" desc="Add your compliance team so they can start working immediately after onboarding. You can always add more people later." />
-                  <div className="space-y-4">
-                    <div className={entraState === 'mapping' ? 'space-y-4' : 'grid grid-cols-2 gap-4 items-start'}>
-
-                      {/* ── Entra ID card (multi-step) ─────────────────────── */}
-                      <div className={`rounded-xl border-2 transition-all bg-white ${
-                        entraState === 'idle' ? 'border-slate-200'
-                        : entraState === 'mapping' ? 'border-blue-300'
-                        : entraState === 'preview' ? 'border-emerald-300'
-                        : 'border-green-400 bg-green-50'}`}>
-
-                        {entraState === 'idle' && (
-                          <div className="p-5">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-9 h-9 rounded-lg bg-[#0078d4] flex items-center justify-center flex-shrink-0"><span className="text-white font-bold text-[13px]">M</span></div>
-                              <div>
-                                <p className="text-[13px] font-bold text-slate-800">Microsoft Entra ID</p>
-                                <p className="text-[10.5px] text-slate-500">Enterprise directory sync</p>
-                              </div>
-                            </div>
-                            <p className="text-[12px] text-slate-600 leading-relaxed mb-4">Import users from your Microsoft directory. Recommended for 50+ members.</p>
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Your Microsoft Tenant ID</label>
-                                <input value={entraTenantId} onChange={e => setEntraTenantId(e.target.value)} placeholder="your-org.onmicrosoft.com"
-                                  className="w-full h-8 px-3 border border-slate-300 rounded-lg text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500" />
-                              </div>
-                              <button onClick={startEntraMapping} disabled={!entraTenantId.trim()}
-                                className="w-full h-9 flex items-center justify-center gap-2 bg-[#0078d4] hover:bg-[#006cc1] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[12.5px] font-semibold rounded-lg transition-colors">
-                                Authorize with Microsoft →
-                              </button>
-                              <p className="text-[10.5px] text-slate-400 text-center">Opens Microsoft OAuth consent screen</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {entraState === 'mapping' && (
-                          <div className="p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                              <p className="text-[13px] font-semibold text-slate-800">Connected: <span className="text-blue-600">{entraTenantId}</span></p>
-                            </div>
-                            <p className="text-[13px] font-bold text-slate-800 mb-4">Map your Entra ID groups to roles</p>
-                            <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest mb-2">Org-Wide Roles</p>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                              {[{ label: 'Compliance Officer', key: 'complianceOfficer' as const }, { label: 'External Auditor', key: 'externalAuditor' as const }].map(({ label, key }) => (
-                                <div key={key}>
-                                  <label className="block text-[11px] font-medium text-slate-700 mb-1">{label}</label>
-                                  <select value={entraGroupMappings[key]} onChange={e => setEntraGroupMappings(p => ({ ...p, [key]: e.target.value }))}
-                                    className="w-full h-7 px-2 border border-slate-300 rounded-lg text-[11.5px] text-slate-900 focus:outline-none focus:border-blue-500 bg-white">
-                                    <option value="">Select group…</option>
-                                    {MOCK_ENTRA_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-                                  </select>
-                                </div>
-                              ))}
-                            </div>
-                            {departments.length > 0 && (
-                              <>
-                                <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-widest mb-2">Department Roles</p>
-                                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                                  {departments.map(dept => {
-                                    const dm = entraGroupMappings.deptMappings.find(m => m.deptId === dept.id) || { deptId: dept.id, itAdmin: '', auditor: '' };
-                                    const upDM = (field: 'itAdmin' | 'auditor', val: string) =>
-                                      setEntraGroupMappings(p => ({ ...p, deptMappings: p.deptMappings.map(m => m.deptId === dept.id ? { ...m, [field]: val } : m) }));
-                                    return (
-                                      <div key={dept.id} className="p-3 bg-white rounded-lg border border-blue-200">
-                                        <p className="text-[11.5px] font-semibold text-slate-800 mb-2">🏢 {dept.name}</p>
-                                        <div className="space-y-1.5">
-                                          {([{ label: 'IT Admin', field: 'itAdmin' as const }, { label: 'Int. Auditor', field: 'auditor' as const }]).map(({ label, field }) => (
-                                            <div key={field} className="flex items-center gap-2">
-                                              <span className="text-[10.5px] text-slate-500 w-20 flex-shrink-0">{label}</span>
-                                              <select value={dm[field]} onChange={e => upDM(field, e.target.value)}
-                                                className="flex-1 h-6 px-2 border border-slate-200 rounded text-[11px] text-slate-900 focus:outline-none focus:border-blue-500 bg-white">
-                                                <option value="">Select group…</option>
-                                                {MOCK_ENTRA_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-                                              </select>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </>
-                            )}
-                            {departments.length === 0 && <p className="text-[11.5px] text-slate-400 italic mb-3">No departments created yet. Complete Step 3 first.</p>}
-                            <button onClick={() => setEntraState('preview')}
-                              className="mt-4 w-full h-9 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors">
-                              Preview Invitations →
-                            </button>
-                          </div>
-                        )}
-
-                        {entraState === 'preview' && (
-                          <div className="p-5">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0"><Check className="w-3 h-3 text-white" /></div>
-                              <p className="text-[13px] font-semibold text-slate-800">Ready to invite</p>
-                            </div>
-                            <p className="text-[12px] text-slate-600 mb-4 leading-relaxed">
-                              <span className="font-bold text-slate-900">{previewTotal} users</span> across <span className="font-bold text-slate-900">{previewRows.length} group{previewRows.length !== 1 ? 's' : ''}</span> will receive invitation emails.
-                            </p>
-                            <div className="space-y-1.5 mb-4 max-h-52 overflow-y-auto">
-                              {previewRows.map((r, i) => (
-                                <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
-                                  <div><p className="text-[12px] font-medium text-slate-800">{r.label}</p><p className="text-[10.5px] text-slate-400">{r.group}</p></div>
-                                  <span className="text-[11.5px] font-semibold text-slate-700">{MOCK_GROUP_COUNTS[r.group] || 0} users</span>
-                                </div>
-                              ))}
-                              {previewRows.length === 0 && <p className="text-[12px] text-slate-400 italic">No groups mapped. Go back to configure.</p>}
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => setEntraState('mapping')} className="flex-1 h-8 border border-slate-300 text-slate-600 text-[12px] font-medium rounded-lg hover:bg-slate-50 transition-colors">← Change Mappings</button>
-                              <button onClick={() => setEntraState('sent')} disabled={previewRows.length === 0}
-                                className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-[12px] font-semibold rounded-lg transition-colors">
-                                Send All Invitations →
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {entraState === 'sent' && (
-                          <div className="p-5">
-                            <div className="flex items-center gap-2 mb-3">
-                              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                              <p className="text-[13px] font-bold text-green-800">Invitations Sent Successfully!</p>
-                            </div>
-                            <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
-                              <span className="font-bold">{previewTotal} invitation emails</span> sent across <span className="font-bold">{previewRows.length} Entra ID group{previewRows.length !== 1 ? 's' : ''}</span>.
-                            </p>
-                            <button onClick={() => { setEntraState('idle'); setEntraGroupMappings({ complianceOfficer: '', externalAuditor: '', deptMappings: [] }); }}
-                              className="text-[11.5px] text-slate-400 hover:text-slate-600 underline transition-colors">Disconnect / Reconfigure</button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* ── Manual invite card ────────────────────────────── */}
-                      <div className="p-5 rounded-xl border-2 border-slate-200 bg-white">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0"><Users className="w-4 h-4 text-slate-600" /></div>
-                          <div><p className="text-[13px] font-bold text-slate-800">Invite Manually</p><p className="text-[10.5px] text-slate-500">Add one by one</p></div>
-                        </div>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Email Address <span className="text-red-500">*</span></label>
-                            <input value={newEmail} onChange={e => setNewEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && addInvite()}
-                              placeholder="colleague@organization.in" type="email"
-                              className="w-full h-8 px-3 rounded-lg border border-slate-300 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500" />
-                          </div>
-                          <div>
-                            <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Role <span className="text-red-500">*</span></label>
-                            <select value={newRole} onChange={e => { setNewRole(e.target.value); setNewDepts([]); }}
-                              className="w-full h-8 px-2 rounded-lg border border-slate-300 text-[12.5px] text-slate-900 focus:outline-none focus:border-blue-500">
-                              {ROLES.map(r => <option key={r}>{r}</option>)}
-                            </select>
-                          </div>
-                          {showDeptField && departments.length > 0 && (
-                            <div>
-                              <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Department</label>
-                              <div className="space-y-1 max-h-28 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50">
-                                {departments.map(d => (
-                                  <label key={d.id} className="flex items-center gap-2 cursor-pointer py-0.5 hover:bg-white rounded px-1 transition-colors">
-                                    <input type="checkbox" checked={newDepts.includes(d.id)}
-                                      onChange={() => setNewDepts(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}
-                                      className="rounded text-blue-600" />
-                                    <span className="text-[12px] text-slate-800">{d.name}</span>
-                                  </label>
-                                ))}
-                              </div>
-                              <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">This user will receive or review tasks for assets in selected departments.</p>
-                            </div>
-                          )}
-                          {showDeptField && departments.length === 0 && (
-                            <p className="text-[11px] text-amber-600 italic">No departments yet — complete Step 3 first to assign departments.</p>
-                          )}
-                          <div>
-                            <label className="block text-[11.5px] font-medium text-slate-700 mb-1">Personal Note <span className="text-[11px] text-slate-400 font-normal">(Optional)</span></label>
-                            <textarea value={inviteNote} onChange={e => setInviteNote(e.target.value)} rows={2}
-                              placeholder="e.g., Hi! Please set up your DPDP CMS account when you get a chance."
-                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[12px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 resize-none" />
-                          </div>
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={() => { setNewEmail(''); setNewDepts([]); setInviteNote(''); }}
-                              className="px-4 h-8 text-[12px] text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
-                            <button onClick={addInvite} disabled={!newEmail.trim()}
-                              className="flex-1 h-8 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-[12px] font-semibold rounded-lg transition-colors">
-                              <Plus className="w-3.5 h-3.5" /> Send Invitation →
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Invited members table */}
-                    {invites.length > 0 && (
-                      <div className="border border-slate-200 rounded-xl overflow-hidden">
-                        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50">
-                          <p className="text-[12px] font-semibold text-slate-700">{invites.length} member{invites.length !== 1 ? 's' : ''} invited</p>
-                        </div>
-                        <table className="w-full text-[12px]">
-                          <thead>
-                            <tr className="border-b border-slate-100 text-slate-500 text-left bg-slate-50">
-                              <th className="px-4 py-2 font-medium">Email</th>
-                              <th className="px-4 py-2 font-medium">Role</th>
-                              <th className="px-4 py-2 font-medium">Departments</th>
-                              <th className="px-4 py-2 font-medium">Status</th>
-                              <th className="px-4 py-2 font-medium w-8" />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {invites.map(inv => (
-                              <tr key={inv.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                                <td className="px-4 py-2 text-slate-800 font-medium">{inv.email}</td>
-                                <td className="px-4 py-2"><span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium">{inv.role}</span></td>
-                                <td className="px-4 py-2">
-                                  {inv.departments && inv.departments.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                      {inv.departments.map(dId => { const d = departments.find(d => d.id === dId); return d ? <span key={dId} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10.5px] rounded">{d.name}</span> : null; })}
-                                    </div>
-                                  ) : <span className="text-slate-400 text-[11px]">Org-wide</span>}
-                                </td>
-                                <td className="px-4 py-2">
-                                  <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${inv.status === 'Sent' ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>
-                                    {inv.status === 'Sent' ? 'Invite Sent' : 'Accepted'}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-2"><button onClick={() => removeInvite(inv.id)} className="text-slate-300 hover:text-red-500 transition-colors"><X className="w-3.5 h-3.5" /></button></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    <div className="text-center">
-                      <button onClick={goNext} className="text-[12px] text-slate-400 hover:text-slate-700 underline transition-colors">Skip for now →</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* ═══════════════ STEP 4: Team Invites ════════════════════════ */}
+            {step === 3 && (
+              <div>
+                <StepHeader
+                  title="Invite Team Members"
+                  desc="Bring your compliance team on board. You can connect your Microsoft Entra ID directory or invite members manually." />
+                <TeamInviteStep 
+                  invites={invites} setInvites={setInvites}
+                  departments={departments}
+                />
+              </div>
+            )}
 
             {/* ═══════════════ STEP 5: Review & Confirm ════════════════════════ */}
             {step === 4 && (
@@ -687,26 +504,6 @@ export function OnboardingPage() {
                     </div>
                   </ReviewCard>
 
-                  {/* Team */}
-                  <ReviewCard title={`Team Members (${invites.length})`} onEdit={() => setStep(3)}>
-                    {invites.length === 0
-                      ? <p className="text-[12px] text-slate-400 italic">No team members invited yet.</p>
-                      : (
-                        <div className="space-y-1.5">
-                          {invites.map(inv => (
-                            <div key={inv.id} className="flex items-center gap-3 text-[12px]">
-                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 flex-shrink-0">
-                                {inv.email[0].toUpperCase()}
-                              </div>
-                              <span className="flex-1 text-slate-700">{inv.email}</span>
-                              <span className="text-slate-500">{inv.role}</span>
-                              <span className={`text-[10.5px] px-1.5 py-0.5 rounded font-medium ${inv.status === 'Sent' ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>{inv.status}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    }
-                  </ReviewCard>
 
                   {/* Estimated controls */}
                   <div className="p-5 bg-white border border-blue-200 rounded-xl">
@@ -726,20 +523,20 @@ export function OnboardingPage() {
             {/* ── Navigation (steps 0,1,3,4) ──────────────────────────────── */}
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200">
               {step > 0 ? (
-                <button onClick={goBack}
+                <button type="button" onClick={goBack}
                   className="flex items-center gap-2 px-5 py-2.5 text-[13px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </button>
               ) : <div />}
               {step < 4 ? (
-                <button onClick={goNext}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg transition-colors">
-                  Continue <ChevronRight className="w-4 h-4" />
+                <button type="submit" disabled={isSaving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                  {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>{step === 3 && invites.length === 0 ? 'Skip & Continue' : step === 3 ? 'Send Invites & Continue' : 'Continue'} <ChevronRight className="w-4 h-4" /></>}
                 </button>
               ) : (
-                <button onClick={() => navigate('/org/dashboard')}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-lg transition-colors">
-                  <CheckCircle2 className="w-4 h-4" /> Complete Onboarding →
+                <button type="button" onClick={handleComplete} disabled={isSaving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                  {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Completing…</> : <><CheckCircle2 className="w-4 h-4" /> Complete Onboarding →</>}
                 </button>
               )}
             </div>
@@ -758,21 +555,20 @@ export function OnboardingPage() {
                   departments={departments}
                   setDepartments={setDepartments}
                   onSkipToTeam={goNext}
-                  invites={invites as InviteUser[]}
                 />
               </div>
               <div className="flex-shrink-0 border-t border-slate-200 bg-white px-8 py-3 flex items-center justify-between">
-                <button onClick={goBack} className="flex items-center gap-2 px-5 py-2 text-[13px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={goBack} className="flex items-center gap-2 px-5 py-2 text-[13px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </button>
-                <button onClick={() => navigate('/org/dashboard')} className="text-[12.5px] text-slate-400 hover:text-slate-700 transition-colors">Save & Exit</button>
-                <button onClick={goNext} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg transition-colors">
-                  Continue to Team <ChevronRight className="w-4 h-4" />
+                <button type="button" onClick={() => navigate('/org/dashboard')} className="text-[12.5px] text-slate-400 hover:text-slate-700 transition-colors">Save & Exit</button>
+                <button type="button" onClick={handleSaveStructure} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                  {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>Continue to Review <ChevronRight className="w-4 h-4" /></>}
                 </button>
               </div>
             </>
           )}
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -801,7 +597,7 @@ function FField({ label, value, onChange, placeholder, required, type = 'text' }
       <label className="block text-[12px] font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required={required}
         className="w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors" />
     </div>
   );
@@ -815,9 +611,10 @@ function SField({ label, value, onChange, options, required }: {
       <label className="block text-[12px] font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 transition-colors">
-        {options.map(o => <option key={o}>{o}</option>)}
+      <select value={value} onChange={e => onChange(e.target.value)} required={required}
+        className={`w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[13px] focus:outline-none focus:border-blue-500 transition-colors ${!value ? 'text-slate-400' : 'text-slate-900'}`}>
+        <option value="" disabled>Select...</option>
+        {options.map(o => <option value={o} key={o}>{o}</option>)}
       </select>
     </div>
   );
@@ -842,11 +639,10 @@ function ReviewCard({ title, children, onEdit, showEdit = true }: {
 }
 
 // ─── Progress Panel (persistent left sidebar across all steps) ───────────────
-function ProgressPanel({ step, setStep, departments, invites }: {
+function ProgressPanel({ step, setStep, departments }: {
   step: number;
   setStep: (s: number) => void;
   departments: Department[];
-  invites: { id: string; email: string; role: string; status: string }[];
 }) {
   const totalAssets    = departments.reduce((s, d) => s + d.assets.length, 0);
   const totalSuppliers = departments.reduce((s, d) => s + d.suppliers.length, 0);
@@ -857,18 +653,17 @@ function ProgressPanel({ step, setStep, departments, invites }: {
     s + d.assets.filter(a => a.piiRecords.length === 0).length
     + d.suppliers.reduce((ss, sup) => ss + sup.assets.filter(a => a.piiRecords.length === 0).length, 0), 0);
 
-  // Progress: steps 1-2 = 30% (15% each), step 3 up to 28% (4 × 7%), step 4 = 15%, step 5 = 15%
-  const s3 = (departments.length > 0 ? 7 : 0)
-           + (totalAssets > 0 ? 7 : 0)
-           + (totalPII > 0 ? 7 : 0)
-           + (totalSuppliers > 0 ? 7 : 0);
-  const s4 = step > 3 ? 15 : invites.length > 0 ? 8 : 0;
-  const s5 = step > 4 ? 15 : 0;
+  // Progress: steps 1-2 = 40% (20% each), step 3 up to 40% (4 × 10%), step 4 = 20%
+  const s3 = (departments.length > 0 ? 10 : 0)
+           + (totalAssets > 0 ? 10 : 0)
+           + (totalPII > 0 ? 10 : 0)
+           + (totalSuppliers > 0 ? 10 : 0);
+  const s4 = step > 3 ? 20 : 0;
   const progress = Math.min(100,
-    (step > 0 ? 15 : 0) +
-    (step > 1 ? 15 : 0) +
-    (step === 2 ? s3 : step > 2 ? 28 : 0) +
-    s4 + s5
+    (step > 0 ? 20 : 0) +
+    (step > 1 ? 20 : 0) +
+    (step === 2 ? s3 : step > 2 ? 40 : 0) +
+    s4
   );
 
   const STEPS_META = [

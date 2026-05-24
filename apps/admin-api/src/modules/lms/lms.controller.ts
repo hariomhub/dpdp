@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express'
 import { z } from 'zod'
-import { lmsService } from './lms.service'
+import { lmsService, lmsDesignationService } from './lms.service'
 import { AuthRequest } from '../../middleware/auth'
 import {
   CourseStatus, CourseDifficulty, CourseCategory,
@@ -109,6 +109,13 @@ export const lmsController = {
         id: req.params.id, data: body, adminId: req.adminId!
       })
       res.json({ success: true, data: course, message: 'Course updated' })
+    } catch (err) { next(err) }
+  },
+
+  async syncCourseContent(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await lmsService.syncCourseContent(req.params.id, req.body, req.adminId!)
+      res.json({ ...result, message: 'Course content synced' })
     } catch (err) { next(err) }
   },
 
@@ -256,6 +263,45 @@ export const lmsController = {
         id: req.params.id, data: body, adminId: req.adminId!
       })
       res.json({ success: true, data: template, message: 'Template updated' })
+    } catch (err) { next(err) }
+  },
+}
+// ─── Designation controller ───────────────────────────────────────────────────
+
+export const lmsDesignationController = {
+  async list(_req: any, res: any, next: any) {
+    try {
+      res.json({ success: true, data: await lmsDesignationService.listDesignations() })
+    } catch (err) { next(err) }
+  },
+  async create(req: any, res: any, next: any) {
+    try {
+      const data = await lmsDesignationService.createDesignation(req.body)
+      res.status(201).json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async update(req: any, res: any, next: any) {
+    try {
+      const data = await lmsDesignationService.updateDesignation(req.params.id, req.body)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async delete(req: any, res: any, next: any) {
+    try {
+      await lmsDesignationService.deleteDesignation(req.params.id)
+      res.json({ success: true, message: 'Designation deleted' })
+    } catch (err) { next(err) }
+  },
+  async getCourseDesignations(req: any, res: any, next: any) {
+    try {
+      res.json({ success: true, data: await lmsDesignationService.getCourseDesignations(req.params.courseId) })
+    } catch (err) { next(err) }
+  },
+  async setCourseDesignations(req: any, res: any, next: any) {
+    try {
+      const { targets } = req.body
+      const data = await lmsDesignationService.setCourseDesignations(req.params.courseId, targets ?? [])
+      res.json({ success: true, data })
     } catch (err) { next(err) }
   },
 }

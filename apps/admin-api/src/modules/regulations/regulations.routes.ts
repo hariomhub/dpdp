@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { regulationsController } from './regulations.controller'
+import { regulationsController, regulationSectionsController } from './regulations.controller'
 import { authenticate } from '../../middleware/auth'
 
 const router = Router()
@@ -17,5 +17,10 @@ router.get('/:id/chapters', regulationsController.getChapters)
 router.post('/:id/chapters', regulationsController.createChapter)
 router.patch('/:id/chapters/:chapterId', regulationsController.updateChapter)
 router.delete('/:id/chapters/:chapterId', regulationsController.deleteChapter)
+
+router.get('/:id/chapters/:chapterId/sections',        regulationSectionsController.list)
+router.post('/:id/chapters/:chapterId/sections',       regulationSectionsController.create)
+router.patch('/:id/chapters/:chapterId/sections/:sid', regulationSectionsController.update)
+router.delete('/:id/chapters/:chapterId/sections/:sid',regulationSectionsController.delete)
 
 export default router

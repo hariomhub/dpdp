@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { lmsController } from './lms.controller'
+import { lmsController, lmsDesignationController } from './lms.controller'
 import { authenticate } from '../../middleware/auth'
 
 const router = Router()
@@ -10,6 +10,7 @@ router.get('/courses', lmsController.listCourses)
 router.post('/courses', lmsController.createCourse)
 router.get('/courses/:id', lmsController.getCourseById)
 router.patch('/courses/:id', lmsController.updateCourse)
+router.put('/courses/:id/sync-content', lmsController.syncCourseContent)
 router.post('/courses/:id/publish', lmsController.publishCourse)
 router.post('/courses/:id/archive', lmsController.archiveCourse)
 
@@ -37,5 +38,15 @@ router.patch('/questions/:id', lmsController.updateQuestion)
 router.get('/certificate-templates', lmsController.listCertificateTemplates)
 router.post('/certificate-templates', lmsController.createCertificateTemplate)
 router.patch('/certificate-templates/:id', lmsController.updateCertificateTemplate)
+
+// ── Designations
+router.get('/designations',                          lmsDesignationController.list)
+router.post('/designations',                         lmsDesignationController.create)
+router.patch('/designations/:id',                    lmsDesignationController.update)
+router.delete('/designations/:id',                   lmsDesignationController.delete)
+
+// ── Course ↔ Designation targeting
+router.get('/courses/:courseId/designations',        lmsDesignationController.getCourseDesignations)
+router.put('/courses/:courseId/designations',        lmsDesignationController.setCourseDesignations)
 
 export default router

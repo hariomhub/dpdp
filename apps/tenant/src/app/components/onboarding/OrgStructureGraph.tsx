@@ -8,7 +8,7 @@ import {
 export type PIIRecord = {
   id: string; categories: string[]; sensitivity: string;
   purpose: string; legalBasis: string; retention: string; deletionMechanism?: string;
-  volume: string; crossBorderTransfer: boolean; crossBorderDestination?: string;
+  volume: string | number; crossBorderTransfer: boolean; crossBorderDestination?: string;
   principalType: string; sharedWithThirdParties: boolean;
 };
 export type Asset = {
@@ -22,11 +22,15 @@ export type Supplier = {
   criticality: string; status: string; assets: Asset[];
 };
 export type Department = {
-  id: string; name: string; description?: string; owner?: string; ownerEmail?: string;
-  assignedITAdmin?: string; assignedAuditor?: string;
+  id: string; frontendId?: string; dbId?: string;
+  name: string; description?: string;
+  owner?: string; ownerEmail?: string;
   assets: Asset[]; suppliers: Supplier[];
 };
-export type InviteUser = { id: string; email: string; role: string; status: string };
+
+export type InviteUser = {
+  id: string; email: string; name: string; role: string; depts: string[]; status: string;
+};
 export const uid = () => Math.random().toString(36).slice(2, 9);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -48,8 +52,8 @@ const PRINCIPAL_TYPES = ['Customer','Employee','Vendor','Minor','Other'];
 // ─── Empty factories ──────────────────────────────────────────────────────────
 export const emptyAsset    = (): Asset    => ({ id: uid(), name: '', assetType: '', description: '', assetOwner: '', hostingLocation: 'India', vendorName: '', criticality: '', internetFacing: false, status: 'Active', piiRecords: [] });
 export const emptySupplier = (): Supplier => ({ id: uid(), name: '', supplierType: 'Cloud Provider', contactName: '', contactEmail: '', countryOfOperation: 'India', dpaSigned: false, contractReference: '', criticality: 'Medium', status: 'Active', assets: [] });
-export const emptyPII      = (): PIIRecord=> ({ id: uid(), categories: [], sensitivity: 'Medium', purpose: '', legalBasis: 'Consent', retention: '', deletionMechanism: '', volume: '', crossBorderTransfer: false, crossBorderDestination: 'India', principalType: 'Customer', sharedWithThirdParties: false });
-export const emptyDept     = (): Department => ({ id: uid(), name: '', description: '', owner: '', ownerEmail: '', assignedITAdmin: '', assignedAuditor: '', assets: [], suppliers: [] });
+export const emptyPII      = (): PIIRecord=> ({ id: uid(), categories: [], sensitivity: 'Medium', purpose: '', legalBasis: 'Consent', retention: '', deletionMechanism: '', volume: 0, crossBorderTransfer: false, crossBorderDestination: 'India', principalType: 'Customer', sharedWithThirdParties: false });
+export const emptyDept     = (): Department => ({ id: uid(), name: '', description: '', owner: '', ownerEmail: '', assets: [], suppliers: [] });
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -59,7 +63,7 @@ const isPositiveNumber = (v: string) => /^\d+$/.test(v.replace(/,/g, '')) && par
 function Ferr({ msg }: { msg?: string }) {
   return msg ? <p className="text-[10.5px] text-red-600 mt-0.5">{msg}</p> : null;
 }
-function F({ label, value, onChange, placeholder, required, type = 'text', error, onBlur }: {
+export function F({ label, value, onChange, placeholder, required, type = 'text', error, onBlur }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
   required?: boolean; type?: string; error?: string; onBlur?: () => void;
 }) {
@@ -106,7 +110,7 @@ function Toggle({ label, value, onChange, required, error }: {
     </div>
   );
 }
-function MultiSelect({ label, value, onChange, options, required, error }: {
+export function MultiSelect({ label, value, onChange, options, required, error }: {
   label: string; value: string[]; onChange: (v: string[]) => void; options: string[]; required?: boolean; error?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -141,8 +145,8 @@ function MultiSelect({ label, value, onChange, options, required, error }: {
     </div>
   );
 }
-function G2({ children }: { children: React.ReactNode }) { return <div className="grid grid-cols-2 gap-3">{children}</div>; }
-function FormSaveBar({ onSave, onCancel, saveLabel = 'Save', disabled }: { onSave: () => void; onCancel: () => void; saveLabel?: string; disabled?: boolean; }) {
+export function G2({ children }: { children: React.ReactNode }) { return <div className="grid grid-cols-2 gap-3">{children}</div>; }
+export function FormSaveBar({ onSave, onCancel, saveLabel = 'Save', disabled }: { onSave: () => void; onCancel: () => void; saveLabel?: string; disabled?: boolean; }) {
   return (
     <div className="flex items-center gap-2 pt-3 mt-3 border-t border-slate-100">
       <button type="button" onClick={onCancel} className="px-4 h-8 text-[12.5px] text-slate-600 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">Cancel</button>
@@ -154,78 +158,20 @@ function FormSaveBar({ onSave, onCancel, saveLabel = 'Save', disabled }: { onSav
   );
 }
 
-// ─── Searchable User Select ───────────────────────────────────────────────────
-function SearchableUserSelect({ label, value, onChange, options, placeholder, helper }: {
-  label: string; value: string; onChange: (v: string) => void;
-  options: { label: string; value: string }[]; placeholder?: string; helper?: string;
-}) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  const filtered = options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()));
-  const selected = options.find(o => o.value === value);
-  return (
-    <div ref={ref} className="relative">
-      <label className="block text-[11.5px] font-medium text-slate-700 mb-1">{label}</label>
-      <div className={`flex items-center gap-2 h-8 px-3 rounded-md border bg-white cursor-text transition-colors ${open ? 'border-blue-500' : 'border-slate-300'}`}
-        onClick={() => setOpen(true)}>
-        {selected ? (
-          <span className="flex-1 text-[12.5px] text-slate-900 truncate">{selected.label}</span>
-        ) : (
-          <input value={query} onChange={e => setQuery(e.target.value)} onFocus={() => setOpen(true)}
-            placeholder={placeholder || 'Search or enter name/email'}
-            className="flex-1 text-[12.5px] text-slate-900 placeholder-slate-400 outline-none bg-transparent min-w-0" />
-        )}
-        {value ? (
-          <button onClick={e => { e.stopPropagation(); onChange(''); setQuery(''); }} className="text-slate-400 hover:text-red-500 flex-shrink-0 transition-colors"><X className="w-3.5 h-3.5" /></button>
-        ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-        )}
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-36 overflow-y-auto">
-          {options.length === 0 ? (
-            <div className="px-3 py-3 text-[11.5px] text-slate-400 text-center">No users with this role have been invited yet</div>
-          ) : filtered.length === 0 ? (
-            <div className="px-3 py-3 text-[11.5px] text-slate-400 text-center">No results for "{query}"</div>
-          ) : filtered.map(o => (
-            <button key={o.value} type="button" onClick={() => { onChange(o.value); setQuery(''); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-[12px] text-slate-800 hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-0">
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {helper && <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">{helper}</p>}
-    </div>
-  );
-}
-
 // ─── Department Form ──────────────────────────────────────────────────────────
-function DeptForm({ initial, existingNames, invites, onSave, onCancel }: {
+export function DeptForm({ initial, existingNames, onSave, onCancel }: {
   initial: Partial<Department>; existingNames: string[];
-  invites: InviteUser[];
   onSave: (d: Partial<Department>) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(initial.name || '');
   const [description, setDescription] = useState(initial.description || '');
   const [owner, setOwner] = useState(initial.owner || '');
   const [ownerEmail, setOwnerEmail] = useState(initial.ownerEmail || '');
-  const [assignedITAdmin, setAssignedITAdmin] = useState(initial.assignedITAdmin || '');
-  const [assignedAuditor, setAssignedAuditor] = useState(initial.assignedAuditor || '');
   const [t, setT] = useState<Set<string>>(new Set());
   const touch = (f: string) => setT(prev => new Set([...prev, f]));
 
   const nameErr = !name.trim() ? 'Required' : name.trim().length < 2 ? 'Min 2 characters' : (existingNames.filter(n => n !== initial.name).includes(name.trim())) ? 'Name already exists' : undefined;
   const isValid = !nameErr;
-
-  const itAdmins = invites.filter(i => i.role === 'IT Admin').map(i => ({ label: i.email, value: i.id }));
-  const auditors = invites.filter(i => i.role === 'Internal Auditor').map(i => ({ label: i.email, value: i.id }));
 
   return (
     <div className="space-y-3">
@@ -236,47 +182,15 @@ function DeptForm({ initial, existingNames, invites, onSave, onCancel }: {
         <F label="Owner Email" value={ownerEmail} onChange={setOwnerEmail} placeholder="jane@company.com" type="email" />
       </G2>
 
-      {/* Assign Compliance Team */}
-      <div className="pt-3 border-t border-slate-200">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex-1 h-px bg-slate-200" />
-          <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap flex-shrink-0">Assign Compliance Team (Optional)</p>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
-        <div className="space-y-3">
-          <SearchableUserSelect
-            label="Assigned IT Admin" value={assignedITAdmin} onChange={setAssignedITAdmin}
-            options={itAdmins} placeholder="Search or enter name/email"
-            helper="This person will automatically receive compliance tasks for assets in this department."
-          />
-          <SearchableUserSelect
-            label="Assigned Internal Auditor" value={assignedAuditor} onChange={setAssignedAuditor}
-            options={auditors} placeholder="Search or enter name/email"
-            helper="This person will automatically review evidence submitted for assets in this department."
-          />
-          {(itAdmins.length === 0 || auditors.length === 0) && (
-            <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                {itAdmins.length === 0 && auditors.length === 0 ? 'No IT Admins or Internal Auditors invited yet.'
-                  : itAdmins.length === 0 ? 'No IT Admins invited yet.'
-                  : 'No Internal Auditors invited yet.'}{' '}
-                Invite team members in Step 4, then return to assign.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
       <FormSaveBar disabled={!isValid}
-        onSave={() => { touch('name'); isValid && onSave({ name: name.trim(), description, owner, ownerEmail, assignedITAdmin, assignedAuditor }); }}
+        onSave={() => { touch('name'); isValid && onSave({ name: name.trim(), description, owner, ownerEmail }); }}
         onCancel={onCancel} saveLabel="Save Department →" />
     </div>
   );
 }
 
-// ─── Asset Form ──────────────────────────────────────────────────────��────────
-function AssetForm({ initial, existingNames, onSave, onCancel }: {
+// ─── Asset Form ───────────────────────────────────────────────────────────────
+export function AssetForm({ initial, existingNames, onSave, onCancel }: {
   initial: Partial<Asset>; existingNames: string[];
   onSave: (a: Asset) => void; onCancel: () => void;
 }) {
@@ -317,7 +231,7 @@ function AssetForm({ initial, existingNames, onSave, onCancel }: {
 }
 
 // ─── PII Form ─────────────────────────────────────────────────────────────────
-function PIIForm({ initial, onSave, onCancel }: {
+export function PIIForm({ initial, onSave, onCancel }: {
   initial: Partial<PIIRecord>; onSave: (p: PIIRecord) => void; onCancel: () => void;
 }) {
   const [f, setF] = useState<PIIRecord>({ ...emptyPII(), ...initial });
@@ -329,7 +243,7 @@ function PIIForm({ initial, onSave, onCancel }: {
     categories: f.categories.length === 0 ? 'Select at least one category' : undefined,
     purpose: !f.purpose.trim() ? 'Required' : f.purpose.trim().length < 10 ? 'Min 10 characters' : undefined,
     retention: !f.retention.trim() ? 'Required' : undefined,
-    volume: !f.volume.trim() ? 'Required' : !isPositiveNumber(f.volume) ? 'Must be a positive number' : undefined,
+    volume: !String(f.volume).trim() ? 'Required' : !isPositiveNumber(String(f.volume)) ? 'Must be a positive number' : undefined,
     crossBorderDestination: f.crossBorderTransfer && !f.crossBorderDestination ? 'Required when transfer is Yes' : undefined,
   };
   const isValid = !Object.values(errs).some(Boolean);
@@ -344,7 +258,7 @@ function PIIForm({ initial, onSave, onCancel }: {
       <F label="Purpose of Collection" value={f.purpose} onChange={v => up('purpose', v)} onBlur={() => touch('purpose')} placeholder="e.g., Customer account management (min 10 chars)" required error={t.has('purpose') ? errs.purpose : undefined} />
       <G2>
         <F label="Retention Period" value={f.retention} onChange={v => up('retention', v)} onBlur={() => touch('retention')} placeholder="e.g., 3 years" required error={t.has('retention') ? errs.retention : undefined} />
-        <F label="Volume (no. of data principals)" value={f.volume} onChange={v => up('volume', v)} onBlur={() => touch('volume')} placeholder="e.g., 50000" required error={t.has('volume') ? errs.volume : undefined} />
+        <F label="Volume (no. of data principals)" value={String(f.volume)} onChange={v => up('volume', v)} onBlur={() => touch('volume')} placeholder="e.g., 50000" required error={t.has('volume') ? errs.volume : undefined} />
       </G2>
       <G2>
         <S label="Data Principal Type" value={f.principalType} onChange={v => up('principalType', v)} options={PRINCIPAL_TYPES} required />
@@ -363,7 +277,7 @@ function PIIForm({ initial, onSave, onCancel }: {
 }
 
 // ─── Supplier Form ────────────────────────────────────────────────────────────
-function SupplierForm({ initial, onSave, onCancel }: {
+export function SupplierForm({ initial, onSave, onCancel }: {
   initial: Partial<Supplier>; onSave: (s: Supplier) => void; onCancel: () => void;
 }) {
   const [f, setF] = useState<Supplier>({ ...emptySupplier(), ...initial });
@@ -674,13 +588,12 @@ function PromptBtn({ label, primary, sub, onClick }: { label: string; primary?: 
 }
 
 // ─── Right Form Panel ─────────────────────────────────────────────────────────
-function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam, invites }: {
+function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam }: {
   panel: PanelState;
   setPanel: (p: PanelState) => void;
   departments: Department[];
   setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
   onSkipToTeam: () => void;
-  invites: InviteUser[];
 }) {
   const upDepts = (fn: (p: Department[]) => Department[]) => setDepartments(fn);
   const getDept    = (id: string) => departments.find(d => d.id === id);
@@ -710,7 +623,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam,
   if (panel.type === 'addDept') return (
     <div>
       <p className="text-[15px] font-bold text-slate-900 mb-4">Add Department</p>
-      <DeptForm key="addDept" initial={{}} existingNames={allDeptNames} invites={invites}
+      <DeptForm key="addDept" initial={{}} existingNames={allDeptNames}
         onCancel={() => setPanel(null)}
         onSave={data => {
           const nd = { ...emptyDept(), ...data };
@@ -951,7 +864,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam,
     return (
       <div>
         <p className="text-[15px] font-bold text-slate-900 mb-4">Edit Department</p>
-        <DeptForm key={`ed-${panel.deptId}`} initial={d || {}} existingNames={allDeptNames} invites={invites}
+        <DeptForm key={`ed-${panel.deptId}`} initial={d || {}} existingNames={allDeptNames}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, ...data } : d)); setPanel(null); }} />
       </div>
@@ -1022,10 +935,9 @@ export interface OrgStructureStepProps {
   departments: Department[];
   setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
   onSkipToTeam: () => void;
-  invites: InviteUser[];
 }
 
-export function OrgStructureStep({ orgName, departments, setDepartments, onSkipToTeam, invites }: OrgStructureStepProps) {
+export function OrgStructureStep({ orgName, departments, setDepartments, onSkipToTeam }: OrgStructureStepProps) {
   const [panel, setPanel] = useState<PanelState>(departments.length === 0 ? { type: 'addDept' } : null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -1072,7 +984,6 @@ export function OrgStructureStep({ orgName, departments, setDepartments, onSkipT
             departments={departments}
             setDepartments={setDepartments}
             onSkipToTeam={onSkipToTeam}
-            invites={invites}
           />
         </div>
       </div>

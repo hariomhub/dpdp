@@ -178,3 +178,33 @@ export const regulationsController = {
     }
   },
 }
+// ─── Section controller (appended) ───────────────────────────────────────────
+import { regulationSectionsService } from './regulations.service'
+
+export const regulationSectionsController = {
+  async list(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await regulationSectionsService.listSections(req.params.chapterId)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async create(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { name, title } = req.body
+      const data = await regulationSectionsService.createSection({ chapterId: req.params.chapterId, name, title })
+      res.status(201).json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async update(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await regulationSectionsService.updateSection(req.params.sid, req.body)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async delete(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await regulationSectionsService.deleteSection(req.params.sid)
+      res.json({ success: true, message: 'Section deleted' })
+    } catch (err) { next(err) }
+  },
+}

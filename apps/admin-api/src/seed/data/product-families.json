@@ -1,0 +1,335 @@
+[
+  {
+    "name": "Identity & Access Management (IAM)",
+    "description": "Identity & Access Management (IAM) solutions",
+    "products": [
+      {
+        "name": "Google Cloud Identity"
+      },
+      {
+        "name": "IBM QRadar"
+      },
+      {
+        "name": "Ironclad"
+      },
+      {
+        "name": "Microsoft Azure AD"
+      },
+      {
+        "name": "Okta"
+      }
+    ]
+  },
+  {
+    "name": "Data Protection & Encryption",
+    "description": "Data Protection & Encryption solutions",
+    "products": [
+      {
+        "name": "AWS KMS"
+      },
+      {
+        "name": "Azure Key Vault"
+      },
+      {
+        "name": "Commvault"
+      },
+      {
+        "name": "Google Cloud KMS"
+      },
+      {
+        "name": "HashiCorp Vault"
+      },
+      {
+        "name": "Symantec DLP"
+      }
+    ]
+  },
+  {
+    "name": "Security Information and Event Management (SIEM)",
+    "description": "Security Information and Event Management (SIEM) solutions",
+    "products": [
+      {
+        "name": "LogRhythm"
+      },
+      {
+        "name": "Microsoft Sentinel"
+      },
+      {
+        "name": "Splunk"
+      }
+    ]
+  },
+  {
+    "name": "Consent Management",
+    "description": "Consent Management solutions",
+    "products": [
+      {
+        "name": "Cookiebot"
+      },
+      {
+        "name": "OneTrust"
+      },
+      {
+        "name": "TrustArc"
+      }
+    ]
+  },
+  {
+    "name": "Cloud Security",
+    "description": "Cloud Security solutions",
+    "products": [
+      {
+        "name": "AWS Data Lifecycle Manager"
+      },
+      {
+        "name": "AWS IAM"
+      },
+      {
+        "name": "AWS Macie"
+      },
+      {
+        "name": "AWS Mumbai"
+      },
+      {
+        "name": "BetterCloud"
+      },
+      {
+        "name": "Google Cloud Mumbai"
+      },
+      {
+        "name": "Microsoft Azure India Central"
+      }
+    ]
+  },
+  {
+    "name": "Other / General Security",
+    "description": "Other / General Security solutions",
+    "products": [
+      {
+        "name": "ARX"
+      },
+      {
+        "name": "AgeID"
+      },
+      {
+        "name": "Amazon SES"
+      },
+      {
+        "name": "Amazon SNS"
+      },
+      {
+        "name": "Arthur AI"
+      },
+      {
+        "name": "Ataccama"
+      },
+      {
+        "name": "AttackIQ"
+      },
+      {
+        "name": "Axeptio"
+      },
+      {
+        "name": "Bark"
+      },
+      {
+        "name": "BigID"
+      },
+      {
+        "name": "BitSight"
+      },
+      {
+        "name": "Blancco"
+      },
+      {
+        "name": "Burp Suite"
+      },
+      {
+        "name": "Confluence"
+      },
+      {
+        "name": "ContentKeeper"
+      },
+      {
+        "name": "ContractPodAi"
+      },
+      {
+        "name": "Cornerstone OnDemand"
+      },
+      {
+        "name": "Cortex XSOAR"
+      },
+      {
+        "name": "Custom Development"
+      },
+      {
+        "name": "Cymulate"
+      },
+      {
+        "name": "DataGrail"
+      },
+      {
+        "name": "Digital Guardian"
+      },
+      {
+        "name": "DocuSign"
+      },
+      {
+        "name": "Elasticsearch"
+      },
+      {
+        "name": "Fiddler AI"
+      },
+      {
+        "name": "Forcepoint"
+      },
+      {
+        "name": "Freshdesk"
+      },
+      {
+        "name": "Google Analytics"
+      },
+      {
+        "name": "IBM InfoSphere"
+      },
+      {
+        "name": "IBM OpenScale"
+      },
+      {
+        "name": "IBM Resilient"
+      },
+      {
+        "name": "IRI FieldShield"
+      },
+      {
+        "name": "Immersive Labs"
+      },
+      {
+        "name": "Informatica"
+      },
+      {
+        "name": "Jira"
+      },
+      {
+        "name": "Jira Service Management"
+      },
+      {
+        "name": "Jumio"
+      },
+      {
+        "name": "KnowBe4"
+      },
+      {
+        "name": "LIME"
+      },
+      {
+        "name": "LinkedIn Learning"
+      },
+      {
+        "name": "Mailchimp"
+      },
+      {
+        "name": "MetricStream"
+      },
+      {
+        "name": "Microsoft Presidio"
+      },
+      {
+        "name": "Microsoft Purview"
+      },
+      {
+        "name": "Microsoft Responsible AI"
+      },
+      {
+        "name": "Mimecast"
+      },
+      {
+        "name": "Osano"
+      },
+      {
+        "name": "PagerDuty"
+      },
+      {
+        "name": "Prevalent"
+      },
+      {
+        "name": "ProcessUnity"
+      },
+      {
+        "name": "Proofpoint Security Awareness"
+      },
+      {
+        "name": "Qualys"
+      },
+      {
+        "name": "RSA Archer"
+      },
+      {
+        "name": "Rapid7"
+      },
+      {
+        "name": "SANS Security Awareness"
+      },
+      {
+        "name": "SHAP"
+      },
+      {
+        "name": "SecurityScorecard"
+      },
+      {
+        "name": "Securly"
+      },
+      {
+        "name": "SendGrid"
+      },
+      {
+        "name": "ServiceNow"
+      },
+      {
+        "name": "ServiceNow Security Operations"
+      },
+      {
+        "name": "SharePoint"
+      },
+      {
+        "name": "Spirion"
+      },
+      {
+        "name": "Talend"
+      },
+      {
+        "name": "Tenable"
+      },
+      {
+        "name": "Termly"
+      },
+      {
+        "name": "Torii"
+      },
+      {
+        "name": "Twilio"
+      },
+      {
+        "name": "Varonis"
+      },
+      {
+        "name": "Vendr"
+      },
+      {
+        "name": "Veriff"
+      },
+      {
+        "name": "Veritas"
+      },
+      {
+        "name": "Yoti"
+      },
+      {
+        "name": "Zapier"
+      },
+      {
+        "name": "Zendesk"
+      }
+    ]
+  }
+]

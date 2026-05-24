@@ -167,6 +167,7 @@ enum TenantAuditAction {
   USER_INVITED
   USER_ACTIVATED
   USER_DEACTIVATED
+  USER_UPDATED
   // Onboarding
   ONBOARDING_COMPLETED
   // Department
@@ -208,6 +209,8 @@ enum TenantAuditAction {
   CLASSIFICATION_CHANGED
   ENTRA_CONNECTED
   ENTRA_DISCONNECTED
+  ENTRA_GROUP_REMOVED
+  ENTRA_RECONNECTED
 }
 
 // ============================================
@@ -224,6 +227,7 @@ model User {
   status       UserStatus  @default(PENDING_INVITE)
   source       InviteSource @default(MANUAL)
   entraObjectId String?    // Microsoft Entra ID object ID
+  syncedGroupId String?    // EntraGroupMapping.id that sourced this user (non-FK, nullable)
   invitedById  String?     // FK to User who invited
   invitedBy    User?       @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
   invitees     User[]      @relation("InvitedBy")
@@ -245,6 +249,8 @@ model User {
   lessonProgress       LmsLessonProgress[]
   issuedCertificates   IssuedCertificate[]
 
+  lmsDesignation       String?     // references LmsDesignation.name (super admin schema)
+
   @@unique([tenantId, email])
   @@map("users")
 }
@@ -263,9 +269,10 @@ model UserInvitation {
   note        String?
   expiresAt   DateTime
   acceptedAt  DateTime?
-  invitedById String?
-  invitedBy   User?      @relation(fields: [invitedById], references: [id], onDelete: SetNull)
-  createdAt   DateTime   @default(now())
+  invitedById   String?
+  invitedBy     User?      @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+  departmentIds String[]   @default([])
+  createdAt     DateTime   @default(now())
 
   @@map("user_invitations")
 }
@@ -913,4 +920,46 @@ model IssuedCertificate {
   pdfUrl              String?
 
   @@map("issued_certificates")
+}
+// ============================================
+// ENTRA ID CONFIGURATION
+// Stores credentials for Microsoft Entra ID
+// integration — encrypted at rest.
+// One record per tenant (unique on tenantId).
+// ============================================
+
+model EntraConfig {
+  id                    String    @id @default(uuid())
+  tenantId              String    @unique
+  tenantDomain          String    // e.g., "yourorg.onmicrosoft.com"
+  clientId              String    // Azure App Registration Client ID (GUID)
+  clientSecretEncrypted String    // AES-256-GCM encrypted client secret
+  azureTenantId         String    // Azure AD Tenant ID (GUID)
+  isConnected           Boolean   @default(true)
+  connectedById         String?   // FK to User who set up the integration
+  lastSyncAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("entra_configs")
+}
+
+
+// ============================================
+// ROLE DESIGNATION DEFAULTS
+// CO configures once: "All IT_ADMIN → CISO by default"
+// Applied when users are created/synced.
+// Individual override always possible.
+// ============================================
+
+model RoleDesignationDefault {
+  id          String     @id @default(uuid())
+  tenantId    String
+  portalRole  TenantRole
+  designation String     // e.g. "CISO" — references LmsDesignation.name
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([tenantId, portalRole])
+  @@map("role_designation_defaults")
 }
