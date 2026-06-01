@@ -12,6 +12,7 @@ on:
       - 'packages/shared/**'
       - 'packages/ui/**'
       - '.github/workflows/deploy-super-admin.yml'
+      - 'package-lock.json'
   workflow_dispatch:
 
 jobs:
