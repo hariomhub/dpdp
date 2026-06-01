@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
+    "build:prod": "esbuild src/app.ts --bundle --platform=node --target=node20 --outfile=dist/app.js --external:@prisma/tenant-client --external:@prisma/client --external:pg && node -e \"require('fs').cpSync('../tenant/dist', 'public', { recursive: true })\"",
     "start": "node dist/app.js",
     "seed": "ts-node src/seed.ts"
   },
@@ -31,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/nodemailer": "^6.4.14",
     "@types/node": "^20.0.0",
+    "esbuild": "^0.20.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
   }

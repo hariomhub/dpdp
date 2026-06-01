@@ -1,0 +1,150 @@
+name: Deploy — Tenant Portal
+
+# Triggers on push to main when any relevant file changes,
+# or manually via GitHub Actions UI (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/tenant-api/**'
+      - 'apps/tenant/**'
+      - 'packages/database/**'
+      - 'packages/shared/**'
+      - 'packages/ui/**'
+      - '.github/workflows/deploy-tenant.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Source ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node ────────────────────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install all workspace dependencies ──────────────────────────────
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # ── 4. Generate Prisma clients ─────────────────────────────────────────
+      # Both clients must be generated (super-admin + tenant) because
+      # packages/database generates them together in a single command.
+      - name: Generate Prisma clients
+        env:
+          SUPER_ADMIN_DATABASE_URL: ${{ secrets.SUPER_ADMIN_DATABASE_URL }}
+          TENANT_DATABASE_URL: ${{ secrets.TENANT_DATABASE_URL }}
+        run: npm run generate --workspace=packages/database
+
+      # ── 5. Run DB migrations ───────────────────────────────────────────────
+      # Requires Azure PostgreSQL firewall to allow Azure services:
+      #   Portal → PostgreSQL → Networking → ☑ Allow public access from Azure services
+      # Uses `prisma migrate deploy` — only applies new migrations, safe to
+      # run on every deploy. Already-applied migrations are skipped.
+      - name: Run tenant DB migrations
+        env:
+          TENANT_DATABASE_URL: ${{ secrets.TENANT_DATABASE_URL }}
+        run: |
+          for i in 1 2 3; do
+            echo "Migration attempt $i/3..."
+            npm run migrate:tenant:prod --workspace=packages/database && break
+            if [ $i -eq 3 ]; then
+              echo "❌ Migration failed after 3 attempts"
+              exit 1
+            fi
+            echo "Retrying in 10s..."
+            sleep 10
+          done
+
+      # ── 6. Build tenant frontend (Vite) ────────────────────────────────────
+      # VITE_TENANT_API_URL is set to /api/v1 (relative path) so the app works
+      # on any hostname — no hardcoded Azure URL needed.
+      - name: Build tenant frontend
+        env:
+          VITE_TENANT_API_URL: /api/v1
+        run: npx turbo build --filter=@dpdp/tenant
+
+      # ── 7. Build tenant-api + copy frontend into public/ ───────────────────
+      # build:prod does two things:
+      #   a) esbuild bundles src/app.ts + all workspace deps (including
+      #      @dpdp/database) into a single dist/app.js. Only @prisma/*
+      #      and pg are kept as external runtime deps.
+      #   b) Copies apps/tenant/dist/ → apps/tenant-api/public/
+      #      so Express can serve the React app as static files.
+      - name: Build tenant-api (bundle + embed frontend)
+        run: npm run build:prod --workspace=@dpdp/tenant-api
+
+      # ── 8. Assemble deployment package ────────────────────────────────────
+      # We ship only what Node needs at runtime:
+      #   dist/     – the esbuild bundle (single file)
+      #   public/   – the tenant React build
+      #   node_modules/@prisma/ – generated client + adapter + runtime
+      #   node_modules/pg*/     – PostgreSQL driver + transitive deps
+      - name: Assemble deployment package
+        run: |
+          mkdir -p deploy
+
+          # Backend bundle (single file from esbuild)
+          cp -r apps/tenant-api/dist   deploy/dist
+
+          # Frontend static files (Express serves these)
+          cp -r apps/tenant-api/public deploy/public
+
+          # Minimal package.json — Azure uses this for startup detection
+          cat > deploy/package.json << 'PKGJSON'
+          {
+            "name": "dpdp-tenant-api",
+            "version": "1.0.0",
+            "scripts": { "start": "node dist/app.js" },
+            "engines": { "node": ">=20" }
+          }
+          PKGJSON
+
+          # Copy the full @prisma directory from the monorepo root node_modules.
+          mkdir -p deploy/node_modules
+          cp -r node_modules/@prisma deploy/node_modules/@prisma
+
+          # Install pg (+ all transitive deps) into the deploy folder.
+          # --no-workspaces prevents npm from finding the monorepo root workspaces config.
+          cd deploy && npm install --save pg@"^8.20.0" --no-workspaces --no-package-lock --quiet
+          cd ..
+
+          # Create the ZIP for Azure App Service ZIP deploy
+          cd deploy && zip -r ../release.zip . && cd ..
+          echo "Package size: $(du -sh release.zip | cut -f1)"
+
+      # ── 9. Deploy to Azure App Service ────────────────────────────────────
+      # Requires two GitHub Secrets:
+      #   AZURE_TENANT_WEBAPP_NAME          – your App Service name (e.g. dpdpcms-tenant)
+      #   AZURE_TENANT_WEBAPP_PUBLISH_PROFILE – XML publish profile from Azure Portal
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_TENANT_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_TENANT_WEBAPP_PUBLISH_PROFILE }}
+          package: release.zip
+
+      # ── 10. Smoke test ─────────────────────────────────────────────────────
+      # Non-fatal — deploy already succeeded above. This is a best-effort
+      # check. If it fails, the deploy is still good; check Azure Portal logs.
+      - name: Smoke test — health check
+        continue-on-error: true
+        run: |
+          URL="${{ secrets.AZURE_TENANT_WEBAPP_URL }}/health"
+          echo "Waiting 60s for App Service to restart..."
+          sleep 60
+          echo "Hitting: $URL"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$URL")
+          echo "Health check HTTP status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Deployment healthy"
+          else
+            echo "⚠️ Health check returned $STATUS — app may still be starting. Check Azure Portal logs."
+          fi

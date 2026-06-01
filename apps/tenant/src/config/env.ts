@@ -3,5 +3,5 @@ const env = {
 }
 
 export const appConfig = {
-  apiUrl: env.VITE_TENANT_API_URL || 'http://localhost:3000/api/v1',
+  apiUrl: env.VITE_TENANT_API_URL || '/api/v1',
 } as const

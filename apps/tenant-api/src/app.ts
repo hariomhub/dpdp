@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import path from 'path'
 import { config } from './config'
 import { errorHandler } from './middleware/error-handler'
 import authRoutes from './modules/auth/auth.routes'
@@ -17,10 +18,15 @@ import lmsRoutes from './modules/lms/lms.routes'
 
 const app = express()
 
-app.use(helmet())
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}))
+
+// In production, the frontend and API are served from the same domain
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-tenant-portal.com']
+    ? true // allow same-origin implicitly by not restricting tightly
     : ['http://localhost:5173'],
   credentials: true,
 }))
@@ -54,6 +60,17 @@ app.use('/api/v1/tasks', tasksRoutes)
 app.use('/api/v1/lms', lmsRoutes)
 
 app.use(errorHandler)
+
+// ─── STATIC SERVING & SPA FALLBACK (Production) ─────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const publicPath = path.join(__dirname, '../public')
+  app.use(express.static(publicPath))
+  
+  // SPA fallback - must be the very last route
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'))
+  })
+}
 
 app.listen(config.port, () => {
   console.log(`Tenant API running on port ${config.port}`)
