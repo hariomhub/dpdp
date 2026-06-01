@@ -1,6 +1,7 @@
 dist/
 */dist/
 apps/*/dist/
+apps/admin-api/public/
 apps/*/imports/
 src/**/*.png
 node_modules/

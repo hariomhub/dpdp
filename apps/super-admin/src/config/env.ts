@@ -11,5 +11,5 @@ function requireEnv(key: keyof typeof env): string {
 }
 
 export const appConfig = {
-  apiUrl: requireEnv('VITE_API_URL') || 'http://localhost:3001/api/v1',
+  apiUrl: requireEnv('VITE_API_URL') || (typeof window !== 'undefined' ? '/api/v1' : 'http://localhost:3001/api/v1'),
 } as const

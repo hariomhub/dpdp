@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import path from 'path'
 import rateLimit from 'express-rate-limit'
 import { config } from './config'
 import { errorHandler } from './middleware/error-handler'
@@ -18,13 +19,26 @@ import productFamilyRoutes from './modules/product-families/product-families.rou
 const app = express()
 
 // Security middleware
-app.use(helmet())
+app.use(helmet({
+  // Allow same-origin iframe embeds if needed; tighten in production
+  contentSecurityPolicy: false,
+}))
+// CORS: only needed if a *separate* frontend origin calls this API.
+// When serving the frontend from this same Express server (same origin),
+// CORS is not required. Keeping it here for dev convenience.
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://admin.dpdpcms.in']
+    ? false  // same-origin — no CORS headers needed
     : ['http://localhost:5174'],
   credentials: true,
 }))
+
+// Serve super-admin static build (must be declared before API routes
+// so assets are served fast, but AFTER cors/helmet/rate-limit middleware)
+if (process.env.NODE_ENV === 'production') {
+  const publicDir = path.join(__dirname, '..', 'public')
+  app.use(express.static(publicDir))
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -52,6 +66,15 @@ app.use('/api/v1/audit-logs', auditRoutes)
 app.use('/api/v1/dashboard', dashboardRoutes)
 app.use('/api/v1/control-families', controlFamilyRoutes)
 app.use('/api/v1/product-families', productFamilyRoutes)
+
+// SPA fallback: serve index.html for any non-API route
+// This makes React Router's client-side routing work on hard refresh / direct URL
+if (process.env.NODE_ENV === 'production') {
+  const publicDir = path.join(__dirname, '..', 'public')
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'))
+  })
+}
 
 // Error handler (must be last)
 app.use(errorHandler)
