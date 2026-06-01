@@ -1566,8 +1566,8 @@ export function AdminControlsPage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [selectedControl, setSelectedControl] = useState<any>(null)
 
-  const { data: regsData, isLoading: regsLoading } = useRegulations()
-  const { data: controlsData, isLoading: controlsLoading } = useControls()
+  const { data: regsData, isLoading: regsLoading } = useRegulations({ limit: 1000 })
+  const { data: controlsData, isLoading: controlsLoading } = useControls({ limit: 1000 })
   const { mutate: publishControl } = usePublishControl()
 
   const regulations = regsData?.data ?? []

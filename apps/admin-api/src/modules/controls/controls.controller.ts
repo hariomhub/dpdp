@@ -11,11 +11,12 @@ const predefinedActionSchema = z.object({
   suggestedDueDays: z.number().int().min(1).max(365),
   priority: z.nativeEnum(Priority),
   orderIndex: z.number().int().optional(),
+  productIds: z.array(z.string().uuid()).optional(),
 })
 
 const createControlSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
-  description: z.string().min(10, 'Description is required'),
+  description: z.string().min(5, 'Description must be at least 5 characters'),
   applicableTo: z.nativeEnum(ApplicableTo).default(ApplicableTo.BOTH),
   status: z.nativeEnum(ControlStatus).default(ControlStatus.DRAFT),
   regulationMappings: z.array(z.object({

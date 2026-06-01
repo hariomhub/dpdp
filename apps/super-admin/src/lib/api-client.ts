@@ -78,6 +78,10 @@ async function request<T>(
   const data = await response.json()
 
   if (!response.ok) {
+    if (data.errors && data.errors.length > 0) {
+      const errMsgs = data.errors.map((e: any) => `${e.field}: ${e.message}`).join(', ')
+      throw new Error(`${data.message} - ${errMsgs}`)
+    }
     throw new Error(data.message || 'Request failed')
   }
 
