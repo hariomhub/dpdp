@@ -44,12 +44,24 @@ jobs:
         run: npm run generate --workspace=packages/database
 
       # ── 5. Run DB migrations ───────────────────────────────────────────────
-      # Uses `prisma migrate deploy` which only runs new migrations (safe
-      # to run on every deploy — idempotent for already-applied migrations).
+      # Requires Azure PostgreSQL firewall to allow Azure services:
+      #   Portal → PostgreSQL → Networking → ☑ Allow public access from Azure services
+      # Uses `prisma migrate deploy` — only applies new migrations, safe to
+      # run on every deploy. Already-applied migrations are skipped.
       - name: Run super-admin DB migrations
         env:
           SUPER_ADMIN_DATABASE_URL: ${{ secrets.SUPER_ADMIN_DATABASE_URL }}
-        run: npm run migrate:super-admin:prod --workspace=packages/database
+        run: |
+          for i in 1 2 3; do
+            echo "Migration attempt $i/3..."
+            npm run migrate:super-admin:prod --workspace=packages/database && break
+            if [ $i -eq 3 ]; then
+              echo "❌ Migration failed after 3 attempts"
+              exit 1
+            fi
+            echo "Retrying in 10s..."
+            sleep 10
+          done
 
       # ── 6. Build super-admin frontend (Vite) ──────────────────────────────
       # VITE_API_URL is set to /api/v1 (relative path) so the app works
