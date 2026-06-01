@@ -16,8 +16,12 @@ export async function sendOrgInvitationEmail(params: {
   toName: string
   orgName: string
   inviteToken: string
+  tenantPortalUrl?: string | null
 }): Promise<void> {
-  const inviteUrl = `${config.platform.tenantAppUrl}/invite/${params.inviteToken}`
+  const baseUrl = params.tenantPortalUrl || config.platform.tenantAppUrl
+  // Ensure we don't have double slashes if baseUrl has a trailing slash
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const inviteUrl = `${cleanBaseUrl}/invite/${params.inviteToken}`
 
   await transporter.sendMail({
     from: `"${config.email.fromName}" <${config.email.fromEmail}>`,

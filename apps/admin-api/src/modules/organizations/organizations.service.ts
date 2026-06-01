@@ -203,6 +203,7 @@ export const organizationsService = {
       toName: params.ceoName,
       orgName: params.name,
       inviteToken,
+      tenantPortalUrl: params.tenantPortalUrl,
     })
 
     return tenant
@@ -298,6 +299,7 @@ export const organizationsService = {
       toName: org.ceoName,
       orgName: org.name,
       inviteToken,
+      tenantPortalUrl: org.tenantPortalUrl,
     })
 
     await logAuditAction({
