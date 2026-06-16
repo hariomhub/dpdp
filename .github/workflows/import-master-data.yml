@@ -22,6 +22,14 @@ jobs:
       - name: Install import dependencies
         run: npm install exceljs pg
 
+      - name: Diagnostics
+        run: |
+          echo "Node version: $(node -v)"
+          echo "Excel file exists: $(test -f super-admin-master-data.xlsx && echo YES || echo NO)"
+          echo "Import script exists: $(test -f import-master-data.js && echo YES || echo NO)"
+          echo "exceljs installed: $(node -e "require('exceljs'); console.log('YES')" 2>&1)"
+          echo "pg installed: $(node -e "require('pg'); console.log('YES')" 2>&1)"
+
       - name: Run master data import
         env:
           AZURE_SUPER_ADMIN_DATABASE_URL: ${{ secrets.SUPER_ADMIN_DATABASE_URL }}
