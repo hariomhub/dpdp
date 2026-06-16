@@ -132,7 +132,7 @@ async function main() {
   (await db.query('SELECT id, name FROM control_families')).rows
     .forEach(r => { maps.controlFamilies[r.name] = r.id; });
 
-  (await db.query('SELECT id, title FROM controls WHERE "isCustom" = false')).rows
+  (await db.query('SELECT id, title FROM controls WHERE "isCustom" = false AND "tenantId" IS NULL')).rows
     .forEach(r => { maps.controls[r.title] = r.id; });
 
   (await db.query(`SELECT cpa.id, cpa."controlId", cpa.title FROM control_predefined_actions cpa`)).rows
