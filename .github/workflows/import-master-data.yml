@@ -20,7 +20,7 @@ jobs:
           node-version: '24'
 
       - name: Install import dependencies
-        run: npm install exceljs pg
+        run: npm install exceljs pg --ignore-scripts
 
       - name: Diagnostics
         run: |
