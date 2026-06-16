@@ -1,0 +1,26 @@
+name: Import — Super Admin Master Data
+
+# Trigger manually from GitHub Actions UI
+on:
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install import dependencies
+        run: npm install exceljs pg
+
+      - name: Run master data import
+        env:
+          AZURE_SUPER_ADMIN_DATABASE_URL: ${{ secrets.SUPER_ADMIN_DATABASE_URL }}
+        run: node import-master-data.js --db=azure
