@@ -52,7 +52,7 @@ export const controlsService = {
 
     const where: Prisma.ControlWhereInput = {
       isCustom: false,
-      tenantId: null,
+      tenantId: { equals: null },
     }
 
     if (query.search) {

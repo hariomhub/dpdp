@@ -373,9 +373,11 @@ async function main() {
 
     const mapKey = `${controlId}||${title}`;
     // Build PostgreSQL array literal string — pg can't auto-cast JS arrays to custom enum arrays
-    const evidenceTypes = (evidenceTypesStr
-      ? `{${evidenceTypesStr.split(',').map(s => s.trim()).filter(Boolean).join(',')}}`
-      : '{}');
+    // Strip any existing {} braces the Excel may already contain, then re-wrap once
+    const rawTypes = evidenceTypesStr ? evidenceTypesStr.trim().replace(/^\{/, '').replace(/\}$/, '') : '';
+    const evidenceTypes = rawTypes
+      ? `{${rawTypes.split(',').map(s => s.trim()).filter(Boolean).join(',')}}`
+      : '{}';
     const suggestedDueDays = parseInt(dueDaysStr) || 30;
     const orderIndex       = parseInt(orderIndexStr) || 0;
 
