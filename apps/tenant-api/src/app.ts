@@ -39,6 +39,7 @@ app.use(limiter)
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(`/${config.storage.uploadDir}`, express.static(path.join(process.cwd(), config.storage.uploadDir)))
 
 app.get('/health', (req, res) => {
   res.json({

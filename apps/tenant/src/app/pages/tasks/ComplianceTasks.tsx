@@ -2,14 +2,18 @@ import React, { useState } from 'react';
 import {
   AlertTriangle, CheckCircle2, Clock, ArrowRight, Search,
   User, Upload, Eye, ThumbsUp, ThumbsDown, X, FileText,
-  Database, Shield, ChevronRight, Edit2, Loader2, Check, RefreshCw
+  Database, Shield, ChevronRight, Edit2, Loader2, Check, RefreshCw, Trash2, Link as LinkIcon
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { apiOrigin } from '../../../lib/api-client';
 import {
   useListTasks, useTaskDetail, useStartTask, useSubmitTask,
   useReviewTask, useSignoffTask, useRejectFinalTask, useAssignTask,
-  useAssignableUsers, type Task,
+  useAssignableUsers, useDeleteEvidence, type Task, type Action, type Evidence, type ActionEvidence, type GapFinding,
 } from '../../../hooks/useTasks';
+import { EvidenceUploadModal } from './EvidenceUploadModal';
+import { GapFindingModal } from './GapFindingModal';
+import { EditEvidenceModal, type EditableEvidence } from './EditEvidenceModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -59,6 +63,57 @@ function relativeTime(iso: string): string {
   return `${d} days ago`;
 }
 
+type ViewableEvidence = Pick<Evidence, 'type' | 'linkUrl' | 'fileUrl' | 'title' | 'textContent'>;
+
+function viewEvidence(ev: ViewableEvidence, onShowText: (title: string, text: string) => void) {
+  if (ev.type === 'TEXT_NOTE') { onShowText(ev.title, ev.textContent ?? ''); return; }
+  const url = ev.type === 'LINK' ? ev.linkUrl : ev.fileUrl ? `${apiOrigin}${ev.fileUrl}` : null;
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function TextNoteModal({ title, text, onClose }: { title: string; text: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-[420px]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+          <p className="text-[15px] font-bold text-slate-900 truncate">{title}</p>
+          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+        </div>
+        <div className="p-4 max-h-80 overflow-y-auto">
+          <p className="text-[13.5px] text-slate-700 whitespace-pre-wrap">{text || '—'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Card-style trigger for the gap-finding requirement on rejection — a two-line
+// label plus icon/chevron reads clearly at any length, unlike a centered button
+// whose text wraps mid-word once "(required to reject)" pushes it past one line.
+function GapFindingTrigger({ recorded, onClick }: { recorded: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className={`w-full p-2.5 rounded-lg border flex items-center gap-2.5 text-left transition-colors ${
+        recorded ? 'border-green-200 bg-green-50 hover:bg-green-100' : 'border-red-200 bg-red-50/60 hover:bg-red-50'
+      }`}>
+      <span className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+        recorded ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+      }`}>
+        {recorded ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className={`text-[13px] font-semibold ${recorded ? 'text-green-700' : 'text-red-700'}`}>
+          {recorded ? 'Gap Finding Recorded' : 'Record Gap Finding'}
+        </p>
+        <p className={`text-[11.5px] ${recorded ? 'text-green-600' : 'text-red-500'}`}>
+          {recorded ? 'Tap to add another' : 'Required before you can reject'}
+        </p>
+      </div>
+      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${recorded ? 'text-green-400' : 'text-red-400'}`} />
+    </button>
+  );
+}
+
 // ─── Assign Modal ─────────────────────────────────────────────────────────────
 
 function AssignModal({ taskId, current, onClose }: { taskId: string; current: string | null; onClose: () => void }) {
@@ -70,30 +125,30 @@ function AssignModal({ taskId, current, onClose }: { taskId: string; current: st
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[380px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <p className="text-[14px] font-bold text-slate-900">Assign Task</p>
+          <p className="text-[15.5px] font-bold text-slate-900">Assign Task</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
         <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
           <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer">
             <input type="radio" checked={selected === ''} onChange={() => setSelected('')} className="accent-slate-800" />
-            <span className="text-[12.5px] text-slate-500">Unassign (leave as PENDING)</span>
+            <span className="text-[14px] text-slate-500">Unassign (leave as PENDING)</span>
           </label>
           {(users as any[]).map((u: any) => (
             <label key={u.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer">
               <input type="radio" checked={selected === u.id} onChange={() => setSelected(u.id)} className="accent-slate-800" />
               <div>
-                <p className="text-[13px] font-medium text-slate-800">{u.name}</p>
-                <p className="text-[11px] text-slate-400">{u.email}</p>
+                <p className="text-[14.5px] font-medium text-slate-800">{u.name}</p>
+                <p className="text-[12.5px] text-slate-400">{u.email}</p>
               </div>
             </label>
           ))}
         </div>
         <div className="flex gap-3 px-5 py-4 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[14.5px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
           <button
-            onClick={async () => { await assignMut.mutateAsync([taskId, { assigneeId: selected || null }] as any); onClose(); }}
+            onClick={async () => { await assignMut.mutateAsync({ id: taskId, body: { assigneeId: selected || null } }); onClose(); }}
             disabled={assignMut.isPending}
-            className="flex-1 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 py-2 bg-slate-900 text-white text-[14.5px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
             {assignMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Save Assignment →
           </button>
@@ -116,12 +171,19 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
   const [showSignoff, setShowSignoff] = useState(false);
   const [showReject,  setShowReject]  = useState(false);
   const [rejectNote,  setRejectNote]  = useState('');
+  const [uploadTarget, setUploadTarget] = useState<{ actionId?: string; productId?: string } | null>(null);
+  const [editingEvidence, setEditingEvidence] = useState<EditableEvidence | null>(null);
+  const [viewingText, setViewingText] = useState<{ title: string; text: string } | null>(null);
+  const [gapFindingContext, setGapFindingContext] = useState<'ia' | 'ea' | null>(null);
+  const [iaFindingRecorded, setIaFindingRecorded] = useState(false);
+  const [eaFindingRecorded, setEaFindingRecorded] = useState(false);
 
   const startMut     = useStartTask();
   const submitMut    = useSubmitTask();
   const reviewMut    = useReviewTask();
   const signoffMut   = useSignoffTask();
   const rejectMut    = useRejectFinalTask();
+  const deleteEvidenceMut = useDeleteEvidence();
 
   if (isLoading) return <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
   if (!task) return <div className="py-20 text-center text-slate-400">Task not found.</div>;
@@ -131,15 +193,44 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
   const isEA = role === 'external_auditor';
   const isCO = role === 'co' || role === 'ceo';
   const pColor = PRIORITY_COLORS[task.priority] ?? '#64748b';
+  const canUpload = isIT && ['IN_PROGRESS', 'REJECTED'].includes(task.status);
+  const actionsAddressed = task.control?.actions.filter(a => a.evidence.length > 0).length ?? 0;
+  const actionsTotal = task.control?.actions.length ?? 0;
 
   return (
     <div className="space-y-4">
       {showAssign && (
         <AssignModal taskId={task.id} current={task.assignedTo?.id ?? null} onClose={() => setShowAssign(false)} />
       )}
+      {uploadTarget && task.control && (
+        <EvidenceUploadModal
+          taskId={task.id}
+          actions={task.control.actions}
+          initialActionId={uploadTarget.actionId}
+          initialProductId={uploadTarget.productId}
+          onClose={() => setUploadTarget(null)}
+        />
+      )}
+      {editingEvidence && (
+        <EditEvidenceModal taskId={task.id} evidence={editingEvidence} onClose={() => setEditingEvidence(null)} />
+      )}
+      {viewingText && (
+        <TextNoteModal title={viewingText.title} text={viewingText.text} onClose={() => setViewingText(null)} />
+      )}
+      {gapFindingContext && task.control && (
+        <GapFindingModal
+          taskId={task.id}
+          actions={task.control.actions}
+          onClose={() => setGapFindingContext(null)}
+          onRecorded={() => {
+            if (gapFindingContext === 'ia') setIaFindingRecorded(true);
+            if (gapFindingContext === 'ea') setEaFindingRecorded(true);
+          }}
+        />
+      )}
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-slate-400">
+      <div className="flex items-center gap-2 text-[13px] text-slate-400">
         <button onClick={onBack} className="hover:text-blue-600 transition-colors">Compliance Tasks</button>
         <ChevronRight className="w-3.5 h-3.5" />
         <span className="text-slate-800 font-medium truncate max-w-sm">{task.title}</span>
@@ -151,21 +242,21 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <StatusChip status={task.status} isOverdue={task.isOverdue} />
-              <span className="text-[10.5px] px-2 py-0.5 rounded font-semibold"
+              <span className="text-[12px] px-2 py-0.5 rounded font-semibold"
                 style={{ background: `${pColor}18`, color: pColor }}>{task.priority}</span>
-              <span className="text-[10.5px] text-slate-400 font-mono">{task.taskCode}</span>
-              {task.autoAssigned && <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold">Auto-delegated</span>}
+              <span className="text-[12px] text-slate-400 font-mono">{task.taskCode}</span>
+              {task.autoAssigned && <span className="text-[11.5px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold">Auto-delegated</span>}
             </div>
-            <h1 className="text-[18px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{task.title}</h1>
+            <h1 className="text-[20px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{task.title}</h1>
           </div>
           {isCO && (
             <button onClick={() => setShowAssign(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-[12px] text-slate-600 rounded-lg hover:bg-slate-50">
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-[13.5px] text-slate-600 rounded-lg hover:bg-slate-50">
               <User className="w-3.5 h-3.5" /> {task.assignedTo ? 'Reassign' : 'Assign'}
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
+        <div className="flex items-center gap-1.5 text-[12.5px] flex-wrap">
           {[
             `Assessment: ${task.assessment.name}`,
             task.regulation ? `Reg: ${task.regulation.shortCode}` : null,
@@ -185,29 +276,97 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
         {/* Left column */}
         <div className="flex-1 space-y-4">
           <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
-            <p className="text-[12.5px] text-slate-700 leading-relaxed">{task.description}</p>
+            <p className="text-[14.5px] text-slate-700 leading-relaxed">{task.description}</p>
             {task.instructions && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-[11.5px] font-semibold text-blue-700 mb-0.5">Instructions from CO</p>
-                <p className="text-[12px] text-blue-600">{task.instructions}</p>
+                <p className="text-[13px] font-semibold text-blue-700 mb-0.5">Instructions from CO</p>
+                <p className="text-[13.5px] text-blue-600">{task.instructions}</p>
               </div>
             )}
             {task.control?.actions && task.control.actions.length > 0 && (
               <div>
-                <p className="text-[11.5px] font-semibold text-slate-600 mb-2">Required Actions</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[13px] font-semibold text-slate-600">Required Actions</p>
+                  <span className="text-[12px] text-slate-400">{actionsAddressed} of {actionsTotal} have evidence</span>
+                </div>
                 <div className="space-y-2">
-                  {task.control.actions.map((action: any, i: number) => (
-                    <div key={action.id} className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-lg">
-                      <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                      <div>
-                        <p className="text-[12px] font-semibold text-slate-800">{action.title}</p>
-                        <p className="text-[11px] text-slate-500">{action.description}</p>
-                        <p className="text-[10.5px] text-slate-400 mt-0.5">
-                          Evidence: {action.evidenceTypes?.join(', ')} · Due within {action.suggestedDueDays}d
-                        </p>
+                  {task.control.actions.map((action: Action, i: number) => {
+                    const usedProductIds = new Set(action.evidence.map(e => e.productId).filter(Boolean));
+                    return (
+                    <div key={action.id} className="p-2.5 bg-slate-50 rounded-lg">
+                      <div className="flex items-start gap-2.5">
+                        <span className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5 ${action.evidence.length > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                          {action.evidence.length > 0 ? <Check className="w-3 h-3" /> : i + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13.5px] font-semibold text-slate-800">{action.title}</p>
+                          <p className="text-[12.5px] text-slate-500">{action.description}</p>
+                          <p className="text-[12px] text-slate-400 mt-0.5">
+                            Evidence: {action.evidenceTypes?.join(', ')} · Due within {action.suggestedDueDays}d
+                          </p>
+
+                          {/* Suggested products for this action — once a product has evidence,
+                              its chip switches to "done" state and re-opens the same tag to add more,
+                              instead of behaving like a fresh, repeatable "mark as used" action. */}
+                          {canUpload && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {action.products.map(p => {
+                                const used = usedProductIds.has(p.id);
+                                const count = action.evidence.filter(e => e.productId === p.id).length;
+                                return (
+                                  <button key={p.id} onClick={() => setUploadTarget({ actionId: action.id, productId: p.id })}
+                                    title={used ? 'Add more evidence for this tool' : undefined}
+                                    className={`text-[12px] px-2 py-1 rounded-md flex items-center gap-1 ${used
+                                      ? 'border border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                                      : 'border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 bg-white'}`}>
+                                    {used ? <Check className="w-3 h-3" /> : '+'} {p.name}{used && count > 1 ? ` (${count})` : ''}
+                                  </button>
+                                );
+                              })}
+                              <button onClick={() => setUploadTarget({ actionId: action.id })}
+                                className="text-[12px] px-2 py-1 border border-dashed border-slate-300 rounded-md text-slate-500 hover:border-blue-300 hover:text-blue-600 bg-white">
+                                + Other tool
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Evidence already tagged to this action */}
+                          {action.evidence.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {action.evidence.map((ev: ActionEvidence) => (
+                                <div key={ev.id} className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
+                                  <FileText className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                                  <span className="truncate">{ev.title}</span>
+                                  <span className="text-slate-400 flex-shrink-0">— {ev.productName ?? ev.otherLabel ?? 'general'}</span>
+                                  <span className="flex-1" />
+                                  <button onClick={() => viewEvidence(ev, (title, text) => setViewingText({ title, text }))}
+                                    className="text-slate-400 hover:text-blue-600 flex-shrink-0"><Eye className="w-3.5 h-3.5" /></button>
+                                  {canUpload && (
+                                    <button onClick={() => setEditingEvidence(ev)}
+                                      className="text-slate-400 hover:text-slate-700 flex-shrink-0"><Edit2 className="w-3.5 h-3.5" /></button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Gap findings raised against this action */}
+                          {action.gapFindings.length > 0 && (
+                            <div className="mt-2 space-y-1.5">
+                              {action.gapFindings.map(gf => (
+                                <div key={gf.id} className="p-2 bg-red-50 border border-red-100 rounded-md">
+                                  <p className="text-[12px] font-semibold text-red-700 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 flex-shrink-0" /> Gap: {gf.remediation}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -216,40 +375,95 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
           {/* Evidence list */}
           <div className="bg-white border border-slate-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[13px] font-bold text-slate-800 flex items-center gap-2">
+              <p className="text-[14.5px] font-bold text-slate-800 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-slate-400" /> Evidence
-                {task.evidenceCount > 0 && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 rounded font-semibold">{task.evidenceCount}</span>}
+                {task.evidenceCount > 0 && <span className="text-[11.5px] bg-blue-100 text-blue-700 px-1.5 rounded font-semibold">{task.evidenceCount}</span>}
               </p>
-              {isIT && ['IN_PROGRESS', 'REJECTED'].includes(task.status) && (
-                <span className="text-[11.5px] text-slate-400 flex items-center gap-1"><Upload className="w-3.5 h-3.5" /> Upload in Evidence Hub</span>
+              {canUpload && (
+                <button onClick={() => setUploadTarget({})}
+                  className="text-[13px] text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium">
+                  <Upload className="w-3.5 h-3.5" /> Add Evidence
+                </button>
               )}
             </div>
             {task.evidence.length === 0 ? (
-              <p className="text-[12px] text-slate-400 py-4 text-center">No evidence uploaded yet.</p>
+              <p className="text-[13.5px] text-slate-400 py-4 text-center">No evidence uploaded yet.</p>
             ) : (
               <div className="space-y-2">
-                {task.evidence.map((ev: any) => (
+                {task.evidence.map((ev: Evidence) => (
                   <div key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50">
-                    <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    {ev.type === 'LINK' ? <LinkIcon className="w-4 h-4 text-blue-400 flex-shrink-0" /> : <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] font-medium text-slate-800 truncate">{ev.title}</p>
-                      <p className="text-[11px] text-slate-400">{ev.evidenceType} · {relativeTime(ev.createdAt)}</p>
+                      <p className="text-[14px] font-medium text-slate-800 truncate">{ev.title}</p>
+                      <p className="text-[12.5px] text-slate-400">{ev.type} · {relativeTime(ev.createdAt)}</p>
+                      {ev.linkedActions.length > 0 && (
+                        <p className="text-[12px] text-slate-400 mt-0.5 truncate">
+                          Linked to: {ev.linkedActions.map(l => l.actionTitle).filter(Boolean).join(', ')}
+                        </p>
+                      )}
                     </div>
+                    <button onClick={() => viewEvidence(ev, (title, text) => setViewingText({ title, text }))}
+                      className="text-slate-400 hover:text-blue-600 flex-shrink-0"><Eye className="w-4 h-4" /></button>
+                    {canUpload && (
+                      <>
+                        <button onClick={() => setEditingEvidence(ev)}
+                          className="text-slate-400 hover:text-slate-700 flex-shrink-0"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteEvidenceMut.mutate({ taskId: task.id, evidenceId: ev.id })}
+                          className="text-slate-300 hover:text-red-500 flex-shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Gap findings — what auditors flagged and what to do about it */}
+          {task.gapFindings.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2">
+              <p className="text-[14.5px] font-bold text-slate-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" /> Gap Findings
+              </p>
+              {task.gapFindings.map((gf: GapFinding) => (
+                <div key={gf.id} className="p-3 bg-red-50 border border-red-100 rounded-lg space-y-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {gf.reasonCodes.map(code => (
+                      <span key={code} className="text-[11.5px] font-semibold px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
+                        {code === 'OTHER' ? (gf.otherReason || 'Other') : code.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                  {gf.actionTitles.length > 0 && (
+                    <p className="text-[12px] text-red-500">Affects: {gf.actionTitles.join(', ')}</p>
+                  )}
+                  <p className="text-[13.5px] text-red-800"><span className="font-semibold">Remediation: </span>{gf.remediation}</p>
+                  {gf.files.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-0.5">
+                      {gf.files.map(f => (
+                        <a key={f.id} href={`${apiOrigin}${f.fileUrl}`} target="_blank" rel="noreferrer"
+                          className="text-[12px] text-red-600 underline flex items-center gap-1">
+                          <FileText className="w-3 h-3" /> {f.fileName}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[12px] text-red-400">{gf.raisedByName ?? 'Reviewer'} · {relativeTime(gf.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Review notes */}
           {task.reviewNotes.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2">
-              <p className="text-[13px] font-bold text-slate-800">Reviewer Notes</p>
+              <p className="text-[14.5px] font-bold text-slate-800">Reviewer Notes</p>
               {task.reviewNotes.map((n: any) => (
                 <div key={n.id} className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
-                  <p className="text-[11.5px] font-semibold text-amber-700">{n.author?.name ?? 'Reviewer'}</p>
-                  <p className="text-[12px] text-amber-800 mt-0.5">{n.note}</p>
-                  <p className="text-[10.5px] text-amber-500 mt-1">{relativeTime(n.createdAt)}</p>
+                  <p className="text-[13px] font-semibold text-amber-700">{n.author?.name ?? 'Reviewer'}</p>
+                  <p className="text-[13.5px] text-amber-800 mt-0.5">{n.note}</p>
+                  <p className="text-[12px] text-amber-500 mt-1">{relativeTime(n.createdAt)}</p>
                 </div>
               ))}
             </div>
@@ -261,47 +475,50 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
           {/* IT Admin actions */}
           {isIT && task.assignedTo?.id && (
             <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2">
-              <p className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide">Your Actions</p>
+              <p className="text-[13px] font-semibold text-slate-600 uppercase tracking-wide">Your Actions</p>
               {task.status === 'PENDING' && (
-                <button onClick={() => startMut.mutate([task.id] as any)}
+                <button onClick={() => startMut.mutate({ id: task.id })}
                   disabled={startMut.isPending}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2">
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[14.5px] font-semibold rounded-lg flex items-center justify-center gap-2">
                   {startMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Start Working
                 </button>
               )}
               {task.status === 'IN_PROGRESS' && (
                 <>
+                  {actionsTotal > 0 && (
+                    <p className="text-[12px] text-slate-400">{actionsAddressed} of {actionsTotal} actions have evidence</p>
+                  )}
                   {showSubmit ? (
                     <div className="space-y-2">
                       <textarea rows={3} value={submitNote} onChange={e => setSubmitNote(e.target.value)}
                         placeholder="Optional: note for the IA reviewer…"
-                        className="w-full px-3 py-2 text-[12px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+                        className="w-full px-3 py-2 text-[13.5px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
                       <div className="flex gap-2">
-                        <button onClick={() => setShowSubmit(false)} className="flex-1 py-1.5 border border-slate-200 text-[12px] text-slate-600 rounded-lg">Cancel</button>
-                        <button onClick={async () => { await submitMut.mutateAsync([task.id, { note: submitNote }] as any); setShowSubmit(false); }}
+                        <button onClick={() => setShowSubmit(false)} className="flex-1 py-1.5 border border-slate-200 text-[13.5px] text-slate-600 rounded-lg">Cancel</button>
+                        <button onClick={async () => { await submitMut.mutateAsync({ id: task.id, body: { note: submitNote } }); setShowSubmit(false); }}
                           disabled={submitMut.isPending}
-                          className="flex-1 py-1.5 bg-green-600 text-white text-[12px] font-semibold rounded-lg flex items-center justify-center">
+                          className="flex-1 py-1.5 bg-green-600 text-white text-[13.5px] font-semibold rounded-lg flex items-center justify-center">
                           {submitMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Submit →'}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <button onClick={() => setShowSubmit(true)}
-                      className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2">
+                      className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-[14.5px] font-semibold rounded-lg flex items-center justify-center gap-2">
                       <Upload className="w-4 h-4" /> Submit for Review
                     </button>
                   )}
                 </>
               )}
               {task.status === 'REJECTED' && (
-                <button onClick={() => startMut.mutate([task.id] as any)} disabled={startMut.isPending}
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-semibold rounded-lg">
+                <button onClick={() => startMut.mutate({ id: task.id })} disabled={startMut.isPending}
+                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-[14.5px] font-semibold rounded-lg">
                   Re-open Task
                 </button>
               )}
-              {['EVIDENCE_SUBMITTED', 'UNDER_REVIEW', 'APPROVED_INTERNAL', 'COMPLIANT'].includes(task.status) && (
-                <p className="text-center text-[12px] text-slate-400 py-2">
+              {['EVIDENCE_SUBMITTED', 'UNDER_REVIEW', 'APPROVED_INTERNAL', 'FINAL_REVIEW', 'COMPLIANT'].includes(task.status) && (
+                <p className="text-center text-[13.5px] text-slate-400 py-2">
                   {task.status === 'COMPLIANT' ? '✅ Task is compliant.' : 'Waiting for reviewer…'}
                 </p>
               )}
@@ -311,57 +528,67 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
           {/* IA review actions */}
           {isIA && ['EVIDENCE_SUBMITTED', 'UNDER_REVIEW'].includes(task.status) && (
             <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2">
-              <p className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide">Review</p>
+              <p className="text-[13px] font-semibold text-slate-600 uppercase tracking-wide">Review</p>
               {showReview ? (
                 <div className="space-y-2">
-                  <textarea rows={3} value={reviewNote} onChange={e => setReviewNote(e.target.value)}
-                    placeholder="Add reviewer notes (required for rejection)…"
-                    className="w-full px-3 py-2 text-[12px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+                  <textarea rows={2} value={reviewNote} onChange={e => setReviewNote(e.target.value)}
+                    placeholder="Optional general comment…"
+                    className="w-full px-3 py-2 text-[13.5px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+                  <GapFindingTrigger recorded={iaFindingRecorded} onClick={() => setGapFindingContext('ia')} />
                   <div className="flex gap-2">
-                    <button onClick={async () => { await reviewMut.mutateAsync([task.id, { decision: 'reject', note: reviewNote }] as any); setShowReview(false); }}
-                      disabled={!reviewNote.trim() || reviewMut.isPending}
-                      className="flex-1 py-2 bg-red-500 text-white text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1 disabled:opacity-50">
+                    <button onClick={async () => { await reviewMut.mutateAsync({ id: task.id, body: { decision: 'reject', note: reviewNote } }); setShowReview(false); setIaFindingRecorded(false); }}
+                      disabled={!iaFindingRecorded || reviewMut.isPending}
+                      title={!iaFindingRecorded ? 'Record at least one gap finding first' : undefined}
+                      className="flex-1 py-2 bg-red-500 text-white text-[13.5px] font-semibold rounded-lg flex items-center justify-center gap-1 disabled:opacity-50">
                       <ThumbsDown className="w-3.5 h-3.5" /> Reject
                     </button>
-                    <button onClick={async () => { await reviewMut.mutateAsync([task.id, { decision: 'approve', note: reviewNote }] as any); setShowReview(false); }}
+                    <button onClick={async () => { await reviewMut.mutateAsync({ id: task.id, body: { decision: 'approve', note: reviewNote } }); setShowReview(false); }}
                       disabled={reviewMut.isPending}
-                      className="flex-1 py-2 bg-green-600 text-white text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1">
+                      className="flex-1 py-2 bg-green-600 text-white text-[13.5px] font-semibold rounded-lg flex items-center justify-center gap-1">
                       <ThumbsUp className="w-3.5 h-3.5" /> Approve
                     </button>
                   </div>
-                  <button onClick={() => setShowReview(false)} className="w-full text-[11.5px] text-slate-400 hover:text-slate-600">Cancel</button>
+                  <button onClick={() => { setShowReview(false); setIaFindingRecorded(false); }} className="w-full text-[13px] text-slate-400 hover:text-slate-600">Cancel</button>
                 </div>
               ) : (
                 <button onClick={() => setShowReview(true)}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg">
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[14.5px] font-semibold rounded-lg">
                   Start Review →
                 </button>
               )}
             </div>
           )}
 
-          {/* CO sign-off */}
-          {isCO && task.status === 'APPROVED_INTERNAL' && (
+          {/* Final sign-off — External Auditor (primary), CO/CEO retain override access */}
+          {(isEA || isCO) && ['APPROVED_INTERNAL', 'FINAL_REVIEW'].includes(task.status) && (
             <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-2">
-              <p className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide">Final Decision</p>
-              <button onClick={() => signoffMut.mutate([task.id] as any)} disabled={signoffMut.isPending}
-                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2">
+              <p className="text-[13px] font-semibold text-slate-600 uppercase tracking-wide">Final Decision</p>
+              <button onClick={() => signoffMut.mutate({ id: task.id })} disabled={signoffMut.isPending}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-[14.5px] font-semibold rounded-lg flex items-center justify-center gap-2">
                 {signoffMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Mark as Compliant
               </button>
+              {!showReject && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <div className="flex-1 h-px bg-slate-100" /><span className="text-[11px] text-slate-300 font-medium">OR</span><div className="flex-1 h-px bg-slate-100" />
+                </div>
+              )}
               {showReject ? (
                 <div className="space-y-2">
                   <textarea rows={2} value={rejectNote} onChange={e => setRejectNote(e.target.value)}
-                    placeholder="Reason for rejection…"
-                    className="w-full px-3 py-2 text-[12px] border border-slate-200 rounded-lg resize-none" />
+                    placeholder="Optional general comment…"
+                    className="w-full px-3 py-2 text-[13.5px] border border-slate-200 rounded-lg resize-none" />
+                  <GapFindingTrigger recorded={eaFindingRecorded} onClick={() => setGapFindingContext('ea')} />
                   <div className="flex gap-2">
-                    <button onClick={() => setShowReject(false)} className="flex-1 py-1.5 border text-[12px] text-slate-600 rounded-lg">Cancel</button>
-                    <button onClick={async () => { await rejectMut.mutateAsync([task.id, { note: rejectNote }] as any); setShowReject(false); }}
-                      className="flex-1 py-1.5 bg-red-500 text-white text-[12px] font-semibold rounded-lg">Reject</button>
+                    <button onClick={() => { setShowReject(false); setEaFindingRecorded(false); }} className="flex-1 py-1.5 border text-[13.5px] text-slate-600 rounded-lg">Cancel</button>
+                    <button onClick={async () => { await rejectMut.mutateAsync({ id: task.id, body: { note: rejectNote } }); setShowReject(false); setEaFindingRecorded(false); }}
+                      disabled={!eaFindingRecorded}
+                      title={!eaFindingRecorded ? 'Record at least one gap finding first' : undefined}
+                      className="flex-1 py-1.5 bg-red-500 text-white text-[13.5px] font-semibold rounded-lg disabled:opacity-50">Reject</button>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setShowReject(true)} className="w-full py-2 border border-red-200 text-red-500 text-[12.5px] rounded-lg hover:bg-red-50">
+                <button onClick={() => setShowReject(true)} className="w-full py-2 border border-red-200 text-red-500 text-[14px] rounded-lg hover:bg-red-50">
                   Reject & Send Back
                 </button>
               )}
@@ -370,7 +597,7 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
 
           {/* Metadata */}
           <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
-            <p className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide">Details</p>
+            <p className="text-[13px] font-semibold text-slate-600 uppercase tracking-wide">Details</p>
             {[
               { label: 'Assigned To', value: task.assignedTo?.name ?? '— Unassigned' },
               { label: 'Due Date', value: new Date(task.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
@@ -378,8 +605,8 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
               { label: 'Created By', value: task.createdBy?.name ?? '—' },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between items-center">
-                <span className="text-[11.5px] text-slate-400">{label}</span>
-                <span className="text-[12px] font-medium text-slate-700">{value}</span>
+                <span className="text-[13px] text-slate-400">{label}</span>
+                <span className="text-[13.5px] font-medium text-slate-700">{value}</span>
               </div>
             ))}
           </div>
@@ -387,19 +614,19 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
           {/* Status history */}
           {task.statusHistory.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-lg p-4">
-              <p className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide mb-3">Activity</p>
+              <p className="text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-3">Activity</p>
               <div className="space-y-2.5">
                 {task.statusHistory.slice(0, 5).map((h: any) => (
                   <div key={h.id} className="flex items-start gap-2.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
                     <div>
-                      <p className="text-[11.5px] text-slate-700 font-medium">
+                      <p className="text-[13px] text-slate-700 font-medium">
                         {STATUS_MAP[h.fromStatus]?.label ?? h.fromStatus} → {STATUS_MAP[h.toStatus]?.label ?? h.toStatus}
                       </p>
-                      <p className="text-[10.5px] text-slate-400">
+                      <p className="text-[12px] text-slate-400">
                         {h.changedBy?.name ?? 'System'} · {relativeTime(h.createdAt)}
                       </p>
-                      {h.note && <p className="text-[11px] text-slate-500 mt-0.5 italic">"{h.note}"</p>}
+                      {h.note && <p className="text-[12.5px] text-slate-500 mt-0.5 italic">"{h.note}"</p>}
                     </div>
                   </div>
                 ))}
@@ -414,11 +641,11 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const ALL_STATUSES = ['All', 'PENDING', 'IN_PROGRESS', 'EVIDENCE_SUBMITTED', 'UNDER_REVIEW', 'APPROVED_INTERNAL', 'COMPLIANT', 'REJECTED'];
+const ALL_STATUSES = ['All', 'PENDING', 'IN_PROGRESS', 'EVIDENCE_SUBMITTED', 'UNDER_REVIEW', 'APPROVED_INTERNAL', 'FINAL_REVIEW', 'COMPLIANT', 'REJECTED'];
 const STATUS_LABELS: Record<string, string> = {
   All: 'All', PENDING: 'Pending', IN_PROGRESS: 'In Progress',
   EVIDENCE_SUBMITTED: 'Evidence Submitted', UNDER_REVIEW: 'Under Review',
-  APPROVED_INTERNAL: 'Approved', COMPLIANT: 'Compliant', REJECTED: 'Rejected',
+  APPROVED_INTERNAL: 'Approved', FINAL_REVIEW: 'Final Review', COMPLIANT: 'Compliant', REJECTED: 'Rejected',
 };
 
 export function ComplianceTasksPage() {
@@ -435,6 +662,7 @@ export function ComplianceTasksPage() {
 
   const isIT = role === 'it_admin';
   const isIA = role === 'internal_auditor';
+  const isEA = role === 'external_auditor';
   const isCO = role === 'co' || role === 'ceo';
 
   const filtered = (tasks as Task[]).filter(t =>
@@ -442,9 +670,10 @@ export function ComplianceTasksPage() {
     t.asset.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const unassigned   = (tasks as Task[]).filter(t => !t.assignedTo && activeTab === 'All');
-  const needsReview  = (tasks as Task[]).filter(t => t.status === 'EVIDENCE_SUBMITTED' && activeTab === 'All');
-  const rejected     = (tasks as Task[]).filter(t => t.status === 'REJECTED' && activeTab === 'All');
+  const unassigned    = (tasks as Task[]).filter(t => !t.assignedTo && activeTab === 'All');
+  const needsReview   = (tasks as Task[]).filter(t => t.status === 'EVIDENCE_SUBMITTED' && activeTab === 'All');
+  const needsSignoff  = (tasks as Task[]).filter(t => t.status === 'FINAL_REVIEW' && activeTab === 'All');
+  const rejected      = (tasks as Task[]).filter(t => t.status === 'REJECTED' && activeTab === 'All');
   const countByTab   = (s: string) => s === 'All' ? (tasks as Task[]).length : (tasks as Task[]).filter(t => t.status === s).length;
 
   return (
@@ -507,6 +736,16 @@ export function ComplianceTasksPage() {
                 {needsReview.length} task{needsReview.length !== 1 ? 's' : ''} waiting for your review
               </p>
               <p className="text-[12px] text-blue-600">IT Admins have submitted evidence. Review and approve or reject.</p>
+            </div>
+          )}
+
+          {/* External Auditor priority */}
+          {isEA && needsSignoff.length > 0 && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-[13px] font-semibold text-amber-800 mb-1">
+                {needsSignoff.length} task{needsSignoff.length !== 1 ? 's' : ''} waiting for final sign-off
+              </p>
+              <p className="text-[12px] text-amber-600">Internal Auditor has approved these. Review and mark compliant or reject.</p>
             </div>
           )}
 

@@ -30,6 +30,16 @@ export const config = {
     superAdminApiUrl: process.env.SUPER_ADMIN_API_URL!,
   },
 
+  storage: {
+    provider: (process.env.STORAGE_PROVIDER || 'local') as 'local' | 'azure',
+    uploadDir: process.env.UPLOAD_DIR || 'uploads',
+    maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '25'),
+    azure: {
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
+      container:        process.env.AZURE_STORAGE_CONTAINER        || 'evidence',
+    },
+  },
+
   entra: {
     /**
      * 32-byte key as a 64-character hex string.

@@ -133,6 +133,29 @@ export function useCreateChapter() {
     },
   })
 }
+export function useUpdateChapter() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      regulationId,
+      chapterId,
+      data,
+    }: {
+      regulationId: string
+      chapterId: string
+      data: Partial<{ name: string; title: string; orderIndex: number; isMandatory: boolean }>
+    }) => apiClient.patch(`/regulations/${regulationId}/chapters/${chapterId}`, data),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: ['regulations', vars.regulationId, 'chapters'],
+      })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to update chapter')
+    },
+  })
+}
+
 // ─── Section hooks ────────────────────────────────────────────────────────────
 
 export function useRegulationSections(regulationId: string, chapterId: string) {

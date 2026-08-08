@@ -59,6 +59,7 @@ export const regulationsController = {
         name: z.string().optional(),
         title: z.string().optional(),
         orderIndex: z.number().int().optional(),
+        isMandatory: z.boolean().optional(),
       }).parse(req.body)
 
       const chapter = await regulationsService.updateChapter({

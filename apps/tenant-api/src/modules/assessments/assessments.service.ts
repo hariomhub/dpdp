@@ -60,7 +60,7 @@ export const assessmentsService = {
   async listRegulations() {
     const regulations = await adminDb.regulation.findMany({
       where:   { status: 'ACTIVE' },
-      include: { chapters: { include: { controlMappings: { include: { control: true }, where: { control: { status: 'PUBLISHED' } } } }, orderBy: { orderIndex: 'asc' } } },
+      include: { chapters: { include: { controlMappings: { include: { control: true }, where: { control: { status: 'PUBLISHED', isCustom: false, tenantId: { equals: null } } } } }, orderBy: { orderIndex: 'asc' } } },
       orderBy: { name: 'asc' },
     })
     
@@ -130,6 +130,17 @@ export const assessmentsService = {
 
     const allControls    = regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control))
     const exclusionsMap  = new Map(data.exclusions?.map(e => [e.controlId, e.reason]) ?? [])
+
+    // Server-side enforcement: controls under a mandatory chapter can never be excluded,
+    // regardless of what the client sends — the UI lock is just the friendly version of this rule.
+    for (const chapter of regulation.chapters) {
+      if (!chapter.isMandatory) continue
+      const excludedInChapter = chapter.controlMappings.filter(cm => exclusionsMap.has(cm.control.id))
+      if (excludedInChapter.length > 0) {
+        throw new Error(`Cannot exclude controls from mandatory chapter "${chapter.title ?? chapter.name}"`)
+      }
+    }
+
     const activeControls = allControls.filter(c => !exclusionsMap.has(c.id))
 
     // Resolve assignees and get asset names before transaction

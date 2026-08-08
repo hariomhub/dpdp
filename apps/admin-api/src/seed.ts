@@ -28,6 +28,7 @@ const CONTROL_FAMILIES = [
   { name: 'Third-Party & Vendor Management', icon: '🤝', color: '#F97316' },
   { name: 'Significant Data Fiduciary Obligations', icon: '⭐', color: '#EAB308' },
   { name: 'Privacy Governance & Accountability', icon: '📋', color: '#06B6D4' },
+  { name: 'Notice & Transparency', icon: '📢', color: '#6366F1' },
 ]
 
 async function seedControlFamilies() {
@@ -48,7 +49,14 @@ async function seedRegulations() {
   for (const reg of regulations) {
     const regulation = await db.regulation.upsert({
       where: { shortCode: reg.shortCode },
-      update: { status: RegulationStatus[reg.status as keyof typeof RegulationStatus] },
+      update: {
+        name: reg.name,
+        issuingAuthority: reg.issuingAuthority,
+        description: reg.description,
+        jurisdiction: reg.jurisdiction,
+        effectiveDate: new Date(reg.effectiveDate),
+        status: RegulationStatus[reg.status as keyof typeof RegulationStatus] ?? RegulationStatus.ACTIVE,
+      },
       create: {
         name: reg.name,
         shortCode: reg.shortCode,
@@ -56,7 +64,7 @@ async function seedRegulations() {
         description: reg.description,
         jurisdiction: reg.jurisdiction,
         effectiveDate: new Date(reg.effectiveDate),
-        status: RegulationStatus[reg.status as keyof typeof RegulationStatus],
+        status: RegulationStatus[reg.status as keyof typeof RegulationStatus] ?? RegulationStatus.ACTIVE,
       },
     })
 
@@ -68,7 +76,7 @@ async function seedRegulations() {
           regulationId: regulation.id,
           name: chapter.name,
           title: chapter.title ?? null,
-          orderIndex: chapter.orderIndex,
+          orderIndex: chapter.orderIndex ?? 0,
         },
       })
 
@@ -80,7 +88,7 @@ async function seedRegulations() {
             chapterId: ch.id,
             name: section.name,
             title: section.title ?? null,
-            orderIndex: section.orderIndex,
+            orderIndex: section.orderIndex ?? 0,
           },
         })
       }
@@ -112,11 +120,25 @@ async function seedProductsFromControls(controls: any[]) {
       for (const prod of f.products) {
         let product = await db.product.findFirst({ where: { name: prod.name } })
         if (!product) {
-          product = await db.product.create({ data: { name: prod.name, productFamilyId: family.id } })
+          product = await db.product.create({
+            data: {
+              name: prod.name,
+              productFamilyId: family.id,
+              vendor: prod.vendor ?? null,
+              description: prod.description ?? null,
+            },
+          })
         } else {
-          product = await db.product.update({ where: { id: product.id }, data: { productFamilyId: family.id } })
+          product = await db.product.update({
+            where: { id: product.id },
+            data: {
+              productFamilyId: family.id,
+              vendor: prod.vendor ?? null,
+              description: prod.description ?? null,
+            },
+          })
         }
-        productNames.add(prod.name) // ensure it's in the set
+        productNames.add(prod.name)
       }
     }
   }
@@ -172,9 +194,9 @@ async function seedControls(productMap: Map<string, string>) {
       regulationMappings.push({ regulationId: reg.id, chapterId, sectionId })
     }
 
-    // Find or create the control
+    // Find or create/update the control
     let control = await db.control.findFirst({
-      where: { title: ctrl.title, isCustom: false, tenantId: null },
+      where: { title: ctrl.title, isCustom: false, tenantId: { equals: null } },
     })
 
     if (!control) {
@@ -186,6 +208,15 @@ async function seedControls(productMap: Map<string, string>) {
           status: ControlStatus[ctrl.status as keyof typeof ControlStatus],
           isCustom: false,
           tenantId: null,
+        },
+      })
+    } else {
+      control = await db.control.update({
+        where: { id: control.id },
+        data: {
+          description: ctrl.description,
+          applicableTo: ApplicableTo[ctrl.applicableTo as keyof typeof ApplicableTo],
+          status: ControlStatus[ctrl.status as keyof typeof ControlStatus],
         },
       })
     }
@@ -234,6 +265,17 @@ async function seedControls(productMap: Map<string, string>) {
             orderIndex: action.orderIndex ?? actionIndex,
           },
         })
+      } else {
+        predefinedAction = await db.controlPredefinedAction.update({
+          where: { id: existing.id },
+          data: {
+            description: action.description,
+            evidenceTypes: action.evidenceTypes.map((t: string) => EvidenceType[t as keyof typeof EvidenceType]),
+            suggestedDueDays: action.suggestedDueDays,
+            priority: Priority[action.priority as keyof typeof Priority],
+            orderIndex: action.orderIndex ?? actionIndex,
+          },
+        })
       }
 
       // Link products to action
@@ -258,6 +300,7 @@ async function main() {
 
   try {
     await seedControlFamilies()
+    await seedLmsDesignations()
     await seedRegulations()
     const productMap = await seedProductsFromControls(loadJson('controls.json'))
     await seedControls(productMap)
@@ -307,7 +350,6 @@ const LMS_DESIGNATIONS = [
 
 async function seedLmsDesignations() {
   console.log('  Seeding LMS designations…')
-  const db = getSuperAdminPrisma()
   for (const d of LMS_DESIGNATIONS) {
     await db.lmsDesignation.upsert({
       where:  { name: d.name },
@@ -316,8 +358,3 @@ async function seedLmsDesignations() {
     })
   }
 }
-
-// Run designation seed immediately
-seedLmsDesignations()
-  .then(() => getSuperAdminPrisma().$disconnect())
-  .catch(console.error)

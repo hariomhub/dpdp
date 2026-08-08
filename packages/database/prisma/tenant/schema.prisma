@@ -204,6 +204,8 @@ enum TenantAuditAction {
   EVIDENCE_UPDATED
   EVIDENCE_APPROVED
   EVIDENCE_REJECTED
+  // Gap findings
+  GAP_FINDING_CREATED
   // Settings
   SETTINGS_UPDATED
   CLASSIFICATION_CHANGED
@@ -242,6 +244,7 @@ model User {
   createdTasks         ComplianceTask[]      @relation("CreatedBy")
   reviewedTasks        ComplianceTask[]      @relation("ReviewedBy")
   uploadedEvidence     Evidence[]
+  gapFindings          GapFinding[]
   notifications        Notification[]
   auditLogs            TenantAuditLog[]
   invitations          UserInvitation[]
@@ -621,9 +624,28 @@ model ComplianceTask {
   evidence        Evidence[]
   reviewNotes     TaskReviewNote[]
   statusHistory   TaskStatusHistory[]
+  taskActions     TaskAction[]
+  gapFindings     GapFinding[]
 
   @@unique([tenantId, taskCode])
   @@map("compliance_tasks")
+}
+
+// Per-task tracking anchor for a catalog ControlPredefinedAction.
+// Created lazily on first evidence upload (or gap finding) for that action;
+// an action with no TaskAction row is simply "not started" for this task.
+model TaskAction {
+  id                 String         @id @default(uuid())
+  taskId             String
+  task               ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  predefinedActionId String         // FK to ControlPredefinedAction (from super admin schema)
+  createdAt          DateTime       @default(now())
+
+  evidenceLinks      EvidenceAction[]
+  gapFindingLinks    GapFindingAction[]
+
+  @@unique([taskId, predefinedActionId])
+  @@map("task_actions")
 }
 
 // Immutable status history log per task
@@ -697,8 +719,85 @@ model Evidence {
 
   // Relations
   versions     EvidenceVersion[]
+  actionLinks  EvidenceAction[]
 
   @@map("evidence")
+}
+
+// Tags a single Evidence record to one or more TaskActions it satisfies,
+// optionally naming which product (catalog or free-text "other") it demonstrates.
+model EvidenceAction {
+  id           String     @id @default(uuid())
+  evidenceId   String
+  evidence     Evidence   @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  taskActionId String
+  taskAction   TaskAction @relation(fields: [taskActionId], references: [id], onDelete: Cascade)
+  productId    String?    // FK to Product (from super admin schema); null when otherLabel is set
+  otherLabel   String?    // free-text tool name when not in the catalog
+  createdAt    DateTime   @default(now())
+
+  @@unique([evidenceId, taskActionId])
+  @@map("evidence_actions")
+}
+
+// ============================================
+// GAP FINDINGS
+// Recorded by an Internal/External Auditor when rejecting a task: which
+// action(s) failed, categorized reason(s), required remediation instructions,
+// and supporting files documenting the gap. Immutable audit record.
+// ============================================
+
+enum GapReasonCode {
+  INSUFFICIENT_EVIDENCE
+  NON_COMPLIANT_CONFIGURATION
+  MISSING_DOCUMENTATION
+  INCORRECT_TOOL_USED
+  OUTDATED_EVIDENCE
+  OTHER
+}
+
+model GapFinding {
+  id           String         @id @default(uuid())
+  tenantId     String
+  taskId       String
+  task         ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  raisedById   String?
+  raisedBy     User?          @relation(fields: [raisedById], references: [id], onDelete: SetNull)
+  role         TenantRole
+  reasonCodes  GapReasonCode[]
+  otherReason  String?        // free text, relevant when OTHER is among reasonCodes
+  remediation  String         // required: what should be done to fix this
+  createdAt    DateTime       @default(now())
+
+  actionLinks  GapFindingAction[]
+  files        GapFindingFile[]
+
+  @@map("gap_findings")
+}
+
+// Tags a GapFinding to one or more TaskActions it applies to.
+model GapFindingAction {
+  id           String     @id @default(uuid())
+  gapFindingId String
+  gapFinding   GapFinding @relation(fields: [gapFindingId], references: [id], onDelete: Cascade)
+  taskActionId String
+  taskAction   TaskAction @relation(fields: [taskActionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([gapFindingId, taskActionId])
+  @@map("gap_finding_actions")
+}
+
+model GapFindingFile {
+  id           String     @id @default(uuid())
+  gapFindingId String
+  gapFinding   GapFinding @relation(fields: [gapFindingId], references: [id], onDelete: Cascade)
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  createdAt    DateTime   @default(now())
+
+  @@map("gap_finding_files")
 }
 
 // Immutable version history for evidence

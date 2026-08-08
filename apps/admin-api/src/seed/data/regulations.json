@@ -1,20 +1,33 @@
 [
   {
-    "name": "Digital Personal Data Protection Act 2023",
     "shortCode": "DPDP-2023",
+    "name": "Digital Personal Data Protection Act 2023",
     "issuingAuthority": "Ministry of Electronics and Information Technology, Government of India",
-    "description": "India's primary data protection legislation governing the processing of digital personal data. It establishes rights of Data Principals, obligations of Data Fiduciaries, and creates the Data Protection Board of India.",
+    "description": "An Act to provide for the processing of digital personal data in a manner that recognises both the right of individuals to protect their personal data and the need to process such personal data for lawful purposes and for matters connected therewith or incidental thereto.",
     "jurisdiction": "India",
     "effectiveDate": "2023-08-11",
-    "status": "PUBLISHED",
+    "status": "ACTIVE",
     "chapters": [
       {
         "name": "Chapter 1",
         "title": "Preliminary",
         "orderIndex": 1,
         "sections": [
-          { "name": "Section 1", "title": "Short Title, Extent and Commencement", "orderIndex": 1 },
-          { "name": "Section 2", "title": "Definitions", "orderIndex": 2 }
+          {
+            "name": "Section 1",
+            "title": "Short Title, Extent and Commencement",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 2",
+            "title": "Definitions",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 3",
+            "title": "Application of Act",
+            "orderIndex": 3
+          }
         ]
       },
       {
@@ -22,13 +35,41 @@
         "title": "Obligations of Data Fiduciary",
         "orderIndex": 2,
         "sections": [
-          { "name": "Section 4", "title": "Application of Act", "orderIndex": 1 },
-          { "name": "Section 5", "title": "Grounds for Processing Personal Data", "orderIndex": 2 },
-          { "name": "Section 6", "title": "Consent", "orderIndex": 3 },
-          { "name": "Section 7", "title": "Certain Legitimate Uses", "orderIndex": 4 },
-          { "name": "Section 8", "title": "General Obligations of Data Fiduciary", "orderIndex": 5 },
-          { "name": "Section 9", "title": "Processing of Personal Data of Children", "orderIndex": 6 },
-          { "name": "Section 10", "title": "Processing of Personal Data of Persons with Disabilities", "orderIndex": 7 }
+          {
+            "name": "Section 4",
+            "title": "Grounds for Processing Personal Data",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 5",
+            "title": "Notice",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 6",
+            "title": "Consent",
+            "orderIndex": 3
+          },
+          {
+            "name": "Section 7",
+            "title": "Certain Legitimate Uses",
+            "orderIndex": 4
+          },
+          {
+            "name": "Section 8",
+            "title": "General Obligations of Data Fiduciary",
+            "orderIndex": 5
+          },
+          {
+            "name": "Section 9",
+            "title": "Processing of Personal Data of Children",
+            "orderIndex": 6
+          },
+          {
+            "name": "Section 10",
+            "title": "Additional obligations of Significant Data Fiduciary",
+            "orderIndex": 7
+          }
         ]
       },
       {
@@ -36,11 +77,31 @@
         "title": "Rights and Duties of Data Principal",
         "orderIndex": 3,
         "sections": [
-          { "name": "Section 11", "title": "Right of Access to Personal Data", "orderIndex": 1 },
-          { "name": "Section 12", "title": "Right of Correction, Completion, Updation and Erasure", "orderIndex": 2 },
-          { "name": "Section 13", "title": "Right of Grievance Redressal", "orderIndex": 3 },
-          { "name": "Section 14", "title": "Right to Nominate", "orderIndex": 4 },
-          { "name": "Section 15", "title": "Duties of Data Principal", "orderIndex": 5 }
+          {
+            "name": "Section 11",
+            "title": "Right to access information about personal data",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 12",
+            "title": "Right of Correction and Erasure of Personal Data",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 13",
+            "title": "Right of Grievance Redressal",
+            "orderIndex": 3
+          },
+          {
+            "name": "Section 14",
+            "title": "Right to Nominate",
+            "orderIndex": 4
+          },
+          {
+            "name": "Section 15",
+            "title": "Duties of Data Principal",
+            "orderIndex": 5
+          }
         ]
       },
       {
@@ -48,8 +109,16 @@
         "title": "Special Provisions",
         "orderIndex": 4,
         "sections": [
-          { "name": "Section 16", "title": "Significant Data Fiduciary", "orderIndex": 1 },
-          { "name": "Section 17", "title": "Exemptions", "orderIndex": 2 }
+          {
+            "name": "Section 16",
+            "title": "Processing of Personal Data Outside India",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 17",
+            "title": "Exemptions",
+            "orderIndex": 2
+          }
         ]
       },
       {
@@ -57,18 +126,340 @@
         "title": "Data Protection Board of India",
         "orderIndex": 5,
         "sections": [
-          { "name": "Section 18", "title": "Establishment of Data Protection Board", "orderIndex": 1 },
-          { "name": "Section 19", "title": "Composition of Board", "orderIndex": 2 },
-          { "name": "Section 27", "title": "Functions of Board", "orderIndex": 3 }
+          {
+            "name": "Section 18",
+            "title": "Establishment of Data Protection Board",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 19",
+            "title": "Composition of Board",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 27",
+            "title": "Functions of Board",
+            "orderIndex": 3
+          },
+          {
+            "name": "Section 20",
+            "title": "Salary, Allowances Payable to and term of Office",
+            "orderIndex": 4
+          },
+          {
+            "name": "Section 21",
+            "title": "Disqualification for Appointment and Continuation as Chairperson and Members of Board",
+            "orderIndex": 5
+          },
+          {
+            "name": "Section 22",
+            "title": "Resignation by Members and filling of Vacancy",
+            "orderIndex": 6
+          },
+          {
+            "name": "Section 23",
+            "title": "Proceedings of Board",
+            "orderIndex": 7
+          },
+          {
+            "name": "Section 24",
+            "title": "Officers and Employees of Board",
+            "orderIndex": 8
+          },
+          {
+            "name": "Section 25",
+            "title": "Members and Officers to be Public Servants",
+            "orderIndex": 9
+          },
+          {
+            "name": "Section 26",
+            "title": "Power of Chairperson",
+            "orderIndex": 10
+          }
         ]
       },
       {
         "name": "Chapter 6",
-        "title": "Penalties",
+        "title": "Powers, Functions and Procedures to be followed by Board",
         "orderIndex": 6,
         "sections": [
-          { "name": "Section 33", "title": "Penalties", "orderIndex": 1 }
+          {
+            "name": "Section 27",
+            "title": "Powers and Functions of Board",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 28",
+            "title": "Procedure to be Followed by Board",
+            "orderIndex": 2
+          }
         ]
+      },
+      {
+        "name": "Chapter 7",
+        "title": "Appeal and Alternative Dispute Resolution",
+        "orderIndex": 7,
+        "sections": [
+          {
+            "name": "Section 29",
+            "title": "Appeal to Appellate Tribunal",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 30",
+            "title": "Orders Passed by Appellate Tribunal to be Executable as Decree",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 31",
+            "title": "Alternate Dispute Resolution",
+            "orderIndex": 3
+          },
+          {
+            "name": "Section 32",
+            "title": "Voluntary Undertaking",
+            "orderIndex": 4
+          }
+        ]
+      },
+      {
+        "name": "Chapter 8",
+        "title": "Penalties and Adjudication",
+        "orderIndex": 8,
+        "sections": [
+          {
+            "name": "Section 33",
+            "title": "Penalties",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 34",
+            "title": "Crediting. sums realised by way of penalties to consolidated fund of India",
+            "orderIndex": 2
+          }
+        ]
+      },
+      {
+        "name": "Chapter 9",
+        "title": "Miscellaneous",
+        "orderIndex": 9,
+        "sections": [
+          {
+            "name": "Section 35",
+            "title": "Protection of action taken in good faith",
+            "orderIndex": 1
+          },
+          {
+            "name": "Section 36",
+            "title": "Power to call for information",
+            "orderIndex": 2
+          },
+          {
+            "name": "Section 37",
+            "title": "Power of Central Government to issue directions",
+            "orderIndex": 3
+          },
+          {
+            "name": "Section 38",
+            "title": "Consistency with other laws",
+            "orderIndex": 4
+          },
+          {
+            "name": "Section 39",
+            "title": "Bar of jurisdiction",
+            "orderIndex": 5
+          },
+          {
+            "name": "Section 40",
+            "title": "Power to make rules",
+            "orderIndex": 6
+          },
+          {
+            "name": "Section 41",
+            "title": "Laying of rules and certain notifications",
+            "orderIndex": 7
+          },
+          {
+            "name": "Section 42",
+            "title": "Power to amend schedule",
+            "orderIndex": 8
+          },
+          {
+            "name": "Section 43",
+            "title": "Power to remove difficulties",
+            "orderIndex": 9
+          },
+          {
+            "name": "Section 44",
+            "title": "Amendments to certain Acts",
+            "orderIndex": 10
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "shortCode": "DPDP-R-2025",
+    "name": "Digital Personal Data Protection Rules 2025",
+    "issuingAuthority": "Ministry of Electronics and Information Technology, Government of India",
+    "description": "The Digital Personal Data Protection Rules 2025 provide organizations a practical roadmap for data privacy. They outline strict guidelines for user consent, breach reporting, and data handling, rolling out in phases to ensure businesses can update their compliance operations.",
+    "jurisdiction": "India",
+    "effectiveDate": "Thu Nov 13 2025 05:30:00 GMT+0530 (India Standard Time)",
+    "status": "ACTIVE",
+    "chapters": [
+      {
+        "name": "Rule 1",
+        "title": "Short title and commencement",
+        "orderIndex": 0,
+        "sections": []
+      },
+      {
+        "name": "Rule 2",
+        "title": "Definitions",
+        "orderIndex": 1,
+        "sections": []
+      },
+      {
+        "name": "Rule 3",
+        "title": "Notice given by Data Fiduciary to Data Principal",
+        "orderIndex": 2,
+        "sections": [
+          {
+            "name": "a",
+            "title": "Rule 3(a)",
+            "orderIndex": 1
+          },
+          {
+            "name": "b",
+            "title": "Rule 3(b)",
+            "orderIndex": 2
+          },
+          {
+            "name": "c",
+            "title": "Rule 3(c)",
+            "orderIndex": 3
+          }
+        ]
+      },
+      {
+        "name": "Rule 4",
+        "title": "Registration and obligations of Consent Manager",
+        "orderIndex": 3,
+        "sections": []
+      },
+      {
+        "name": "Rule 5",
+        "title": "Processing of personal data for provision or issue of subsidy, benefit, service, certificate, licence or permit by State and its instrumentalities",
+        "orderIndex": 4,
+        "sections": []
+      },
+      {
+        "name": "Rule 6",
+        "title": "Reasonable security safeguards",
+        "orderIndex": 5,
+        "sections": []
+      },
+      {
+        "name": "Rule 7",
+        "title": "Intimation of personal data breach",
+        "orderIndex": 6,
+        "sections": []
+      },
+      {
+        "name": "Rule 8",
+        "title": "Time period for specified purpose to be deemed as no longer being served",
+        "orderIndex": 7,
+        "sections": []
+      },
+      {
+        "name": "Rule 9",
+        "title": "Contact information of person to answer questions about processing",
+        "orderIndex": 8,
+        "sections": []
+      },
+      {
+        "name": "Rule 10",
+        "title": "Verifiable consent for processing of personal data of child",
+        "orderIndex": 9,
+        "sections": []
+      },
+      {
+        "name": "Rule 11",
+        "title": "Verifiable consent for processing of personal data of person with disability who has lawful guardian",
+        "orderIndex": 10,
+        "sections": []
+      },
+      {
+        "name": "Rule 12",
+        "title": "Exemptions from certain obligations applicable to processing of personal data of child",
+        "orderIndex": 11,
+        "sections": []
+      },
+      {
+        "name": "Rule 13",
+        "title": "Additional obligations of Significant Data Fiduciary",
+        "orderIndex": 12,
+        "sections": []
+      },
+      {
+        "name": "Rule 14",
+        "title": "Rights of Data Principals",
+        "orderIndex": 13,
+        "sections": []
+      },
+      {
+        "name": "Rule 15",
+        "title": "Transfer of personal data outside the territory of India",
+        "orderIndex": 14,
+        "sections": []
+      },
+      {
+        "name": "Rule 16",
+        "title": "Exemption from Act for research, archiving or statistical purposes",
+        "orderIndex": 15,
+        "sections": []
+      },
+      {
+        "name": "Rule 17",
+        "title": "Appointment of Chairperson and other Members",
+        "orderIndex": 16,
+        "sections": []
+      },
+      {
+        "name": "Rule 18",
+        "title": "Salary, allowances and other terms and conditions of service of Chairperson and other Members",
+        "orderIndex": 17,
+        "sections": []
+      },
+      {
+        "name": "Rule 19",
+        "title": "Procedure for meetings of Board and authentication of its orders, directions and instruments",
+        "orderIndex": 18,
+        "sections": []
+      },
+      {
+        "name": "Rule 20",
+        "title": "Functioning of Board as digital office",
+        "orderIndex": 19,
+        "sections": []
+      },
+      {
+        "name": "Rule 21",
+        "title": "Terms and conditions of appointment and service of officers and employees of Board",
+        "orderIndex": 20,
+        "sections": []
+      },
+      {
+        "name": "Rule 22",
+        "title": "Appeal to Appellate Tribunal",
+        "orderIndex": 21,
+        "sections": []
+      },
+      {
+        "name": "Rule 23",
+        "title": "Calling for information from Data Fiduciary or intermediary",
+        "orderIndex": 22,
+        "sections": []
       }
     ]
   }

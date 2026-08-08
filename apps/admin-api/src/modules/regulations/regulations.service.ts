@@ -103,7 +103,7 @@ export const regulationsService = {
 
   async updateChapter(params: {
     chapterId: string
-    data: Partial<{ name: string; title: string; orderIndex: number }>
+    data: Partial<{ name: string; title: string; orderIndex: number; isMandatory: boolean }>
     adminId: string
   }) {
     const chapter = await db.regulationChapter.findUnique({

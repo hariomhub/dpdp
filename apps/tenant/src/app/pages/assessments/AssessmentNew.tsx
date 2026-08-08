@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Check, ChevronRight, Loader2, AlertTriangle,
-  Database, User, Users, Shuffle, Shield
+  Database, User, Users, Shuffle, Shield, Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import {
@@ -37,6 +37,15 @@ function StepIndicator({ steps, current }: { steps: string[]; current: number })
 
 const STEPS = ['Details', 'Assets', 'Regulation', 'Assign Tasks', 'Review'];
 
+// Placeholder preview only — real tenant-authored custom controls aren't built yet.
+// Kept entirely separate from `allControls`/`activeControls` so these ids never reach
+// the create-assessment payload or the task-list preview.
+const DUMMY_CUSTOM_CONTROLS = [
+  { id: 'custom-dummy-1', title: 'Internal Data Handling SOP Review' },
+  { id: 'custom-dummy-2', title: 'Vendor Security Questionnaire Process' },
+  { id: 'custom-dummy-3', title: 'Employee Data Access Recertification' },
+];
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function AssessmentNewPage() {
   const navigate = useNavigate();
@@ -66,6 +75,7 @@ export function AssessmentNewPage() {
   const [excludedControls, setExcludedControls]   = useState<Set<string>>(new Set());
   const [exclusionReasons, setExclusionReasons]   = useState<Record<string, string>>({});
   const [expandedChapters, setExpandedChapters]   = useState<Set<string>>(new Set());
+  const [controlsTab, setControlsTab]             = useState<'regulation' | 'custom'>('regulation');
 
   // Step 4 — Task Assignment
   const [taskAssignments, setTaskAssignments] = useState<Record<string, string | null>>({});
@@ -79,6 +89,8 @@ export function AssessmentNewPage() {
     ? selectedReg.chapters?.flatMap((ch: any) => ch.controls ?? []) ?? []
     : [];
   const activeControls   = allControls.filter((c: any) => !excludedControls.has(c.id));
+  const excludedRealCount = allControls.filter((c: any) => excludedControls.has(c.id)).length;
+  const activeCustomControls = DUMMY_CUSTOM_CONTROLS.filter(c => !excludedControls.has(c.id));
   const selectedAssetList = ownDeptAssets.filter((a: any) => selectedAssets.has(a.id));
 
   // Task list preview: activeControls × selectedAssets
@@ -129,7 +141,10 @@ export function AssessmentNewPage() {
       endDate:      form.endDate,
       regulationId: selectedRegId,
       assetIds:     Array.from(selectedAssets),
+      // Only real catalog control ids ever reach the API — dummy custom-control ids
+      // (from the placeholder Custom Controls tab) live in the same Set but are never real rows.
       exclusions:   Array.from(excludedControls)
+        .filter(id => allControls.some((c: any) => c.id === id))
         .map(id => ({ controlId: id, reason: exclusionReasons[id] || 'Excluded by CO' })),
       taskAssignments: assignments.length > 0 ? assignments : undefined,
     });
@@ -356,27 +371,103 @@ export function AssessmentNewPage() {
 
             {selectedReg && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[13px] font-bold text-slate-800">Controls</p>
-                  <p className="text-[11.5px] text-slate-400">
-                    {activeControls.length} active · {excludedControls.size} excluded
-                  </p>
+                {/* Tabs: catalog (regulation-mandated) controls vs the org's own custom controls */}
+                <div className="flex items-center gap-1 border-b border-slate-200 mb-2">
+                  {[
+                    { key: 'regulation' as const, label: 'Regulation Controls', count: allControls.length },
+                    { key: 'custom' as const, label: 'Custom Controls', count: DUMMY_CUSTOM_CONTROLS.length },
+                  ].map(tab => (
+                    <button key={tab.key} onClick={() => setControlsTab(tab.key)}
+                      className={`px-3 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
+                        controlsTab === tab.key ? 'border-blue-500 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+                      }`}>
+                      {tab.label} <span className="ml-1 text-[10.5px] text-slate-400">({tab.count})</span>
+                    </button>
+                  ))}
                 </div>
-                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                  {selectedReg.chapters?.map((chapter: any) => (
-                    <div key={chapter.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                      <button onClick={() => setExpandedChapters(p => {
-                        const n = new Set(p); n.has(chapter.id) ? n.delete(chapter.id) : n.add(chapter.id); return n;
-                      })} className="w-full flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-left">
-                        <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedChapters.has(chapter.id) ? 'rotate-90' : ''}`} />
-                        <span className="text-[12.5px] font-bold text-slate-700">{chapter.name}</span>
-                        {chapter.title && <span className="text-[11.5px] text-slate-400">— {chapter.title}</span>}
-                        <span className="text-[10px] text-slate-400 ml-auto">{chapter.controls?.length ?? 0} controls</span>
-                      </button>
-                      {expandedChapters.has(chapter.id) && chapter.controls?.map((ctrl: any) => {
+
+                {controlsTab === 'regulation' ? (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11.5px] text-slate-400">Controls defined via the regulation's control library — mandatory chapters cannot be excluded.</p>
+                      <p className="text-[11.5px] text-slate-400 flex-shrink-0 ml-2">
+                        {activeControls.length} active · {excludedRealCount} excluded
+                      </p>
+                    </div>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {selectedReg.chapters?.map((chapter: any) => (
+                        <div key={chapter.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                          <button onClick={() => setExpandedChapters(p => {
+                            const n = new Set(p); n.has(chapter.id) ? n.delete(chapter.id) : n.add(chapter.id); return n;
+                          })} className="w-full flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-left">
+                            <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedChapters.has(chapter.id) ? 'rotate-90' : ''}`} />
+                            <span className="text-[12.5px] font-bold text-slate-700">{chapter.name}</span>
+                            {chapter.title && <span className="text-[11.5px] text-slate-400">— {chapter.title}</span>}
+                            {chapter.isMandatory && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                <Lock className="w-2.5 h-2.5" /> Mandatory
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400 ml-auto">{chapter.controls?.length ?? 0} controls</span>
+                          </button>
+                          {expandedChapters.has(chapter.id) && chapter.controls?.map((ctrl: any) => {
+                            const isExcluded = excludedControls.has(ctrl.id);
+                            const isLocked = !!chapter.isMandatory;
+                            return (
+                              <div key={ctrl.id} className="border-t border-slate-100">
+                                <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
+                                  {isLocked ? (
+                                    <span title={`Mandatory under "${chapter.title ?? chapter.name}" — cannot be excluded`}
+                                      className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">
+                                      <Lock className="w-3 h-3 text-amber-500" />
+                                    </span>
+                                  ) : (
+                                    <input type="checkbox" checked={!isExcluded}
+                                      onChange={e => {
+                                        setExcludedControls(p => {
+                                          const n = new Set(p);
+                                          e.target.checked ? n.delete(ctrl.id) : n.add(ctrl.id);
+                                          return n;
+                                        });
+                                      }}
+                                      className="accent-blue-600 w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                  <p className={`text-[12px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                                    {ctrl.title}
+                                  </p>
+                                  {isLocked && (
+                                    <span title={`Mandatory under "${chapter.title ?? chapter.name}" — cannot be excluded`}
+                                      className="text-[10px] text-amber-600 flex-shrink-0">Locked</span>
+                                  )}
+                                </div>
+                                {isExcluded && !isLocked && (
+                                  <div className="px-8 pb-2">
+                                    <input value={exclusionReasons[ctrl.id] ?? ''}
+                                      onChange={e => setExclusionReasons(p => ({ ...p, [ctrl.id]: e.target.value }))}
+                                      placeholder="Reason for exclusion..."
+                                      className="w-full h-7 px-2 rounded border border-slate-200 text-[11.5px] text-slate-600 focus:outline-none focus:border-slate-400" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11.5px] text-slate-400">Controls your organization defines itself — always optional.</p>
+                      <p className="text-[11.5px] text-slate-400 flex-shrink-0 ml-2">
+                        {activeCustomControls.length} active · {DUMMY_CUSTOM_CONTROLS.length - activeCustomControls.length} excluded
+                      </p>
+                    </div>
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      {DUMMY_CUSTOM_CONTROLS.map((ctrl, i) => {
                         const isExcluded = excludedControls.has(ctrl.id);
                         return (
-                          <div key={ctrl.id} className="border-t border-slate-100">
+                          <div key={ctrl.id} className={i > 0 ? 'border-t border-slate-100' : ''}>
                             <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
                               <input type="checkbox" checked={!isExcluded}
                                 onChange={e => {
@@ -391,20 +482,12 @@ export function AssessmentNewPage() {
                                 {ctrl.title}
                               </p>
                             </div>
-                            {isExcluded && (
-                              <div className="px-8 pb-2">
-                                <input value={exclusionReasons[ctrl.id] ?? ''}
-                                  onChange={e => setExclusionReasons(p => ({ ...p, [ctrl.id]: e.target.value }))}
-                                  placeholder="Reason for exclusion..."
-                                  className="w-full h-7 px-2 rounded border border-slate-200 text-[11.5px] text-slate-600 focus:outline-none focus:border-slate-400" />
-                              </div>
-                            )}
                           </div>
                         );
                       })}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             )}
           </div>

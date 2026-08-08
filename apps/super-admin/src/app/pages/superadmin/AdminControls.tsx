@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import {
   Plus, Shield, Scale, BarChart2, Search, Eye, Edit2, Archive,
   ChevronDown, ChevronRight, Trash2, X, ArrowLeft, Loader2, Check,
-  AlertTriangle, FileText, Layers
+  AlertTriangle, FileText, Layers, Lock
 } from 'lucide-react'
 import {
   useRegulations,
@@ -11,6 +11,7 @@ import {
   useArchiveRegulation,
   useRegulationChapters,
   useCreateChapter,
+  useUpdateChapter,
   useRegulationSections,
   useCreateSection,
 } from '../../../hooks/useRegulations'
@@ -1170,6 +1171,9 @@ function RegDetailPage({ reg, onBack, allControls }: {
   const { data: allControlsData } = useControls()
   const allControlsFromApi = allControlsData?.data ?? []
   const { data: controlFamiliesData = [] } = useControlFamilies()
+  const { data: regChapters = [] } = useRegulationChapters(reg.id)
+  const updateChapterMut = useUpdateChapter()
+  const [showChapters, setShowChapters] = useState(false)
 
   const toggleChapter = (ch: string) => setExpandedChapters(p => {
     const n = new Set(p); n.has(ch) ? n.delete(ch) : n.add(ch); return n
@@ -1431,6 +1435,43 @@ function RegDetailPage({ reg, onBack, allControls }: {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Chapters — mark a chapter mandatory to lock its controls from exclusion in tenant assessments */}
+      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+        <button onClick={() => setShowChapters(v => !v)}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-slate-50 transition-colors">
+          {showChapters ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+          <span className="text-[13px] font-semibold text-slate-800 flex-1">Chapters</span>
+          <span className="text-[11.5px] text-slate-400">{regChapters.length} chapter{regChapters.length !== 1 ? 's' : ''}</span>
+        </button>
+        {showChapters && (
+          <div className="border-t border-slate-100 divide-y divide-slate-50">
+            {regChapters.length === 0 ? (
+              <p className="text-[12px] text-slate-400 italic px-4 py-4">No chapters defined for this regulation yet.</p>
+            ) : (
+              [...regChapters].sort((a: any, b: any) => a.orderIndex - b.orderIndex).map((ch: any) => (
+                <div key={ch.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-semibold text-slate-800">
+                      {ch.name}{ch.title && <span className="text-slate-400 font-normal"> — {ch.title}</span>}
+                    </p>
+                    <p className="text-[11px] text-slate-400">{ch._count?.controlMappings ?? 0} control{(ch._count?.controlMappings ?? 0) !== 1 ? 's' : ''}</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer flex-shrink-0" title="Controls under a mandatory chapter cannot be excluded when a tenant creates an assessment">
+                    <span className={`flex items-center gap-1 text-[11.5px] font-medium ${ch.isMandatory ? 'text-amber-700' : 'text-slate-400'}`}>
+                      <Lock className="w-3 h-3" /> Mandatory
+                    </span>
+                    <div onClick={() => updateChapterMut.mutate({ regulationId: reg.id, chapterId: ch.id, data: { isMandatory: !ch.isMandatory } })}
+                      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${ch.isMandatory ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${ch.isMandatory ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </div>
+                  </label>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">

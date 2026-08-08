@@ -1,6 +1,7 @@
 import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
-import { TaskStatus, TenantRole, TenantAuditAction, Prisma } from '@prisma/tenant-client'
+import { TaskStatus, TenantRole, TenantAuditAction, EvidenceType, GapReasonCode, Prisma } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
+import { deleteFile } from '../../utils/storage'
 
 const db      = getTenantPrisma()
 const adminDb = getSuperAdminPrisma()
@@ -35,7 +36,11 @@ function buildTaskWhere(
       where.status = { in: ['EVIDENCE_SUBMITTED', 'UNDER_REVIEW', 'APPROVED_INTERNAL'] as TaskStatus[] }
     }
   } else if (role === TenantRole.EXTERNAL_AUDITOR) {
-    if (!query.status) where.status = TaskStatus.FINAL_REVIEW
+    // Include APPROVED_INTERNAL too, so tasks approved before the FINAL_REVIEW
+    // hand-off was wired up (or otherwise left in that legacy state) aren't invisible here.
+    if (!query.status) {
+      where.status = { in: ['APPROVED_INTERNAL', 'FINAL_REVIEW'] as TaskStatus[] }
+    }
   }
   // CEO / CO see everything
 
@@ -135,7 +140,7 @@ export const tasksService = {
         createdBy:   { select: { id: true, name: true } },
         reviewedBy:  { select: { id: true, name: true } },
         assessment:  { include: { regulations: true } },
-        evidence:    { orderBy: { createdAt: 'desc' } },
+        evidence:    { orderBy: { createdAt: 'desc' }, include: { actionLinks: true } },
         reviewNotes: { orderBy: { createdAt: 'desc' } },
         statusHistory: { orderBy: { createdAt: 'desc' } },
       },
@@ -167,14 +172,123 @@ export const tasksService = {
       statusHistory
     };
 
-    // Enrich control + predefined actions from super-admin
+    // Enrich control + predefined actions (with their mapped products + master evidence) from super-admin
     const ctrl = await adminDb.control.findUnique({
       where:   { id: task.controlId },
       include: {
         regulationMappings: { include: { chapter: { select: { name: true, title: true } } } },
-        predefinedActions: { orderBy: { orderIndex: 'asc' } },
+        predefinedActions: {
+          orderBy: { orderIndex: 'asc' },
+          include: { products: { include: { product: true, masterEvidences: true } } },
+        },
       },
     })
+
+    // This task's own per-action tracking rows (only exist for actions with at least one evidence upload or gap finding)
+    const taskActions = await db.taskAction.findMany({
+      where:   { taskId },
+      include: {
+        evidenceLinks:   { include: { evidence: true }, orderBy: { createdAt: 'desc' } },
+        gapFindingLinks: { include: { gapFinding: { include: { files: true } } }, orderBy: { createdAt: 'desc' } },
+      },
+    })
+    const taskActionByPredefinedId = new Map(taskActions.map(ta => [ta.predefinedActionId, ta]))
+    const predefinedIdByTaskActionId = new Map(taskActions.map(ta => [ta.id, ta.predefinedActionId]))
+    const actionTitleByPredefinedId = new Map((ctrl?.predefinedActions ?? []).map(a => [a.id, a.title]))
+
+    // Resolve product names for anything tagged via evidence (may not be a "suggested" product for that action)
+    const linkedProductIds = [...new Set(
+      taskActions.flatMap(ta => ta.evidenceLinks.map(el => el.productId).filter(Boolean))
+    )] as string[]
+    const linkedProducts = linkedProductIds.length > 0
+      ? await adminDb.product.findMany({ where: { id: { in: linkedProductIds } }, select: { id: true, name: true } })
+      : []
+    const productNameById = new Map(linkedProducts.map(p => [p.id, p.name]))
+
+    // Resolve who raised each gap finding
+    const gapFindingRaiserIds = [...new Set(
+      taskActions.flatMap(ta => ta.gapFindingLinks.map(gl => gl.gapFinding.raisedById).filter(Boolean))
+    )] as string[]
+    const gapFindingRaisers = gapFindingRaiserIds.length > 0
+      ? await db.user.findMany({ where: { id: { in: gapFindingRaiserIds } }, select: { id: true, name: true } })
+      : []
+    const raiserNameById = new Map(gapFindingRaisers.map(u => [u.id, u.name]))
+
+    function formatGapFinding(gf: typeof taskActions[number]['gapFindingLinks'][number]['gapFinding'], actionTitles: string[]) {
+      return {
+        id:          gf.id,
+        reasonCodes: gf.reasonCodes,
+        otherReason: gf.otherReason,
+        remediation: gf.remediation,
+        createdAt:   gf.createdAt,
+        raisedByName: gf.raisedById ? raiserNameById.get(gf.raisedById) ?? null : null,
+        actionTitles,
+        files: gf.files.map(f => ({ id: f.id, fileName: f.fileName, fileUrl: f.fileUrl })),
+      }
+    }
+
+    const actions = (ctrl?.predefinedActions ?? []).map(action => {
+      const ta = taskActionByPredefinedId.get(action.id)
+      return {
+        id:               action.id,
+        title:            action.title,
+        description:      action.description,
+        evidenceTypes:    action.evidenceTypes,
+        suggestedDueDays: action.suggestedDueDays,
+        priority:         action.priority,
+        orderIndex:       action.orderIndex,
+        products: action.products.map(ap => ({
+          id:             ap.product.id,
+          name:           ap.product.name,
+          vendor:         ap.product.vendor,
+          logoUrl:        ap.product.logoUrl,
+          masterEvidence: ap.masterEvidences[0] ?? null,
+        })),
+        evidence: (ta?.evidenceLinks ?? []).map(el => ({
+          id:          el.evidence.id,
+          title:       el.evidence.title,
+          type:        el.evidence.type,
+          description: el.evidence.description,
+          fileUrl:     el.evidence.fileUrl,
+          fileName:    el.evidence.fileName,
+          linkUrl:     el.evidence.linkUrl,
+          textContent: el.evidence.textContent,
+          createdAt:   el.evidence.createdAt,
+          productId:   el.productId,
+          productName: el.productId ? productNameById.get(el.productId) ?? null : null,
+          otherLabel:  el.otherLabel,
+        })),
+        gapFindings: (ta?.gapFindingLinks ?? []).map(gl => formatGapFinding(gl.gapFinding, [action.title])),
+      }
+    })
+
+    // Flattened, de-duplicated top-level list (one GapFinding can tag multiple actions)
+    const gapFindingsById = new Map<string, { gf: typeof taskActions[number]['gapFindingLinks'][number]['gapFinding']; actionTitles: Set<string> }>()
+    for (const ta of taskActions) {
+      const actionTitle = actionTitleByPredefinedId.get(ta.predefinedActionId) ?? null
+      for (const gl of ta.gapFindingLinks) {
+        const entry = gapFindingsById.get(gl.gapFinding.id) ?? { gf: gl.gapFinding, actionTitles: new Set<string>() }
+        if (actionTitle) entry.actionTitles.add(actionTitle)
+        gapFindingsById.set(gl.gapFinding.id, entry)
+      }
+    }
+    const gapFindings = [...gapFindingsById.values()]
+      .sort((a, b) => b.gf.createdAt.getTime() - a.gf.createdAt.getTime())
+      .map(({ gf, actionTitles }) => formatGapFinding(gf, [...actionTitles]))
+
+    const evidenceWithLinks = taskWithUsers.evidence.map((ev: any) => ({
+      ...ev,
+      linkedActions: (ev.actionLinks ?? []).map((al: any) => {
+        const predefinedId = predefinedIdByTaskActionId.get(al.taskActionId) ?? null
+        return {
+          actionId:    predefinedId,
+          actionTitle: predefinedId ? actionTitleByPredefinedId.get(predefinedId) ?? null : null,
+          productId:   al.productId,
+          productName: al.productId ? productNameById.get(al.productId) ?? null : null,
+          otherLabel:  al.otherLabel,
+        }
+      }),
+    }))
 
     // Regulation info
     let regulation = null
@@ -188,6 +302,8 @@ export const tasksService = {
 
     return {
       ...taskWithUsers,
+      evidence:   evidenceWithLinks,
+      gapFindings,
       isOverdue:  computeIsOverdue(task.dueDate, task.status),
       regulation,
       control: ctrl ? {
@@ -195,7 +311,7 @@ export const tasksService = {
         title:       ctrl.title,
         description: ctrl.description,
         chapter:     ctrl.regulationMappings?.[0]?.chapter?.name ?? null,
-        actions:     ctrl.predefinedActions,
+        actions,
       } : null,
     }
   },
@@ -232,7 +348,9 @@ export const tasksService = {
     return { success: true }
   },
 
-  // ── IA reviews (EVIDENCE_SUBMITTED → APPROVED_INTERNAL | REJECTED) ─────────
+  // ── IA reviews (EVIDENCE_SUBMITTED → FINAL_REVIEW | REJECTED) ──────────────
+  // Approval hands the task straight to the External Auditor's queue (buildTaskWhere
+  // filters EA's default list to FINAL_REVIEW) for final sign-off.
   async reviewTask(tenantId: string, taskId: string, userId: string, decision: 'approve' | 'reject', note?: string) {
     const task = await db.complianceTask.findFirst({ where: { tenantId, id: taskId } })
     if (!task) throw new Error('Task not found')
@@ -240,7 +358,7 @@ export const tasksService = {
       throw new Error('Task must be EVIDENCE_SUBMITTED or UNDER_REVIEW for IA review')
     }
 
-    const newStatus = decision === 'approve' ? TaskStatus.APPROVED_INTERNAL : TaskStatus.REJECTED
+    const newStatus = decision === 'approve' ? TaskStatus.FINAL_REVIEW : TaskStatus.REJECTED
 
     await db.complianceTask.update({
       where: { id: taskId },
@@ -265,11 +383,15 @@ export const tasksService = {
     return { success: true }
   },
 
-  // ── CO final sign-off (APPROVED_INTERNAL → COMPLIANT) ──────────────────────
+  // ── Final sign-off, normally by the External Auditor (FINAL_REVIEW → COMPLIANT) ──
+  // APPROVED_INTERNAL is also accepted so any task already sitting there from
+  // before this workflow change isn't stuck.
   async signoffTask(tenantId: string, taskId: string, userId: string) {
     const task = await db.complianceTask.findFirst({ where: { tenantId, id: taskId } })
     if (!task) throw new Error('Task not found')
-    if (task.status !== TaskStatus.APPROVED_INTERNAL) throw new Error('Task must be APPROVED_INTERNAL for sign-off')
+    if (!['APPROVED_INTERNAL', 'FINAL_REVIEW'].includes(task.status)) {
+      throw new Error('Task must be APPROVED_INTERNAL or FINAL_REVIEW for sign-off')
+    }
 
     await db.complianceTask.update({
       where: { id: taskId },
@@ -285,8 +407,8 @@ export const tasksService = {
       data:  { compliantControls: compliantCount + 1 },
     })
 
-    await logStatusChange(taskId, TaskStatus.APPROVED_INTERNAL, TaskStatus.COMPLIANT, userId)
-    await logTenantAction({ tenantId, userId, action: TenantAuditAction.TASK_APPROVED, targetType: 'task', targetId: taskId, targetName: task.title, details: { from: 'APPROVED_INTERNAL', to: 'COMPLIANT' } })
+    await logStatusChange(taskId, task.status, TaskStatus.COMPLIANT, userId)
+    await logTenantAction({ tenantId, userId, action: TenantAuditAction.TASK_APPROVED, targetType: 'task', targetId: taskId, targetName: task.title, details: { from: task.status, to: 'COMPLIANT' } })
     return { success: true }
   },
 
@@ -341,5 +463,203 @@ export const tasksService = {
       select:  { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     })
+  },
+
+  // ── Add evidence, tagged to one or more of this task's actions ─────────────
+  async addEvidence(params: {
+    tenantId: string; taskId: string; userId: string
+    data: {
+      title: string
+      type: EvidenceType
+      description?: string
+      linkUrl?: string
+      textContent?: string
+      file?: { fileName: string; fileSize: number; fileUrl: string; storageProvider: string }
+      actions: { actionId: string; productId?: string; otherLabel?: string }[]
+    }
+  }) {
+    const task = await db.complianceTask.findFirst({ where: { tenantId: params.tenantId, id: params.taskId } })
+    if (!task) throw new Error('Task not found')
+    if (task.assignedToId !== params.userId) throw new Error('Only the assigned IT Admin can add evidence')
+    if (!['IN_PROGRESS', 'REJECTED'].includes(task.status)) throw new Error('Task must be IN_PROGRESS or REJECTED to add evidence')
+    if (!params.data.actions || params.data.actions.length === 0) throw new Error('At least one action must be tagged')
+
+    const evidence = await db.$transaction(async (tx) => {
+      const ev = await tx.evidence.create({
+        data: {
+          tenantId:      params.tenantId,
+          taskId:        params.taskId,
+          title:         params.data.title,
+          type:          params.data.type,
+          description:   params.data.description ?? null,
+          fileUrl:       params.data.file?.fileUrl ?? null,
+          fileName:      params.data.file?.fileName ?? null,
+          fileSize:      params.data.file?.fileSize ?? null,
+          linkUrl:       params.data.linkUrl ?? null,
+          textContent:   params.data.textContent ?? null,
+          submittedById: params.userId,
+        },
+      })
+
+      for (const tag of params.data.actions) {
+        const taskAction = await tx.taskAction.upsert({
+          where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: tag.actionId } },
+          update: {},
+          create: { taskId: params.taskId, predefinedActionId: tag.actionId },
+        })
+        await tx.evidenceAction.create({
+          data: {
+            evidenceId:   ev.id,
+            taskActionId: taskAction.id,
+            productId:    tag.productId ?? null,
+            otherLabel:   tag.otherLabel ?? null,
+          },
+        })
+      }
+
+      return ev
+    })
+
+    await logTenantAction({
+      tenantId: params.tenantId, userId: params.userId,
+      action: TenantAuditAction.EVIDENCE_UPLOADED, targetType: 'evidence', targetId: evidence.id,
+      targetName: evidence.title,
+      details: { taskId: params.taskId, actionIds: params.data.actions.map(a => a.actionId) },
+    })
+
+    return evidence
+  },
+
+  // ── Delete evidence (uploader only, while task is still editable) ──────────
+  async deleteEvidence(tenantId: string, taskId: string, evidenceId: string, userId: string) {
+    const evidence = await db.evidence.findFirst({ where: { id: evidenceId, taskId, tenantId } })
+    if (!evidence) throw new Error('Evidence not found')
+    if (evidence.submittedById !== userId) throw new Error('Only the uploader can delete this evidence')
+
+    const task = await db.complianceTask.findFirst({ where: { id: taskId, tenantId } })
+    if (!task || !['IN_PROGRESS', 'REJECTED'].includes(task.status)) {
+      throw new Error('Task must be IN_PROGRESS or REJECTED to delete evidence')
+    }
+
+    if (evidence.fileUrl) {
+      await deleteFile(evidence.fileUrl, 'local').catch(() => {})
+    }
+    await db.evidence.delete({ where: { id: evidenceId } })
+
+    await logTenantAction({
+      tenantId, userId, action: TenantAuditAction.EVIDENCE_UPDATED, targetType: 'evidence', targetId: evidenceId,
+      targetName: evidence.title, details: { deleted: true, taskId },
+    })
+
+    return { success: true }
+  },
+
+  // ── Edit evidence metadata / replace file (uploader only, while task is editable) ──
+  async updateEvidence(params: {
+    tenantId: string; taskId: string; evidenceId: string; userId: string
+    data: {
+      title?: string
+      description?: string
+      linkUrl?: string
+      textContent?: string
+      file?: { fileName: string; fileSize: number; fileUrl: string }
+    }
+  }) {
+    const evidence = await db.evidence.findFirst({ where: { id: params.evidenceId, taskId: params.taskId, tenantId: params.tenantId } })
+    if (!evidence) throw new Error('Evidence not found')
+    if (evidence.submittedById !== params.userId) throw new Error('Only the uploader can edit this evidence')
+
+    const task = await db.complianceTask.findFirst({ where: { id: params.taskId, tenantId: params.tenantId } })
+    if (!task || !['IN_PROGRESS', 'REJECTED'].includes(task.status)) {
+      throw new Error('Task must be IN_PROGRESS or REJECTED to edit evidence')
+    }
+
+    if (params.data.file && evidence.fileUrl) {
+      await deleteFile(evidence.fileUrl, 'local').catch(() => {})
+    }
+
+    const updated = await db.evidence.update({
+      where: { id: params.evidenceId },
+      data: {
+        title:       params.data.title ?? evidence.title,
+        description: params.data.description !== undefined ? params.data.description : evidence.description,
+        linkUrl:     params.data.linkUrl ?? evidence.linkUrl,
+        textContent: params.data.textContent ?? evidence.textContent,
+        ...(params.data.file ? {
+          fileUrl:  params.data.file.fileUrl,
+          fileName: params.data.file.fileName,
+          fileSize: params.data.file.fileSize,
+        } : {}),
+      },
+    })
+
+    await logTenantAction({
+      tenantId: params.tenantId, userId: params.userId, action: TenantAuditAction.EVIDENCE_UPDATED,
+      targetType: 'evidence', targetId: params.evidenceId, targetName: updated.title,
+      details: { taskId: params.taskId, replacedFile: !!params.data.file },
+    })
+
+    return updated
+  },
+
+  // ── Record a gap finding when rejecting a task ──────────────────────────────
+  async addGapFinding(params: {
+    tenantId: string; taskId: string; userId: string
+    data: {
+      reasonCodes: GapReasonCode[]
+      otherReason?: string
+      remediation: string
+      actionIds: string[]
+      files: { fileName: string; fileSize: number; fileUrl: string }[]
+    }
+  }) {
+    const task = await db.complianceTask.findFirst({ where: { tenantId: params.tenantId, id: params.taskId } })
+    if (!task) throw new Error('Task not found')
+
+    const user = await db.user.findUnique({ where: { id: params.userId }, select: { role: true } })
+    if (!user) throw new Error('User not found')
+
+    const finding = await db.$transaction(async (tx) => {
+      const gf = await tx.gapFinding.create({
+        data: {
+          tenantId:    params.tenantId,
+          taskId:      params.taskId,
+          raisedById:  params.userId,
+          role:        user.role,
+          reasonCodes: params.data.reasonCodes,
+          otherReason: params.data.otherReason ?? null,
+          remediation: params.data.remediation,
+        },
+      })
+
+      for (const actionId of params.data.actionIds) {
+        const taskAction = await tx.taskAction.upsert({
+          where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: actionId } },
+          update: {},
+          create: { taskId: params.taskId, predefinedActionId: actionId },
+        })
+        await tx.gapFindingAction.create({
+          data: { gapFindingId: gf.id, taskActionId: taskAction.id },
+        })
+      }
+
+      if (params.data.files.length > 0) {
+        await tx.gapFindingFile.createMany({
+          data: params.data.files.map(f => ({
+            gapFindingId: gf.id, fileUrl: f.fileUrl, fileName: f.fileName, fileSize: f.fileSize,
+          })),
+        })
+      }
+
+      return gf
+    })
+
+    await logTenantAction({
+      tenantId: params.tenantId, userId: params.userId, action: TenantAuditAction.GAP_FINDING_CREATED,
+      targetType: 'task', targetId: params.taskId, targetName: task.title,
+      details: { gapFindingId: finding.id, actionIds: params.data.actionIds, reasonCodes: params.data.reasonCodes },
+    })
+
+    return finding
   },
 }

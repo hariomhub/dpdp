@@ -1,1 +1,0 @@
-ALTER TABLE "user_invitations" ADD COLUMN "departmentIds" TEXT[] NOT NULL DEFAULT '{}';

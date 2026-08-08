@@ -1,6 +1,9 @@
 import { appConfig } from '../config/env'
 
 const BASE = appConfig.apiUrl
+// Uploaded file/evidence URLs come back as root-relative paths (e.g. "/uploads/…"),
+// served outside the /api/v1 prefix — strip it to get the API server's origin.
+export const apiOrigin = BASE.replace(/\/api\/v1\/?$/, '')
 
 // ─── Token management (localStorage) ─────────────────────────────────────────
 
@@ -45,6 +48,22 @@ async function refreshAccessToken(): Promise<string | null> {
 
 // ─── Core request ─────────────────────────────────────────────────────────────
 
+async function parseResponse<T>(res: Response): Promise<T> {
+  const data = await res.json()
+  if (!res.ok) {
+    console.error('[api-client] Request failed:', data)
+    let msg = data.message || 'Request failed'
+    if (data.errors && Array.isArray(data.errors)) {
+      const details = data.errors.map((e: any) => `${e.field || 'field'}: ${e.message || 'invalid'}`).join(' | ')
+      msg = `${msg} (${details})`
+    } else if (data.error) {
+      msg = `${msg} (${data.error})`
+    }
+    throw new Error(msg)
+  }
+  return data
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   let token = tokens.getAccess()
 
@@ -66,19 +85,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     if (token) res = await makeReq(token)
   }
 
-  const data = await res.json()
-  if (!res.ok) {
-    console.error('[api-client] Request failed:', data)
-    let msg = data.message || 'Request failed'
-    if (data.errors && Array.isArray(data.errors)) {
-      const details = data.errors.map((e: any) => `${e.field || 'field'}: ${e.message || 'invalid'}`).join(' | ')
-      msg = `${msg} (${details})`
-    } else if (data.error) {
-      msg = `${msg} (${data.error})`
-    }
-    throw new Error(msg)
+  return parseResponse<T>(res)
+}
+
+// Multipart upload — deliberately omits Content-Type so the browser sets the
+// multipart boundary itself; JSON.stringify-based request() can't be reused here.
+async function uploadRequest<T>(endpoint: string, formData: FormData, method = 'POST'): Promise<T> {
+  let token = tokens.getAccess()
+
+  const makeReq = (t: string | null) =>
+    fetch(`${BASE}${endpoint}`, {
+      method,
+      headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+      body: formData,
+    })
+
+  let res = await makeReq(token)
+
+  if (res.status === 401 && token) {
+    token = await refreshAccessToken()
+    if (token) res = await makeReq(token)
   }
-  return data
+
+  return parseResponse<T>(res)
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -88,5 +117,6 @@ export const apiClient = {
   post:   <T>(endpoint: string, body?: unknown)    => request<T>(endpoint, { method: 'POST',  body: body ? JSON.stringify(body) : undefined }),
   patch:  <T>(endpoint: string, body?: unknown)    => request<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(endpoint: string)                    => request<T>(endpoint, { method: 'DELETE' }),
+  upload: <T>(endpoint: string, formData: FormData, method = 'POST') => uploadRequest<T>(endpoint, formData, method),
   tokens,
 }
