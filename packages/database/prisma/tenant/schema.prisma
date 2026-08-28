@@ -44,6 +44,19 @@ enum AssetStatus {
   UNDER_REVIEW
 }
 
+enum CloudConnectionStatus {
+  PENDING
+  CONNECTED
+  FAILED
+  DISCONNECTED
+}
+
+enum DraftStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
 enum Priority {
   LOW
   MEDIUM
@@ -59,6 +72,11 @@ enum EvidenceType {
   LINK
   TEXT_NOTE
   LOG
+}
+
+enum EvidenceSource {
+  MANUAL
+  AUTOMATED
 }
 
 enum AssetCompliance {
@@ -213,6 +231,15 @@ enum TenantAuditAction {
   ENTRA_DISCONNECTED
   ENTRA_GROUP_REMOVED
   ENTRA_RECONNECTED
+  // Cloud Connections (Prowler scanning — separate from Entra)
+  CLOUD_CONNECTION_CREATED
+  CLOUD_CONNECTION_TESTED
+  CLOUD_CONNECTION_FAILED
+  CLOUD_CONNECTION_DISCONNECTED
+  ASSETS_DISCOVERED
+  // Compliance scanning — automated evidence/gap findings from Prowler
+  AUTOMATED_EVIDENCE_CREATED
+  AUTOMATED_GAP_FINDING_CREATED
 }
 
 // ============================================
@@ -368,6 +395,15 @@ model Asset {
   vendorName      String?        // for vendor-hosted asset types
   dataCategories  String[]       // array of data category strings
 
+  // Set once, when this asset is confirmed from a DiscoveredAssetDraft —
+  // lets a later scan find the same real Asset again instead of only ever
+  // producing new drafts. Soft reference (plain string, matches the
+  // EntraConfig.connectedById convention) — not a hard FK, since an Asset
+  // must keep meaning something even after its originating connection is
+  // disconnected/deleted.
+  cloudConnectionId String?
+  cloudResourceUid  String?
+
   // Computed fields (updated by scoring engine)
   compliantControls Int          @default(0)
   totalControls     Int          @default(0)
@@ -385,6 +421,7 @@ model Asset {
   assetRiskSnapshots   AssetRiskSnapshot[]
 
   @@unique([tenantId, assetCode])
+  @@index([cloudConnectionId, cloudResourceUid])
   @@map("assets")
 }
 
@@ -706,6 +743,12 @@ model Evidence {
   submittedById String?
   submittedBy   User?       @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
+  // Automated evidence (source = AUTOMATED) has no submittedById — nothing
+  // human submitted it. sourceCheckId traces it back to the Prowler check
+  // that produced it.
+  source        EvidenceSource @default(MANUAL)
+  sourceCheckId String?
+
   // Review status
   reviewStatus  TaskStatus? // mirrors task status at time of review
 
@@ -763,10 +806,15 @@ model GapFinding {
   task         ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   raisedById   String?
   raisedBy     User?          @relation(fields: [raisedById], references: [id], onDelete: SetNull)
-  role         TenantRole
+  // Nullable — an automated gap finding (source = AUTOMATED) has no human
+  // raiser and therefore no role. A human-raised one (source = MANUAL,
+  // the only kind before this field existed) always has one.
+  role         TenantRole?
   reasonCodes  GapReasonCode[]
   otherReason  String?        // free text, relevant when OTHER is among reasonCodes
   remediation  String         // required: what should be done to fix this
+  source        EvidenceSource @default(MANUAL)
+  sourceCheckId String?
   createdAt    DateTime       @default(now())
 
   actionLinks  GapFindingAction[]
@@ -1061,4 +1109,76 @@ model RoleDesignationDefault {
 
   @@unique([tenantId, portalRole])
   @@map("role_designation_defaults")
+}
+
+// ============================================
+// TENANT CLOUD CONNECTIONS
+// Credentials for scanning a tenant's cloud/SaaS accounts
+// via Prowler. Encrypted at rest using the same AES-256-GCM
+// utility as EntraConfig. Deliberately separate from
+// EntraConfig — Entra is for login/SSO only; this is for
+// infrastructure scanning, and a tenant may have many of
+// these at once (one per provider connection), unlike the
+// single-row-per-tenant EntraConfig.
+// ============================================
+
+model TenantCloudConnection {
+  id                  String                @id @default(uuid())
+  tenantId            String
+  providerKey         String                // matches CloudProviderType.key (super admin schema)
+  alias               String                // user-given label, e.g. "Production Azure Subscription"
+  credentialEncrypted String                // AES-256-GCM ciphertext of the JSON credential payload
+  status              CloudConnectionStatus @default(PENDING)
+  lastCheckedAt       DateTime?
+  lastError           String?
+  connectedById       String?               // FK to User who set up the connection (soft reference, matches EntraConfig convention)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@unique([tenantId, providerKey, alias])
+  @@map("tenant_cloud_connections")
+
+  discoveredAssets DiscoveredAssetDraft[]
+}
+
+// ============================================
+// DISCOVERED ASSET DRAFTS
+// A discovery scan's raw output, staged here for human review before it
+// becomes a real Asset — matches the design principle that automated
+// discovery only ever produces suggestions, never writes Asset/PII records
+// directly. suggestedAssetType/suggestedCriticality come from matching the
+// resource's cloudResourceType against the super-admin Generic Asset
+// Catalog; null means no matching template exists yet (shown to the
+// reviewer as "Unrecognized resource" rather than silently dropped).
+// ============================================
+
+model DiscoveredAssetDraft {
+  id                   String                 @id @default(uuid())
+  tenantId             String
+  connectionId         String
+  connection           TenantCloudConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  cloudResourceUid     String                 // Prowler's resource uid (ARN, resource ID, ...)
+  name                 String
+  region               String
+  service              String
+  cloudResourceType    String
+
+  suggestedAssetType   String?                // matched AssetType enum value, null if unrecognized
+  suggestedCriticality String?
+  // Best-effort only: not yet derived from findings (e.g. Prowler's
+  // "internet-exposed" check category) — defaults false until that
+  // wiring is added. Flagged here rather than silently assumed correct.
+  internetFacing       Boolean                @default(false)
+
+  tags                 Json?
+  metadata             Json?
+
+  status               DraftStatus            @default(PENDING)
+  reviewedAssetId      String?                // set once confirmed into a real Asset
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@unique([connectionId, cloudResourceUid])
+  @@map("discovered_asset_drafts")
 }

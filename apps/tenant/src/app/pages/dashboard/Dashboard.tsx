@@ -30,16 +30,16 @@ function MetricCard({ label, value, sub, color, trend, extraClass = '' }: {
   label: string; value: string | number; sub?: string; color: string; trend?: string; extraClass?: string;
 }) {
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg overflow-hidden ${extraClass}`}>
+    <div className={`bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden ${extraClass}`}>
       <div className="h-0.5 w-full" style={{ background: color }} />
       <div className="p-4">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
-        <p className="text-[30px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>{value}</p>
-        {sub && <p className="text-[11px] text-slate-400 mt-1">{sub}</p>}
+        <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+        <p className="text-[36px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>{value}</p>
+        {sub && <p className="text-[13px] text-slate-400 mt-1">{sub}</p>}
         {trend && (
           <div className="flex items-center gap-1 mt-1">
             <ArrowUpRight className="w-3 h-3 text-green-500" />
-            <span className="text-[10.5px] text-slate-400">{trend}</span>
+            <span className="text-[12.5px] text-slate-400">{trend}</span>
           </div>
         )}
       </div>
@@ -51,8 +51,8 @@ function DonutChart({ data, label, total }: { data: { name: string; value: numbe
   const navigate = useNavigate();
   const pct = Math.round((data[0].value / total) * 100);
   return (
-    <div className="flex-1 bg-white border border-slate-200 rounded-lg p-4 cursor-pointer hover:shadow-sm transition-shadow" onClick={() => navigate('/org/assessments')}>
-      <p className="text-[13px] font-semibold text-slate-800 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>{label}</p>
+    <div className="flex-1 bg-white border border-[#D4AF37]/35 rounded-lg p-4 cursor-pointer hover:shadow-sm transition-shadow" onClick={() => navigate('/org/assessments')}>
+      <p className="text-[15px] font-semibold text-slate-800 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>{label}</p>
       <div className="flex items-center gap-4">
         <div className="relative" style={{ width: 80, height: 80 }}>
           <ResponsiveContainer width={80} height={80}>
@@ -63,14 +63,14 @@ function DonutChart({ data, label, total }: { data: { name: string; value: numbe
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[16px] font-bold text-slate-800" style={{ fontFamily: 'Sora, sans-serif' }}>{pct}%</span>
+            <span className="text-[18px] font-bold text-slate-800" style={{ fontFamily: 'Cinzel, serif' }}>{pct}%</span>
           </div>
         </div>
         <div className="space-y-1.5">
           {data.map((d: { name: string; value: number; color: string }) => (
             <div key={d.name} className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
-              <span className="text-[11px] text-slate-600">{d.value} {d.name}</span>
+              <span className="text-[13px] text-slate-600">{d.value} {d.name}</span>
             </div>
           ))}
         </div>
@@ -92,8 +92,8 @@ function RiskGauge({ score, size = 'md' }: { score: number; size?: 'lg' | 'md' }
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth={size === 'lg' ? 10 : 8} />
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke={level.color} strokeWidth={size === 'lg' ? 10 : 8}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
-        <text x={cx} y={cy - 6} textAnchor="middle" fill={level.color} fontSize={size === 'lg' ? 28 : 20} fontWeight="bold" fontFamily="Sora">{score}</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fill="#64748b" fontSize={10}>{level.label}</text>
+        <text x={cx} y={cy - 6} textAnchor="middle" fill={level.color} fontSize={size === 'lg' ? 32 : 24} fontWeight="bold" fontFamily="Cinzel">{score}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="#64748b" fontSize={12}>{level.label}</text>
       </svg>
     </div>
   );
@@ -104,20 +104,20 @@ function ActivityFeed({ items = [] }: { items?: DashboardStats['recentActivity']
     <div className="space-y-3">
       {items.slice(0, 8).map((item, i) => (
         <div key={i} className="flex items-start gap-3">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: `${ROLE_COLORS[item.role as keyof typeof ROLE_COLORS]}20`, color: ROLE_COLORS[item.role as keyof typeof ROLE_COLORS] }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0" style={{ background: `${ROLE_COLORS[item.role as keyof typeof ROLE_COLORS]}20`, color: ROLE_COLORS[item.role as keyof typeof ROLE_COLORS] }}>
             {item.user.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] text-slate-700">
+            <p className="text-[14px] text-slate-700">
               <span className="font-semibold">{item.user}</span>
-              <span className="text-slate-400 text-[10.5px] ml-1">({ROLE_LABELS[item.role as keyof typeof ROLE_LABELS]})</span>
+              <span className="text-slate-400 text-[12.5px] ml-1">({ROLE_LABELS[item.role as keyof typeof ROLE_LABELS]})</span>
               {' '}{item.action} <span className="font-medium text-slate-800">{item.details}</span>
             </p>
-            <p className="text-[10.5px] text-slate-400 mt-0.5">{item.time}</p>
+            <p className="text-[12.5px] text-slate-400 mt-0.5">{item.time}</p>
           </div>
         </div>
       ))}
-      <button className="text-[11.5px] text-blue-600 hover:text-blue-700 font-medium">View Full Activity →</button>
+      <button className="text-[13.5px] text-[#1A3E5C] hover:text-[#D4AF37] font-medium">View Full Activity →</button>
     </div>
   );
 }
@@ -126,7 +126,7 @@ function UpcomingDeadlines({ items = [] }: { items?: DashboardStats['upcomingDea
   const navigate = useNavigate();
   return (
     <div className="space-y-2">
-      {items.length === 0 && <p className="text-[12px] text-slate-400 italic">No upcoming deadlines.</p>}
+      {items.length === 0 && <p className="text-[14px] text-slate-400 italic">No upcoming deadlines.</p>}
       {[...items].sort((a, b) => a.daysLeft - b.daysLeft).map((d, i) => {
         const overdue = d.daysLeft < 0;
         const urgent = d.daysLeft >= 0 && d.daysLeft < 7;
@@ -134,21 +134,21 @@ function UpcomingDeadlines({ items = [] }: { items?: DashboardStats['upcomingDea
         return (
           <div key={i} className="flex items-center gap-3 p-2.5 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
             <div className="flex-1 min-w-0">
-              <p className="text-[12.5px] font-semibold text-slate-800 truncate">{d.name}</p>
+              <p className="text-[14.5px] font-semibold text-slate-800 truncate">{d.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${d.type === 'Assessment' ? 'bg-violet-50 text-violet-700' : 'bg-blue-50 text-blue-700'}`}>{d.type}</span>
-                <span className="text-[10.5px] text-slate-400">{d.dueDate}</span>
+                <span className={`text-[12px] px-1.5 py-0.5 rounded font-semibold ${d.type === 'Assessment' ? 'bg-violet-50 text-violet-700' : 'bg-[#1A3E5C]/8 text-[#1A3E5C]'}`}>{d.type}</span>
+                <span className="text-[12.5px] text-slate-400">{d.dueDate}</span>
               </div>
             </div>
             {overdue
-              ? <span className="text-[10.5px] font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded flex-shrink-0">OVERDUE</span>
-              : <span className={`text-[10.5px] font-semibold flex-shrink-0 ${urgent ? 'text-red-600' : warn ? 'text-amber-600' : 'text-green-600'}`}>{d.daysLeft}d left</span>
+              ? <span className="text-[12.5px] font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded flex-shrink-0">OVERDUE</span>
+              : <span className={`text-[12.5px] font-semibold flex-shrink-0 ${urgent ? 'text-red-600' : warn ? 'text-amber-600' : 'text-green-600'}`}>{d.daysLeft}d left</span>
             }
           </div>
         );
       })}
       <button onClick={() => navigate('/org/compliance-tasks')}
-        className="w-full text-center text-[11.5px] text-blue-600 hover:text-blue-700 font-medium pt-1.5 border-t border-slate-100 mt-1">
+        className="w-full text-center text-[13.5px] text-[#1A3E5C] hover:text-[#D4AF37] font-medium pt-1.5 border-t border-slate-100 mt-1">
         View All Upcoming Deadlines →
       </button>
     </div>
@@ -174,10 +174,10 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
         <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
         <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
         <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
           <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(risk).color }} />
           <div className="p-4">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p>
+            <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p>
             <RiskGauge score={risk} size="md" />
           </div>
         </div>
@@ -185,7 +185,7 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 2: Compliance by Regulation */}
       <div>
-        <p className="text-[14px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Compliance by Regulation</p>
+        <p className="text-[16px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Compliance by Regulation</p>
         {regs.length > 0 ? (
           <div className="flex gap-3">
             {regs.slice(0, 3).map(r => {
@@ -199,44 +199,44 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
             })}
           </div>
         ) : (
-          <p className="text-[12px] text-slate-400 italic p-4 bg-slate-50 rounded-lg">No assessments yet — create one to see regulation compliance.</p>
+          <p className="text-[14px] text-slate-400 italic p-4 bg-slate-50 rounded-lg">No assessments yet — create one to see regulation compliance.</p>
         )}
       </div>
 
       {/* Row 3: Dept Compliance + Risk Gauge */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Department Compliance Overview</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Department Compliance Overview</p>
           {depts.length > 0 ? (
             <div className="space-y-2">
               {depts.sort((a, b) => a.compliant - b.compliant).map(d => (
                 <div key={d.name} className="flex items-center gap-3">
-                  <p className="text-[11.5px] text-slate-600 w-20 flex-shrink-0">{d.name}</p>
+                  <p className="text-[13.5px] text-slate-600 w-20 flex-shrink-0">{d.name}</p>
                   <div className="flex-1 h-5 bg-slate-100 rounded flex overflow-hidden cursor-pointer hover:opacity-80" onClick={() => navigate('/org/assets')}>
                     <div className="h-full" style={{ width: `${d.compliant}%`, background: '#22C55E' }} />
                     <div className="h-full" style={{ width: `${d.inProgress}%`, background: '#3B82F6' }} />
                     <div className="h-full" style={{ width: `${d.nonCompliant}%`, background: '#F87171' }} />
                     <div className="h-full" style={{ width: `${d.notStarted}%`, background: '#94A3B8' }} />
                   </div>
-                  <span className="text-[11.5px] font-semibold text-slate-700 w-8 text-right flex-shrink-0">{d.compliant}%</span>
+                  <span className="text-[13.5px] font-semibold text-slate-700 w-8 text-right flex-shrink-0">{d.compliant}%</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[12px] text-slate-400 italic">No assessment data yet.</p>
+            <p className="text-[14px] text-slate-400 italic">No assessment data yet.</p>
           )}
         </div>
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-2">Risk Score</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-2">Risk Score</p>
           <div className="flex flex-col items-center py-2">
             <RiskGauge score={risk} size="lg" />
-            <p className="text-[11px] text-slate-400 mt-2">Overall Risk: {RISK_LEVEL(risk).label}</p>
+            <p className="text-[13px] text-slate-400 mt-2">Overall Risk: {RISK_LEVEL(risk).label}</p>
           </div>
           {stats?.riskiestAsset && (
             <div className="mt-3 pt-3 border-t border-slate-100">
-              <p className="text-[11px] font-semibold text-slate-600 mb-1.5">Top Risk Driver</p>
-              <p className="text-[12px] font-semibold text-slate-800">{stats.riskiestAsset.name}</p>
-              <button className="text-[11.5px] text-blue-600 hover:text-blue-700 font-medium mt-1.5" onClick={() => navigate('/org/assets')}>View Asset →</button>
+              <p className="text-[13px] font-semibold text-slate-600 mb-1.5">Top Risk Driver</p>
+              <p className="text-[14px] font-semibold text-slate-800">{stats.riskiestAsset.name}</p>
+              <button className="text-[13.5px] text-[#1A3E5C] hover:text-[#D4AF37] font-medium mt-1.5" onClick={() => navigate('/org/assets')}>View Asset →</button>
             </div>
           )}
         </div>
@@ -244,9 +244,9 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 4: Asset Health + Activity */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-2">Asset Health Summary</p>
-          <p className="text-[30px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>{ah?.total ?? 0}</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-2">Asset Health Summary</p>
+          <p className="text-[36px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>{ah?.total ?? 0}</p>
           {(ah?.total ?? 0) > 0 && (
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex mb-3">
               {ah && [{ w: ah.fullyCompliant, c: '#22C55E' }, { w: ah.partiallyCompliant, c: '#3B82F6' }, { w: ah.nonCompliant, c: '#F87171' }, { w: ah.notStarted, c: '#94A3B8' }].map((s, i) => (
@@ -254,26 +254,26 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
               ))}
             </div>
           )}
-          <div className="space-y-1 text-[11px]">
+          <div className="space-y-1 text-[13px]">
             {ah && [['#22C55E', `${ah.fullyCompliant} Fully Compliant`], ['#3B82F6', `${ah.partiallyCompliant} Partially Compliant`], ['#F87171', `${ah.nonCompliant} Non-Compliant`], ['#94A3B8', `${ah.notStarted} Not Started`]].map(([color, label]) => (
               <div key={label} className="flex items-center gap-2"><span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} /><span className="text-slate-600">{label}</span></div>
             ))}
           </div>
           {(ah?.noPiiRecords ?? 0) > 0 && (
             <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
-              <p className="text-[11px] text-amber-700">⚠ {ah!.noPiiRecords} asset(s) have no PII records. Controls cannot be accurately mapped.</p>
-              <button className="text-[11px] text-amber-700 font-medium mt-0.5" onClick={() => navigate('/org/assets')}>Review Assets →</button>
+              <p className="text-[13px] text-amber-700">⚠ {ah!.noPiiRecords} asset(s) have no PII records. Controls cannot be accurately mapped.</p>
+              <button className="text-[13px] text-amber-700 font-medium mt-0.5" onClick={() => navigate('/org/assets')}>Review Assets →</button>
             </div>
           )}
         </div>
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Recent Activity</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Recent Activity</p>
           <ActivityFeed items={stats?.recentActivity} />
         </div>
       </div>
       {/* Row 5: Deadlines */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4">
-        <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+        <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
         <UpcomingDeadlines items={stats?.upcomingDeadlines} />
       </div>
     </div>
@@ -291,18 +291,18 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
       <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <p className="text-[13px] font-semibold text-amber-800">⚠ Requires Your Attention</p>
+          <p className="text-[15px] font-semibold text-amber-800">⚠ Requires Your Attention</p>
         </div>
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[12px] text-amber-700">
+          <div className="flex items-center justify-between text-[14px] text-amber-700">
             <span>1 task rejected — awaiting your decision</span>
             <button onClick={() => navigate('/org/compliance-tasks')} className="font-medium hover:text-amber-900">Review Now →</button>
           </div>
-          <div className="flex items-center justify-between text-[12px] text-amber-700">
+          <div className="flex items-center justify-between text-[14px] text-amber-700">
             <span>3 controls have no assigned action</span>
             <button onClick={() => navigate('/org/controls')} className="font-medium hover:text-amber-900">View Gaps →</button>
           </div>
-          <div className="flex items-center justify-between text-[12px] text-amber-700">
+          <div className="flex items-center justify-between text-[14px] text-amber-700">
             <span>2 assets have non-compliant controls</span>
             <button onClick={() => navigate('/org/assets')} className="font-medium hover:text-amber-900">Review →</button>
           </div>
@@ -315,15 +315,15 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
         <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
         <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
         <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
           <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(stats?.riskScore ?? 0).color }} />
-          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p><RiskGauge score={stats?.riskScore ?? 0} size="md" /></div>
+          <div className="p-4"><p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p><RiskGauge score={stats?.riskScore ?? 0} size="md" /></div>
         </div>
       </div>
 
       {/* Action Queue */}
       <div>
-        <p className="text-[14px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>My Action Queue</p>
+        <p className="text-[16px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>My Action Queue</p>
         <div className="grid grid-cols-4 gap-3">
           {[
             { label: 'Rejected Tasks', value: 1, color: '#EF4444', sub: 'Awaiting your decision', cta: 'Review →' },
@@ -331,13 +331,13 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
             { label: 'Under Review', value: 4, color: '#3B82F6', sub: 'With Internal Auditor', cta: '' },
             { label: 'Pending Final Sign-Off', value: 1, color: '#8B5CF6', sub: 'With External Auditor', cta: '' },
           ].map(c => (
-            <div key={c.label} className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <div key={c.label} className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
               <div className="h-0.5 w-full" style={{ background: c.color }} />
               <div className="p-3.5">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{c.label}</p>
-                <p className="text-[26px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Sora, sans-serif', color: c.color }}>{c.value}</p>
-                <p className="text-[11px] text-slate-400">{c.sub}</p>
-                {c.cta && <button className="mt-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-700" onClick={() => navigate('/org/compliance-tasks')}>{c.cta}</button>}
+                <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{c.label}</p>
+                <p className="text-[32px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif', color: c.color }}>{c.value}</p>
+                <p className="text-[13px] text-slate-400">{c.sub}</p>
+                {c.cta && <button className="mt-1.5 text-[13px] font-semibold text-[#1A3E5C] hover:text-[#D4AF37]" onClick={() => navigate('/org/compliance-tasks')}>{c.cta}</button>}
               </div>
             </div>
           ))}
@@ -346,29 +346,29 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Assessment Progress */}
       <div>
-        <p className="text-[14px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Active Assessment Progress</p>
+        <p className="text-[16px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Active Assessment Progress</p>
         <div className="grid grid-cols-2 gap-3">
           {[
             { name: 'Q1 2025 DPDP Assessment', regs: ['DPDP'], assets: ['Customer DB', 'AWS Infra', '+1 more'], pct: 67, compliant: 28, total: 42, daysLeft: 4 },
             { name: 'AWS Infrastructure Audit', regs: ['DPDP'], assets: ['AWS Infra', 'Customer DB'], pct: 70, compliant: 14, total: 20, daysLeft: 19 },
           ].map(a => (
-            <div key={a.name} className="bg-white border border-slate-200 rounded-lg p-4">
+            <div key={a.name} className="bg-white border border-[#D4AF37]/35 rounded-lg p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <p className="text-[13px] font-bold text-slate-800">{a.name}</p>
+                  <p className="text-[15px] font-bold text-slate-800">{a.name}</p>
                   <div className="flex gap-1.5 mt-1">
-                    {a.regs.map(r => <span key={r} className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">{r}</span>)}
-                    {a.assets.map(as => <span key={as} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{as}</span>)}
+                    {a.regs.map(r => <span key={r} className="text-[12px] px-1.5 py-0.5 bg-[#1A3E5C]/8 text-[#1A3E5C] rounded font-semibold">{r}</span>)}
+                    {a.assets.map(as => <span key={as} className="text-[12px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{as}</span>)}
                   </div>
                 </div>
-                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded ${a.daysLeft < 7 ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{a.daysLeft}d left</span>
+                <span className={`text-[12.5px] font-bold px-2 py-0.5 rounded ${a.daysLeft < 7 ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{a.daysLeft}d left</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1.5">
                 <div className="h-full bg-green-500 rounded-full" style={{ width: `${a.pct}%` }} />
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-slate-500">{a.compliant}/{a.total} controls compliant</p>
-                <button className="text-[11px] text-blue-600 font-medium hover:text-blue-700" onClick={() => navigate('/org/assessments')}>View →</button>
+                <p className="text-[13px] text-slate-500">{a.compliant}/{a.total} controls compliant</p>
+                <button className="text-[13px] text-[#1A3E5C] font-medium hover:text-[#D4AF37]" onClick={() => navigate('/org/assessments')}>View →</button>
               </div>
             </div>
           ))}
@@ -377,19 +377,19 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Gaps + Activity */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-slate-800">Controls With No Action Assigned</p>
-            <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">{c?.unassignedTasks ?? 0} gaps</span>
+            <p className="text-[15px] font-semibold text-slate-800">Controls With No Action Assigned</p>
+            <span className="text-[13px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">{c?.unassignedTasks ?? 0} gaps</span>
           </div>
           {(c?.unassignedTasks ?? 0) === 0 ? (
-            <div className="py-8 text-center"><p className="text-[12px] text-slate-400">No unassigned controls — great work!</p></div>
+            <div className="py-8 text-center"><p className="text-[14px] text-slate-400">No unassigned controls — great work!</p></div>
           ) : (
-            <div className="py-4 px-4"><p className="text-[12px] text-slate-500">View compliance tasks to assign team members to open controls.</p><button onClick={() => navigate('/org/compliance-tasks')} className="mt-2 text-[12px] text-blue-600 font-medium">Go to Tasks →</button></div>
+            <div className="py-4 px-4"><p className="text-[14px] text-slate-500">View compliance tasks to assign team members to open controls.</p><button onClick={() => navigate('/org/compliance-tasks')} className="mt-2 text-[14px] text-[#1A3E5C] font-medium">Go to Tasks →</button></div>
           )}
         </div>
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
           <UpcomingDeadlines items={stats?.upcomingDeadlines} />
         </div>
       </div>
@@ -422,26 +422,26 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-red-600" />
-            <p className="text-[12.5px] font-bold text-red-800">⚠ Requires Attention — Rejected Tasks</p>
+            <p className="text-[14.5px] font-bold text-red-800">⚠ Requires Attention — Rejected Tasks</p>
           </div>
           {rejected.map(t => (
             <div key={t.id} className="p-3 bg-white border border-red-200 rounded-lg mt-2">
-              <p className="text-[12.5px] font-semibold text-slate-800 mb-1">{t.title}</p>
-              <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded mb-2">IA Feedback: Evidence does not sufficiently demonstrate compliance. Please provide complete configuration export.</p>
-              <button onClick={() => navigate('/org/compliance-tasks')} className="text-[11.5px] font-semibold text-blue-600 hover:text-blue-700">View Feedback and Resubmit →</button>
+              <p className="text-[14.5px] font-semibold text-slate-800 mb-1">{t.title}</p>
+              <p className="text-[13px] text-amber-700 bg-amber-50 p-2 rounded mb-2">IA Feedback: Evidence does not sufficiently demonstrate compliance. Please provide complete configuration export.</p>
+              <button onClick={() => navigate('/org/compliance-tasks')} className="text-[13.5px] font-semibold text-[#1A3E5C] hover:text-[#D4AF37]">View Feedback and Resubmit →</button>
             </div>
           ))}
         </div>
       )}
 
       {/* Row 2: Task List */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-slate-800">My Compliance Tasks</p>
+          <p className="text-[15px] font-semibold text-slate-800">My Compliance Tasks</p>
           <div className="flex gap-1">
             {['All', 'Pending', 'In Progress', 'Rejected', 'Completed'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 rounded text-[11.5px] font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                className={`px-3 py-1 rounded text-[13.5px] font-medium transition-all ${activeTab === tab ? 'bg-[#1A3E5C] text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
                 {tab}
               </button>
             ))}
@@ -451,22 +451,22 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
           {tasks.filter(t => activeTab === 'All' || t.status === activeTab).map(t => (
             <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50" style={{ borderLeft: `4px solid ${PRIORITY_COLORS[t.priority]}` }}>
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-bold text-slate-800">{t.title}</p>
+                <p className="text-[14.5px] font-bold text-slate-800">{t.title}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Database className="w-3 h-3 text-slate-400" />
-                  <p className="text-[11.5px] font-semibold text-slate-600">Work on: {t.asset}</p>
+                  <p className="text-[13.5px] font-semibold text-slate-600">Work on: {t.asset}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-[11px] text-slate-400">Due: {t.dueDate}</p>
+                  <p className="text-[13px] text-slate-400">Due: {t.dueDate}</p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <span className="block text-[10.5px] px-2 py-0.5 rounded font-semibold mb-1" style={{ background: `${STATUS_COLORS[t.status]}20`, color: STATUS_COLORS[t.status] }}>{t.status}</span>
-                <p className={`text-[10.5px] font-medium ${t.daysLeft < 0 ? 'text-red-600' : t.daysLeft < 7 ? 'text-amber-600' : 'text-slate-500'}`}>
+                <span className="block text-[12.5px] px-2 py-0.5 rounded font-semibold mb-1" style={{ background: `${STATUS_COLORS[t.status]}20`, color: STATUS_COLORS[t.status] }}>{t.status}</span>
+                <p className={`text-[12.5px] font-medium ${t.daysLeft < 0 ? 'text-red-600' : t.daysLeft < 7 ? 'text-amber-600' : 'text-slate-500'}`}>
                   {t.daysLeft < 0 ? `${Math.abs(t.daysLeft)}d overdue` : `${t.daysLeft}d left`}
                 </p>
               </div>
-              <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1 px-2.5 py-1.5 text-[11.5px] font-medium border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 flex-shrink-0">
+              <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1 px-2.5 py-1.5 text-[13.5px] font-medium border border-[#D4AF37]/35 rounded-lg hover:bg-slate-100 text-slate-600 flex-shrink-0">
                 Open <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -476,17 +476,17 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 3 */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Upcoming Due Dates — Next 7 Days</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Due Dates — Next 7 Days</p>
           {[{ day: 'Tomorrow', tasks: ['Fix consent withdrawal mechanism'] }, { day: 'May 3', tasks: ['Update privacy notice on website'] }].map(d => (
             <div key={d.day} className="mb-3">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">{d.day}</p>
-              {d.tasks.map(t => <p key={t} className="text-[12px] text-slate-700 pl-2 border-l-2 border-blue-300">{t}</p>)}
+              <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wide mb-1">{d.day}</p>
+              {d.tasks.map(t => <p key={t} className="text-[14px] text-slate-700 pl-2 border-l-2 border-[#1A3E5C]/30">{t}</p>)}
             </div>
           ))}
         </div>
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Evidence Submission Status</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Evidence Submission Status</p>
           {[
             { title: 'Data Retention Policy v2.1', asset: 'Customer Database', date: 'Mar 12', status: 'Approved' },
             { title: 'AWS DPA Agreement 2025', asset: 'AWS Infra', date: 'Mar 5', status: 'Approved' },
@@ -494,10 +494,10 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
           ].map((ev, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
               <div className="flex-1">
-                <p className="text-[12px] font-medium text-slate-800 truncate">{ev.title}</p>
-                <p className="text-[10.5px] text-slate-400">{ev.asset} · {ev.date}</p>
+                <p className="text-[14px] font-medium text-slate-800 truncate">{ev.title}</p>
+                <p className="text-[12.5px] text-slate-400">{ev.asset} · {ev.date}</p>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-semibold flex-shrink-0 ${ev.status === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{ev.status}</span>
+              <span className={`text-[12px] px-2 py-0.5 rounded font-semibold flex-shrink-0 ${ev.status === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{ev.status}</span>
             </div>
           ))}
         </div>
@@ -521,30 +521,30 @@ function IADashboard({ stats }: { stats?: DashboardStats }) {
         <MetricCard label="Rejected Total" value={0} color="#EF4444" sub="Sent back for rework" />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-[13px] font-semibold text-slate-800">Evidence Awaiting Your Review</p>
-          <p className="text-[11px] text-slate-400">Oldest first — review in order of submission</p>
+          <p className="text-[15px] font-semibold text-slate-800">Evidence Awaiting Your Review</p>
+          <p className="text-[13px] text-slate-400">Oldest first — review in order of submission</p>
         </div>
         {queue.length === 0 ? (
           <div className="py-12 text-center">
             <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" />
-            <p className="text-[14px] font-semibold text-slate-600">All caught up!</p>
-            <p className="text-[12px] text-slate-400">No evidence pending review.</p>
+            <p className="text-[16px] font-semibold text-slate-600">All caught up!</p>
+            <p className="text-[14px] text-slate-400">No evidence pending review.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
             {queue.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
+                  <p className="text-[14.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <Database className="w-3 h-3 text-blue-400" />
-                    <span className="text-[11.5px] font-semibold text-blue-700">{item.asset}</span>
+                    <Database className="w-3 h-3 text-[#1A3E5C]/50" />
+                    <span className="text-[13.5px] font-semibold text-[#1A3E5C]">{item.asset}</span>
                   </div>
-                  <span className="text-[10.5px] text-slate-400">Submitted by: <span className="font-medium text-slate-600">{item.submittedBy}</span></span>
+                  <span className="text-[12.5px] text-slate-400">Submitted by: <span className="font-medium text-slate-600">{item.submittedBy}</span></span>
                 </div>
-                <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0">
+                <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-semibold text-white bg-[#1A3E5C] rounded-lg hover:bg-[#15324a] transition-colors flex-shrink-0">
                   Review Evidence <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -554,25 +554,25 @@ function IADashboard({ stats }: { stats?: DashboardStats }) {
       </div>
 
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Controls Reviewed This Cycle</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Controls Reviewed This Cycle</p>
           {[
             { name: 'Q1 2025 DPDP Assessment', regs: ['DPDP'], reviewed: 28, total: 42 },
             { name: 'AWS Infrastructure Audit', regs: ['DPDP'], reviewed: 12, total: 20 },
           ].map(a => (
             <div key={a.name} className="mb-4">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[12px] font-semibold text-slate-800">{a.name}</p>
-                <span className="text-[11px] text-slate-400">{a.reviewed}/{a.total} controls</span>
+                <p className="text-[14px] font-semibold text-slate-800">{a.name}</p>
+                <span className="text-[13px] text-slate-400">{a.reviewed}/{a.total} controls</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(a.reviewed / a.total) * 100}%` }} />
+                <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: `${(a.reviewed / a.total) * 100}%` }} />
               </div>
             </div>
           ))}
         </div>
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Recently Processed</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Recently Processed</p>
           {[
             { title: 'Data Retention Policy', asset: 'Customer DB', decision: 'Approved', time: '2 hrs ago' },
             { title: 'AWS DPA Agreement', asset: 'AWS Infra', decision: 'Approved', time: '1 day ago' },
@@ -582,10 +582,10 @@ function IADashboard({ stats }: { stats?: DashboardStats }) {
             <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-50 last:border-0">
               {item.decision === 'Approved' ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" /> : <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />}
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-slate-800 truncate">{item.title}</p>
-                <p className="text-[10.5px] text-slate-400">{item.asset} · {item.time}</p>
+                <p className="text-[14px] font-medium text-slate-800 truncate">{item.title}</p>
+                <p className="text-[12.5px] text-slate-400">{item.asset} · {item.time}</p>
               </div>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${item.decision === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{item.decision}</span>
+              <span className={`text-[12px] px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${item.decision === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{item.decision}</span>
             </div>
           ))}
         </div>
@@ -605,48 +605,48 @@ function EADashboard({ stats }: { stats?: DashboardStats }) {
       <div className="grid grid-cols-3 gap-3">
         <MetricCard label="Pending Sign-Off" value={c?.finalReview ?? 0} sub="Internally approved, awaiting final sign-off" color="#F59E0B" />
         <MetricCard label="Signed Off This Cycle" value={0} sub="Final approvals given" color="#22C55E" />
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
           <div className="h-0.5 bg-green-500 w-full" />
-          <div className="p-4"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Overall Compliance Score</p><RiskGauge score={stats?.complianceScore ?? 0} size="md" /></div>
+          <div className="p-4"><p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Overall Compliance Score</p><RiskGauge score={stats?.complianceScore ?? 0} size="md" /></div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-[13px] font-semibold text-slate-800">Items Ready for Final Sign-Off</p>
+          <p className="text-[15px] font-semibold text-slate-800">Items Ready for Final Sign-Off</p>
         </div>
         <div className="divide-y divide-slate-50">
           {queue.map((item, i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50">
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
+                <p className="text-[14.5px] font-bold text-slate-800 mb-0.5">{item.title}</p>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <Database className="w-3 h-3 text-blue-400" />
-                  <span className="text-[11.5px] font-semibold text-blue-700">{item.asset}</span>
+                  <Database className="w-3 h-3 text-[#1A3E5C]/50" />
+                  <span className="text-[13.5px] font-semibold text-[#1A3E5C]">{item.asset}</span>
                 </div>
               </div>
-              <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors flex-shrink-0">
+              <button onClick={() => navigate('/org/compliance-tasks')} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors flex-shrink-0">
                 Review &amp; Sign Off <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
           {queue.length === 0 && (
-            <div className="py-12 text-center"><CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" /><p className="text-[13px] text-slate-500">No items pending your sign-off</p></div>
+            <div className="py-12 text-center"><CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" /><p className="text-[15px] text-slate-500">No items pending your sign-off</p></div>
           )}
         </div>
       </div>
 
 
       {/* Read-only compliance overview */}
-      <div className="flex items-start gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg">
-        <p className="text-[11px] text-slate-500">The compliance overview below is read-only for External Auditors.</p>
-        <span className="text-[9.5px] border border-slate-300 text-slate-400 px-1.5 py-0.5 rounded ml-auto flex-shrink-0">View Only</span>
+      <div className="flex items-start gap-2 px-3 py-2 bg-slate-100 border border-[#D4AF37]/35 rounded-lg">
+        <p className="text-[13px] text-slate-500">The compliance overview below is read-only for External Auditors.</p>
+        <span className="text-[11.5px] border border-slate-300 text-slate-400 px-1.5 py-0.5 rounded ml-auto flex-shrink-0">View Only</span>
       </div>
       <div className="flex gap-3">
         {stats?.regulationCompliance && stats.regulationCompliance.length > 0 ? stats.regulationCompliance.slice(0,3).map(r => {
           const d = [{ name:'Compliant',value:r.compliant,color:'#22C55E'},{name:'In Progress',value:r.inProgress,color:'#3B82F6'},{name:'Non-Compliant',value:r.nonCompliant,color:'#F87171'},{name:'Not Started',value:r.notStarted,color:'#94A3B8'}];
           return <DonutChart key={r.name} data={d} label={r.name} total={r.total||1} />;
-        }) : <p className="text-[12px] text-slate-400 italic">No assessment data yet.</p>}
+        }) : <p className="text-[14px] text-slate-400 italic">No assessment data yet.</p>}
       </div>
     </div>
   );
@@ -674,20 +674,20 @@ function DashSkeleton() {
 function GetStartedCTA() {
   const navigate = useNavigate();
   return (
-    <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex items-start gap-5">
-      <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+    <div className="p-6 bg-gradient-to-br from-[#1A3E5C]/5 to-[#D4AF37]/20 border border-[#D4AF37]/55 rounded-xl flex items-start gap-5">
+      <div className="w-12 h-12 rounded-xl bg-[#1A3E5C] flex items-center justify-center flex-shrink-0">
         <Shield className="w-6 h-6 text-white" />
       </div>
       <div className="flex-1">
-        <p className="text-[15px] font-bold text-slate-900 mb-1">Create your first assessment to see compliance data</p>
-        <p className="text-[12.5px] text-slate-500 leading-relaxed mb-4">Your organization is set up. Start an assessment to track compliance controls, assign tasks to your team, and measure progress across regulations.</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-1">Create your first assessment to see compliance data</p>
+        <p className="text-[14.5px] text-slate-500 leading-relaxed mb-4">Your organization is set up. Start an assessment to track compliance controls, assign tasks to your team, and measure progress across regulations.</p>
         <div className="flex gap-3">
           <button onClick={() => navigate('/org/assessments/new')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors">
+            className="flex items-center gap-2 px-4 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[14.5px] font-semibold rounded-lg transition-colors">
             <Plus className="w-4 h-4" /> Create First Assessment
           </button>
           <button onClick={() => navigate('/org/assets')}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 text-[12.5px] font-medium rounded-lg hover:bg-white transition-colors">
+            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 text-[14.5px] font-medium rounded-lg hover:bg-white transition-colors">
             View Assets
           </button>
         </div>
@@ -698,10 +698,10 @@ function GetStartedCTA() {
           { icon: Users, label: 'Team', desc: 'Assign tasks' },
           { icon: Zap, label: 'Controls', desc: 'Map regulations' },
         ].map(({ icon: Icon, label, desc }) => (
-          <div key={label} className="text-center p-3 bg-white rounded-lg border border-blue-100">
-            <Icon className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-            <p className="text-[11px] font-bold text-slate-800">{label}</p>
-            <p className="text-[10px] text-slate-400">{desc}</p>
+          <div key={label} className="text-center p-3 bg-white rounded-lg border border-[#D4AF37]/45">
+            <Icon className="w-5 h-5 text-[#1A3E5C] mx-auto mb-1" />
+            <p className="text-[13px] font-bold text-slate-800">{label}</p>
+            <p className="text-[12px] text-slate-400">{desc}</p>
           </div>
         ))}
       </div>
@@ -732,9 +732,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{TITLES[role]}</h1>
-        <p className="text-[12px] text-slate-400 mt-0.5">
+      <div className="pl-3 border-l-[3px] border-[#D4AF37]">
+        <h1 className="text-[28px] font-bold text-[#1A3E5C] tracking-tight" style={{ fontFamily: 'Cinzel, serif' }}>{TITLES[role]}</h1>
+        <p className="text-[14px] text-slate-400 mt-1">
           {stats?.orgName || orgName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>

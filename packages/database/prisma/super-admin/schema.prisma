@@ -123,6 +123,16 @@ enum RegulationStatus {
   ARCHIVED
 }
 
+enum ProviderCategory {
+  CLOUD_INFRASTRUCTURE
+  IDENTITY_SAAS
+  DEVOPS_SOURCE
+  DATABASE_SERVICE
+  EDGE_PLATFORM
+  CONTAINER_ORCHESTRATION
+  EMERGING
+}
+
 enum AuditAction {
   ORG_CREATED
   ORG_UPDATED
@@ -152,6 +162,15 @@ enum AuditAction {
   SUPER_ADMIN_LOGIN
   SUPER_ADMIN_LOGOUT
   SETTINGS_UPDATED
+  CLOUD_PROVIDER_CREATED
+  CLOUD_PROVIDER_UPDATED
+  CLOUD_PROVIDER_TOGGLED
+  ASSET_TEMPLATE_CREATED
+  ASSET_TEMPLATE_UPDATED
+  ASSET_TEMPLATE_DELETED
+  CHECK_MAPPING_CREATED
+  CHECK_MAPPING_UPDATED
+  CHECK_MAPPING_DELETED
 }
 
 // ============================================
@@ -330,6 +349,7 @@ model ControlPredefinedAction {
   priority         Priority     @default(HIGH)
   orderIndex       Int          @default(0)
   products         ActionProduct[]
+  checkMappings    ControlCheckMapping[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -673,4 +693,89 @@ model LmsCourseDesignation {
 
   @@id([courseId, designationId])
   @@map("lms_course_designations")
+}
+
+// ============================================
+// CONTROL <-> CHECK MAPPING
+// Maps a DPDP ControlPredefinedAction to a specific Prowler check on a
+// specific provider — "when this check passes on a resource, that's
+// evidence this action is satisfied." Same curated-catalog pattern as
+// GenericAssetTemplate: starts empty/sparse, grows as Super Admin maps
+// real checks, checkTitle/checkSeverity cached at mapping time so the
+// catalog UI doesn't need a live cloud-scanner call to render a list.
+// ============================================
+
+model ControlCheckMapping {
+  id                 String                  @id @default(uuid())
+  predefinedActionId String
+  predefinedAction   ControlPredefinedAction @relation(fields: [predefinedActionId], references: [id], onDelete: Cascade)
+  providerId         String
+  provider           CloudProviderType       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  checkId            String                  // Prowler's CheckID, e.g. "s3_bucket_level_public_access_block"
+  checkTitle         String                  // cached from Prowler's check metadata at mapping time
+  checkSeverity      String?                 // cached severity (low/medium/high/critical)
+
+  status             ControlStatus           @default(DRAFT)
+  isActive           Boolean                 @default(true)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([predefinedActionId, providerId, checkId])
+  @@map("control_check_mappings")
+}
+
+// ============================================
+// CLOUD PROVIDER REGISTRY
+// Master catalog of cloud/SaaS providers Prowler can
+// scan. Super Admin controls which are active and
+// therefore selectable by tenants at connection time.
+// ============================================
+
+model CloudProviderType {
+  id               String           @id @default(uuid())
+  key              String           @unique  // matches Prowler's provider key exactly, e.g. "azure"
+  displayName      String                    // "Microsoft Azure"
+  category         ProviderCategory
+  isActive         Boolean          @default(false)
+  credentialSchema Json                      // field shape required to connect (mirrors Prowler's own credential schema)
+  logoUrl          String?
+  docsUrl          String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  assetTemplates   GenericAssetTemplate[]
+  checkMappings    ControlCheckMapping[]
+
+  @@map("cloud_provider_types")
+}
+
+// ============================================
+// GENERIC ASSET CATALOG
+// Maps a provider's native resource type (Prowler's
+// ResourceType, e.g. "microsoft.storage/storageaccounts")
+// to a tenant AssetType value. assetType is stored as a
+// plain string, not a Prisma enum reference — it
+// corresponds to the AssetType enum in the TENANT schema,
+// which lives in a separate database and cannot be
+// referenced directly. Validated at the application layer
+// against the known AssetType set.
+// ============================================
+
+model GenericAssetTemplate {
+  id                      String            @id @default(uuid())
+  providerId              String
+  provider                CloudProviderType @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  cloudResourceType       String            // Prowler's ResourceType string for this provider
+  displayName             String            // "Azure Storage Account"
+  assetType               String            // must match a tenant-schema AssetType enum value
+  defaultCriticality      String            @default("MEDIUM")
+  suggestedDataCategories String[]          @default([])
+  status                  ControlStatus     @default(DRAFT)
+  isActive                Boolean           @default(true)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@unique([providerId, cloudResourceType])
+  @@map("generic_asset_templates")
 }

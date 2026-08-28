@@ -15,6 +15,8 @@ import usersRoutes from './modules/users/users.routes'
 import assessmentsRoutes from './modules/assessments/assessments.routes'
 import tasksRoutes from './modules/tasks/tasks.routes'
 import lmsRoutes from './modules/lms/lms.routes'
+import cloudConnectionsRoutes from './modules/cloud-connections/cloud-connections.routes'
+import discoveryRoutes from './modules/discovery/discovery.routes'
 
 const app = express()
 
@@ -59,6 +61,8 @@ app.use('/api/v1/assessments', assessmentsRoutes)
 app.use('/api/v1/users', usersRoutes)
 app.use('/api/v1/tasks', tasksRoutes)
 app.use('/api/v1/lms', lmsRoutes)
+app.use('/api/v1/cloud-connections', cloudConnectionsRoutes)
+app.use('/api/v1/discovery', discoveryRoutes)
 
 app.use(errorHandler)
 

@@ -30,4 +30,11 @@ export const queryKeys = {
   auditLog: {
     list: (params: Record<string, unknown>) => ['audit-log', params] as const,
   },
+  cloudConnections: {
+    providers: ['cloud-connections', 'providers'] as const,
+    list:      ['cloud-connections', 'list']      as const,
+  },
+  discovery: {
+    drafts: (connectionId?: string) => ['discovery', 'drafts', connectionId ?? 'all'] as const,
+  },
 }

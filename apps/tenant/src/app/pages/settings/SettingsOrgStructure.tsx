@@ -12,6 +12,7 @@ import {
   useCreateSupplierAsset, useDeleteSupplierAsset
 } from '../../../hooks/useOrg';
 import { DeptForm, AssetForm, SupplierForm, PIIForm } from '../../components/onboarding/OrgStructureGraph';
+import { CloudConnectionsPanel } from '../../components/cloud/CloudConnectionsPanel';
 import { queryKeys } from '../../../lib/query-keys';
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -77,6 +78,8 @@ export function SettingsOrgStructure() {
           <Plus className="w-3.5 h-3.5" /> Add Department
         </button>
       </div>
+
+      <CloudConnectionsPanel />
 
       {depts.length === 0 ? (
         <div className="py-16 text-center border border-dashed border-slate-300 rounded-lg">

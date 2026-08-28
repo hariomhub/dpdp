@@ -42,4 +42,10 @@ export const config = {
       process.env.INVITE_TOKEN_EXPIRY_HOURS || '48'
     ),
   },
+
+  cloudScanner: {
+    // Read-only from here — Super Admin only ever browses Prowler's check
+    // catalog (GET /checks) to build mappings, never scans a real account.
+    scannerServiceUrl: process.env.CLOUD_SCANNER_URL || 'http://localhost:8090',
+  },
 }

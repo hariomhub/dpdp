@@ -14,6 +14,9 @@ import auditRoutes from './modules/audit/audit.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import controlFamilyRoutes from './modules/control-families/control-families.routes'
 import productFamilyRoutes from './modules/product-families/product-families.routes'
+import cloudProviderTypeRoutes from './modules/cloud-provider-types/cloud-provider-types.routes'
+import genericAssetTemplateRoutes from './modules/generic-asset-templates/generic-asset-templates.routes'
+import controlCheckMappingRoutes from './modules/control-check-mappings/control-check-mappings.routes'
 
 
 const app = express()
@@ -66,6 +69,9 @@ app.use('/api/v1/audit-logs', auditRoutes)
 app.use('/api/v1/dashboard', dashboardRoutes)
 app.use('/api/v1/control-families', controlFamilyRoutes)
 app.use('/api/v1/product-families', productFamilyRoutes)
+app.use('/api/v1/cloud-provider-types', cloudProviderTypeRoutes)
+app.use('/api/v1/generic-asset-templates', genericAssetTemplateRoutes)
+app.use('/api/v1/control-check-mappings', controlCheckMappingRoutes)
 
 // SPA fallback: serve index.html for any non-API route
 // This makes React Router's client-side routing work on hard refresh / direct URL

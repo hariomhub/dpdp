@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router';
-import { ShieldCheck, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import {
+  ShieldCheck,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Lock as LockIcon,
+  FileCheck,
+  UserCheck,
+  Building2,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +24,92 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+// Nodes represent the compliance ecosystem around a tenant workspace —
+// the card sits over the hub, and lines converge into it.
+const NODES: { top: string; left: string; Icon: typeof LockIcon }[] = [
+  { top: '10%', left: '15%', Icon: LockIcon },
+  { top: '9%', left: '83%', Icon: FileCheck },
+  { top: '83%', left: '12%', Icon: Building2 },
+  { top: '87%', left: '85%', Icon: UserCheck },
+];
+
+function LoginBackdrop() {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#eef3fd] via-[#e4ecfb] to-[#dbe7fb]">
+      {/* single-tone blue wash for richness */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(37,99,235,0.16) 0%, rgba(59,130,246,0.12) 50%, rgba(37,99,235,0.18) 100%)',
+        }}
+      />
+
+      {/* dot grid texture */}
+      <div
+        className="absolute inset-0 opacity-[0.5]"
+        style={{
+          backgroundImage:
+            'linear-gradient(#64748b 1px, transparent 1px), linear-gradient(90deg, #64748b 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+          maskImage: 'radial-gradient(circle at center, black, transparent 72%)',
+          WebkitMaskImage: 'radial-gradient(circle at center, black, transparent 72%)',
+        }}
+      />
+
+      {/* ambient glows — one consistent blue family, no hue shifts */}
+      <div
+        className="absolute top-[-16%] right-[-10%] w-[620px] h-[620px] rounded-full opacity-45 blur-3xl"
+        style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)' }}
+      />
+      <div
+        className="absolute bottom-[-18%] left-[-12%] w-[560px] h-[560px] rounded-full opacity-40 blur-3xl"
+        style={{ background: 'radial-gradient(circle, #3b82f6, transparent 70%)' }}
+      />
+      <div
+        className="absolute top-[35%] left-[42%] w-[380px] h-[380px] rounded-full opacity-20 blur-3xl"
+        style={{ background: 'radial-gradient(circle, #2563eb, transparent 70%)' }}
+      />
+
+      {/* concentric protection rings, centered on the card */}
+      {[420, 620, 820].map((size) => (
+        <div
+          key={size}
+          className="absolute top-1/2 left-1/2 rounded-full border border-slate-900/[0.06]"
+          style={{ width: size, height: size, transform: 'translate(-50%, -50%)' }}
+        />
+      ))}
+
+      {/* connector lines from center hub to each ecosystem node */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {NODES.map((n, i) => (
+          <line
+            key={i}
+            x1={50}
+            y1={50}
+            x2={parseFloat(n.left)}
+            y2={parseFloat(n.top)}
+            stroke="#1e293b"
+            strokeOpacity={0.1}
+            strokeWidth={0.15}
+          />
+        ))}
+      </svg>
+
+      {/* ecosystem node markers */}
+      {NODES.map(({ top, left, Icon }, i) => (
+        <div
+          key={i}
+          className="absolute w-10 h-10 rounded-xl bg-white/80 ring-1 ring-slate-900/[0.08] flex items-center justify-center backdrop-blur-sm shadow-md shadow-slate-900/10"
+          style={{ top, left, transform: 'translate(-50%, -50%)' }}
+        >
+          <Icon className="w-[18px] h-[18px] text-blue-600/60" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function LoginPage() {
   const loginMutation = useLogin();
@@ -43,94 +139,80 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-      {/* Left Panel */}
-      <div className="hidden lg:flex w-[50%] flex-col justify-between p-12 bg-gradient-to-br from-blue-700 to-blue-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
+    <div
+      className="relative h-screen flex items-center justify-center overflow-hidden px-4 py-5"
+      style={{ fontFamily: 'DM Sans, sans-serif' }}
+    >
+      <LoginBackdrop />
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
+      <div className="relative z-10 w-full max-w-[440px]">
+        <div className="bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(15,23,42,0.25)] ring-1 ring-slate-900/[0.04] p-7 sm:p-8">
+          {/* Logo */}
+          <div className="flex flex-col items-center text-center mb-5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25 mb-2.5">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="text-[20px] font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>DPDP CMS</span>
-          </div>
-        </div>
-
-        <div className="relative z-10">
-          <h1 className="text-[36px] font-bold text-white leading-tight mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
-            India's DPDP<br />Compliance,<br />Simplified.
-          </h1>
-          <p className="text-[15px] text-blue-100 leading-relaxed max-w-md">
-            Assess, manage, and prove compliance with the Digital Personal Data Protection Act 2023.
-            Built for Indian organizations, by compliance experts.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex gap-4">
-          {['Evidence-Based', 'Audit-Ready', 'Role-Governed'].map(f => (
-            <div key={f} className="flex items-center gap-2 text-blue-100">
-              <div className="w-2 h-2 rounded-full bg-blue-300" />
-              <span className="text-[13px] font-medium">{f}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Right Panel */}
-      <div className="flex-1 flex items-center justify-center bg-white p-8">
-        <div className="w-full max-w-[360px]">
-          <div className="flex justify-center mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
+            <span className="text-[18px] font-bold text-slate-900 tracking-tight" style={{ fontFamily: 'Sora, sans-serif' }}>
+              DPDP CMS
+            </span>
+            <span className="text-[10px] font-semibold text-blue-600/70 tracking-[0.18em] uppercase mt-0.5">
+              Compliance Workspace
+            </span>
           </div>
 
-          <h2 className="text-[20px] font-bold text-slate-900 text-center mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Sign in to your account
+          <h2 className="text-[20px] font-bold text-slate-900 text-center mb-1 tracking-tight" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Welcome back
           </h2>
-          <p className="text-[13px] text-slate-500 text-center mb-6">
-            Sign in with your email and password to continue
+          <p className="text-[13px] text-slate-400 text-center mb-5">
+            Sign in to continue your compliance workspace
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 mb-4">
             {/* Email */}
             <div>
-              <label className="block text-[12px] font-medium text-slate-600 mb-1">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+                Email Address
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                 <input
                   type="email"
                   placeholder="you@organization.in"
                   {...register('email')}
-                  className="w-full h-9 pl-9 pr-3 rounded-md bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  className="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-150"
                 />
               </div>
-              {errors.email && <p className="text-[11px] text-rose-500 mt-1">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="text-[11px] text-rose-500 mt-1.5 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 inline-block" />
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-[12px] font-medium text-slate-600 mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide">
+                  Password
+                </label>
+                <Link to="/forgot-password" className="text-[11.5px] font-medium text-blue-600 hover:text-blue-700">
+                  Forgot password?
+                </Link>
+              </div>
               <PasswordInput register={register} />
-              {errors.password && <p className="text-[11px] text-rose-500 mt-1">{errors.password.message}</p>}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-3.5 h-3.5 accent-blue-600" />
-                <span className="text-[12px] text-slate-500">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="text-[12px] text-blue-600 hover:text-blue-700">
-                Forgot password?
-              </Link>
+              {errors.password && (
+                <p className="text-[11px] text-rose-500 mt-1.5 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 inline-block" />
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
               disabled={loginMutation.isPending}
-              className="w-full h-9 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-md transition-colors flex items-center justify-center gap-2"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-xl transition-all duration-150 flex items-center justify-center gap-2 mt-1 shadow-sm shadow-blue-600/25"
             >
               {loginMutation.isPending ? (
                 <>
@@ -154,9 +236,9 @@ export function LoginPage() {
           </div>
 
           <button type="button" onClick={handleMicrosoftLogin} disabled={entraLoading}
-            className="w-full h-9 border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-700 text-[13px] font-medium rounded-md transition-colors flex items-center justify-center gap-2.5">
+            className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 active:scale-[0.99] disabled:opacity-60 text-white text-[13px] font-medium rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm shadow-neutral-900/20">
             {entraLoading ? (
-              <svg className="animate-spin w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
@@ -171,10 +253,20 @@ export function LoginPage() {
             Sign in with Microsoft
           </button>
 
-          <p className="text-center text-[12px] text-slate-400 mt-5">
+          <p className="text-center text-[12px] text-slate-400 mt-4">
             Don't have an account?{' '}
             <span className="text-slate-600">Contact your administrator.</span>
           </p>
+        </div>
+
+        {/* Status footer */}
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 ring-1 ring-slate-900/[0.06] backdrop-blur-sm shadow-sm shadow-slate-900/5">
+            <Lock className="w-3 h-3 text-blue-600/70" />
+            <span className="text-[11px] font-medium text-slate-500 tracking-wide">
+              Data handled per the DPDP Act, 2023
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -184,13 +276,13 @@ export function LoginPage() {
 function PasswordInput({ register }: { register: any }) {
   const [show, setShow] = useState(false);
   return (
-    <div className="relative">
-      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+    <div className="relative group">
+      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
       <input
         type={show ? 'text' : 'password'}
         placeholder="••••••••"
         {...register('password')}
-        className="w-full h-9 pl-9 pr-10 rounded-md bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+        className="w-full h-11 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-150"
       />
       <button type="button" onClick={() => setShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { OrgStructureStep, Department, InviteUser, uid } from '../../components/onboarding/OrgStructureGraph';
+import { CloudConnectionsPanel } from '../../components/cloud/CloudConnectionsPanel';
 import { TeamInviteStep } from '../../components/onboarding/TeamInviteStep';
 import {
   useOnboardingStatus,
@@ -548,6 +549,9 @@ export function OnboardingPage() {
               <div className="px-6 py-3.5 border-b border-slate-100 flex-shrink-0 bg-white">
                 <h2 className="text-[17px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>Organization Structure</h2>
                 <p className="text-[12px] text-slate-500 mt-0.5">Map your departments, assets, suppliers, and the personal data that flows through them.</p>
+              </div>
+              <div className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
+                <CloudConnectionsPanel />
               </div>
               <div className="flex-1 overflow-hidden">
                 <OrgStructureStep

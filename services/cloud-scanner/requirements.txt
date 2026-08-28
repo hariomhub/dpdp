@@ -1,0 +1,3 @@
+prowler
+fastapi
+uvicorn[standard]

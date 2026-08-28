@@ -49,4 +49,18 @@ export const config = {
     encryptionKey: process.env.ENTRA_ENCRYPTION_KEY || '',
     redirectUri:   process.env.ENTRA_REDIRECT_URI   || 'http://localhost:5173/auth/callback',
   },
+
+  cloudScanner: {
+    /**
+     * Same encryption key/utility as Entra (utils/crypto.ts) — reused for
+     * TenantCloudConnection credentials, a separate concern from Entra login,
+     * but the same AES-256-GCM mechanism.
+     */
+    encryptionKey: process.env.CLOUD_CONNECTION_ENCRYPTION_KEY || '',
+    scannerServiceUrl: process.env.CLOUD_SCANNER_URL || 'http://localhost:8090',
+  },
+
+  redis: {
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
 }

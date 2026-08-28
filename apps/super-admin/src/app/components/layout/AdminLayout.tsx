@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import {
   LayoutDashboard, Building2, ShieldCheck, GraduationCap,
   CreditCard, Settings, ChevronLeft, ChevronRight,
-  LogOut, ScrollText, ClipboardList, Loader2, Package, Boxes
+  LogOut, ScrollText, ClipboardList, Loader2, Package, Boxes, Cloud, Layers, Link2
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useLogout, useMe } from '../../../hooks/useAuth'
@@ -15,6 +15,9 @@ const ADMIN_NAV = [
   { icon: ClipboardList, label: 'Regulations & Controls', path: '/admin/controls' },
   { icon: Boxes, label: 'Control Families', path: '/admin/control-families' },
   { icon: Package, label: 'Product Families', path: '/admin/product-families' },
+  { icon: Cloud, label: 'Cloud Providers', path: '/admin/cloud-providers' },
+  { icon: Layers, label: 'Asset Catalog', path: '/admin/asset-catalog' },
+  { icon: Link2, label: 'Check Mappings', path: '/admin/check-mappings' },
   { icon: GraduationCap, label: 'LMS', path: '/admin/lms' },
   { label: 'System', type: 'section' },
   { icon: Settings, label: 'Platform Settings', path: '/admin/settings' },

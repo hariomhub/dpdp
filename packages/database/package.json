@@ -28,6 +28,7 @@
     "db:reset:super-admin": "prisma migrate reset --config=prisma/super-admin/prisma.config.ts",
     "db:reset:tenant": "prisma migrate reset --config=prisma/tenant/prisma.config.ts",
     "postinstall": "npm run generate",
-    "seed:tenant": "ts-node src/seed/tenant-seed.ts"
+    "seed:tenant": "ts-node src/seed/tenant-seed.ts",
+    "seed:cloud-catalog": "ts-node src/seed/cloud-catalog-seed.ts"
   }
 }
