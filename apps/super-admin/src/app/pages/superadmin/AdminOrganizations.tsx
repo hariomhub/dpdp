@@ -79,32 +79,32 @@ function OrgStructureTab() {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-slate-400 mb-3">Read-only view of the organization's department and asset structure as built during onboarding.</p>
+      <p className="text-[13px] text-slate-400 mb-3">Read-only view of the organization's department and asset structure as built during onboarding.</p>
       {DEPT_TREE.map(dept => {
         const isOpen = expanded.has(dept.id);
         return (
-          <div key={dept.id} className="border border-slate-200 rounded-lg overflow-hidden">
+          <div key={dept.id} className="border border-[#64748B]/20 rounded-lg overflow-hidden">
             <button onClick={() => toggle(dept.id)}
               className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
               {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
               <Building2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-[12.5px] font-bold text-slate-800">{dept.name}</p>
-                <p className="text-[10.5px] text-slate-400">IT Admin: {dept.itAdmin} · IA: {dept.ia}</p>
+                <p className="text-[14.5px] font-bold text-slate-800">{dept.name}</p>
+                <p className="text-[12.5px] text-slate-400">IT Admin: {dept.itAdmin} · IA: {dept.ia}</p>
               </div>
-              <span className="text-[10.5px] text-slate-400">{dept.assets.length} assets · {dept.suppliers.length} suppliers</span>
+              <span className="text-[12.5px] text-slate-400">{dept.assets.length} assets · {dept.suppliers.length} suppliers</span>
             </button>
             {isOpen && (
               <div className="px-4 pb-3 pt-2 space-y-2">
                 {dept.assets.map(asset => (
-                  <div key={asset.id} className="flex items-center gap-3 p-2.5 bg-white border border-slate-100 rounded-lg">
+                  <div key={asset.id} className="flex items-center gap-3 p-2.5 bg-white border border-[#64748B]/20 rounded-lg">
                     <Database className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-[12px] font-semibold text-slate-700">{asset.name}</p>
-                      <p className="text-[10.5px] text-slate-400">{asset.type} · {asset.criticality}</p>
+                      <p className="text-[14px] font-semibold text-slate-700">{asset.name}</p>
+                      <p className="text-[12.5px] text-slate-400">{asset.type} · {asset.criticality}</p>
                     </div>
                     <div className="flex gap-1 flex-wrap">
-                      {asset.pii.map(p => <span key={p} className="text-[9.5px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded">{p}</span>)}
+                      {asset.pii.map(p => <span key={p} className="text-[11.5px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded">{p}</span>)}
                     </div>
                   </div>
                 ))}
@@ -113,20 +113,20 @@ function OrgStructureTab() {
                     <div className="flex items-center gap-3 p-2.5 bg-amber-50 border border-amber-100 rounded-lg">
                       <Package className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-[12px] font-semibold text-amber-800">{sup.name}</p>
-                        <p className="text-[10.5px] text-amber-600">{sup.type} · DPA: {sup.dpa ? '✓ Signed' : '✗ Not Signed'}</p>
+                        <p className="text-[14px] font-semibold text-amber-800">{sup.name}</p>
+                        <p className="text-[12.5px] text-amber-600">{sup.type} · DPA: {sup.dpa ? '✓ Signed' : '✗ Not Signed'}</p>
                       </div>
                     </div>
                     {sup.assets.map(va => (
-                      <div key={va.id} className="flex items-center gap-3 p-2 ml-6 bg-white border border-slate-100 rounded-lg mt-1">
+                      <div key={va.id} className="flex items-center gap-3 p-2 ml-6 bg-white border border-[#64748B]/20 rounded-lg mt-1">
                         <Database className="w-3 h-3 text-slate-300 flex-shrink-0" />
-                        <p className="text-[11.5px] text-slate-600">{va.name} <span className="text-slate-400">({va.type})</span></p>
+                        <p className="text-[13.5px] text-slate-600">{va.name} <span className="text-slate-400">({va.type})</span></p>
                       </div>
                     ))}
                   </div>
                 ))}
                 {dept.assets.length === 0 && dept.suppliers.length === 0 && (
-                  <p className="text-[11.5px] text-slate-400 italic text-center py-2">No assets or suppliers added yet.</p>
+                  <p className="text-[13.5px] text-slate-400 italic text-center py-2">No assets or suppliers added yet.</p>
                 )}
               </div>
             )}
@@ -144,7 +144,7 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
   if (isLoading) {
     return <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
       <Loader2 className="w-5 h-5 animate-spin" />
-      <span className="text-[13px]">Loading organization details...</span>
+      <span className="text-[15px]">Loading organization details...</span>
     </div>;
   }
 
@@ -155,36 +155,36 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[14px] text-slate-500 hover:text-slate-800 border border-[#64748B]/20 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> Organizations
         </button>
         <span className="text-slate-300">/</span>
-        <span className="text-[13px] font-semibold text-slate-800">{org.name}</span>
-        <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${STATUS_COLORS[org.status] || 'bg-slate-100 text-slate-600'}`}>{org.status}</span>
+        <span className="text-[15px] font-semibold text-slate-800">{org.name}</span>
+        <span className={`text-[13px] px-2 py-0.5 rounded font-medium ${STATUS_COLORS[org.status] || 'bg-slate-100 text-slate-600'}`}>{org.status}</span>
       </div>
 
       {/* Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4">
+      <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center border border-[#64748B]/20">
               <Building2 className="w-5 h-5 text-slate-600" />
             </div>
             <div>
-              <h2 className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{org.name}</h2>
-              <p className="text-[12px] text-slate-400">{org.industry} · <span className={`font-medium ${org.plan === 'ENTERPRISE' ? 'text-violet-600' : org.plan === 'PROFESSIONAL' ? 'text-blue-600' : 'text-amber-600'}`}>{org.plan}</span> · CEO: {org.ceoName} · Onboarded {new Date(org.onboardedAt || org.createdAt).toLocaleDateString('en-IN')}</p>
+              <h2 className="text-[18px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{org.name}</h2>
+              <p className="text-[14px] text-slate-400">{org.industry} · <span className={`font-medium ${org.plan === 'ENTERPRISE' ? 'text-violet-600' : org.plan === 'PROFESSIONAL' ? 'text-blue-600' : 'text-amber-600'}`}>{org.plan}</span> · CEO: {org.ceoName} · Onboarded {new Date(org.onboardedAt || org.createdAt).toLocaleDateString('en-IN')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
               <Headphones className="w-3.5 h-3.5" /> Support Access
             </button>
             {org.status !== 'SUSPENDED' ? (
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors">
                 <Ban className="w-3.5 h-3.5" /> Suspend Org
               </button>
             ) : (
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Reactivate
               </button>
             )}
@@ -193,10 +193,10 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-0 overflow-x-auto">
+      <div className="flex border-b border-[#64748B]/20 gap-0 overflow-x-auto">
         {ORG_TABS.map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-[12.5px] font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${activeTab === tab ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+            className={`px-4 py-2 text-[14.5px] font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${activeTab === tab ? 'border-[#1A3E5C] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
             {tab}
           </button>
         ))}
@@ -205,44 +205,44 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
       {/* Tab 1: Org Details */}
       {activeTab === 'Org Details' && (
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
-            <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-3">Basic Information</p>
-            <div className="grid grid-cols-3 gap-4 text-[12.5px]">
+          <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
+            <p className="text-[14px] font-bold text-slate-500 uppercase tracking-widest mb-3">Basic Information</p>
+            <div className="grid grid-cols-3 gap-4 text-[14.5px]">
               {[
                 ['Organization Name', org.name], ['Industry', org.industry], ['Plan', org.plan],
                 ['Country', org.country || 'India'], ['Org Size', 'N/A'], ['Primary Email', org.ceoEmail],
                 ['Tenant Code', org.tenantCode], ['PAN', 'N/A'], ['GST', 'N/A'],
               ].map(([k, v]) => (
                 <div key={k}>
-                  <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
+                  <p className="text-[12.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
                   <p className="text-slate-800 font-medium">{v}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
-            <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-3">DPO Details</p>
-            <div className="grid grid-cols-3 gap-4 text-[12.5px]">
+          <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
+            <p className="text-[14px] font-bold text-slate-500 uppercase tracking-widest mb-3">DPO Details</p>
+            <div className="grid grid-cols-3 gap-4 text-[14.5px]">
               {[['DPO Name', 'N/A'], ['DPO Email', 'N/A'], ['DPO Phone', 'N/A']].map(([k, v]) => (
                 <div key={k}>
-                  <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
+                  <p className="text-[12.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>
                   <p className="text-slate-800 font-medium">{v}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
-            <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-3">DPDP Classification</p>
+          <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
+            <p className="text-[14px] font-bold text-slate-500 uppercase tracking-widest mb-3">DPDP Classification</p>
             <div className="flex items-start gap-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Shield className="w-4 h-4 text-blue-600" />
-                  <p className="text-[13px] font-bold text-blue-800">Data Fiduciary</p>
-                  <span className="ml-auto px-2 py-0.5 bg-green-50 text-green-700 text-[10.5px] rounded font-semibold">Active Classification</span>
+                  <p className="text-[15px] font-bold text-blue-800">Data Fiduciary</p>
+                  <span className="ml-auto px-2 py-0.5 bg-green-50 text-green-700 text-[12.5px] rounded font-semibold">Active Classification</span>
                 </div>
-                <p className="text-[11.5px] text-blue-600">Standard obligations under DPDP Act. Subject to Chapters 2, 3, and provisions of Chapter 4.</p>
+                <p className="text-[13.5px] text-blue-600">Standard obligations under DPDP Act. Subject to Chapters 2, 3, and provisions of Chapter 4.</p>
               </div>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[12px] text-slate-600">
+              <div className="p-3 bg-slate-50 border border-[#64748B]/20 rounded-lg text-[14px] text-slate-600">
                 <p className="font-semibold text-slate-700 mb-1.5">Active Regulations</p>
                 {['DPDP Act 2023', 'RBI Data Localisation'].map(r => <p key={r} className="flex items-center gap-1.5 mb-0.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />{r}</p>)}
               </div>
@@ -256,14 +256,14 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
 
       {/* Tab 3: Team Members */}
       {activeTab === 'Team Members' && (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-slate-100">
-            <p className="text-[12px] text-slate-400">Read-only · {5} members</p>
+            <p className="text-[14px] text-slate-400">Read-only · {5} members</p>
           </div>
-          <table className="w-full text-[12px]">
+          <table className="w-full text-[14px]">
             <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
               {['Name', 'Role', 'Department(s)', 'Email', 'Source', 'Status', 'Last Login'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">{h}</th>
+                <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>
               ))}
             </tr></thead>
             <tbody>
@@ -279,27 +279,27 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
                   <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0" style={{ background: `${color}18`, color }}>
+                        <span className="w-7 h-7 rounded-full text-[12px] font-bold flex items-center justify-center flex-shrink-0" style={{ background: `${color}18`, color }}>
                           {u.name.split(' ').map(n => n[0]).join('')}
                         </span>
                         <p className="font-semibold text-slate-800">{u.name}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded text-[10.5px] font-semibold" style={{ background: `${color}18`, color }}>{u.role}</span>
+                      <span className="px-2 py-0.5 rounded text-[12.5px] font-semibold" style={{ background: `${color}18`, color }}>{u.role}</span>
                     </td>
                     <td className="px-4 py-3">
                       {u.depts.length > 0
-                        ? <div className="flex flex-wrap gap-1">{u.depts.map(d => <span key={d} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{d}</span>)}</div>
+                        ? <div className="flex flex-wrap gap-1">{u.depts.map(d => <span key={d} className="text-[12px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{d}</span>)}</div>
                         : <span className="text-slate-400">Org-wide</span>
                       }
                     </td>
                     <td className="px-4 py-3 text-slate-500">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${u.source === 'Entra ID' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{u.source}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[12px] font-semibold ${u.source === 'Entra ID' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{u.source}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10.5px] font-medium">{u.status}</span>
+                      <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[12.5px] font-medium">{u.status}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-400">{u.login}</td>
                   </tr>
@@ -312,12 +312,12 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
 
       {/* Tab 4: Assessments */}
       {activeTab === 'Assessments' && (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-slate-100"><p className="text-[12px] text-slate-400">Read-only · 0 assessments</p></div>
-          <table className="w-full text-[12px]">
+        <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100"><p className="text-[14px] text-slate-400">Read-only · 0 assessments</p></div>
+          <table className="w-full text-[14px]">
             <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
               {['Assessment Name', 'Regulation', 'Department', 'Status', 'Compliance %', 'Period', 'Created By', 'Last Updated'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr></thead>
             <tbody>
@@ -328,10 +328,10 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
               ].map((a, i) => (
                 <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-semibold text-slate-800">{a.name}</td>
-                  <td className="px-4 py-3"><span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10.5px] font-semibold">{a.reg}</span></td>
+                  <td className="px-4 py-3"><span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[12.5px] font-semibold">{a.reg}</span></td>
                   <td className="px-4 py-3 text-slate-500">{a.dept}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-[10.5px] font-medium ${a.status === 'Active' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>{a.status}</span>
+                    <span className={`px-2 py-0.5 rounded text-[12.5px] font-medium ${a.status === 'Active' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>{a.status}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -354,27 +354,27 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
       {/* Tab 5: Billing */}
       {activeTab === 'Billing' && (
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[13px] font-semibold text-slate-800">Current Plan</p>
+              <p className="text-[15px] font-semibold text-slate-800">Current Plan</p>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Downgrade Plan</button>
-                <button className="px-3 py-1.5 text-[12px] text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-colors">Upgrade Plan</button>
+                <button className="px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">Downgrade Plan</button>
+                <button className="px-3 py-1.5 text-[14px] text-white bg-[#15324a] rounded-lg hover:bg-[#1A3E5C] transition-colors">Upgrade Plan</button>
               </div>
             </div>
             <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
-              <p className="text-[15px] font-bold text-slate-900">{org.plan} Plan</p>
-              <p className="text-[11.5px] text-slate-500 mt-0.5">Renews: Jun 1, 2025 · Unlimited seats · ₹1,20,000/mo</p>
+              <p className="text-[17px] font-bold text-slate-900">{org.plan} Plan</p>
+              <p className="text-[13.5px] text-slate-500 mt-0.5">Renews: Jun 1, 2025 · Unlimited seats · ₹1,20,000/mo</p>
             </div>
             <div className="mt-4 space-y-3">
-              <p className="text-[11.5px] font-semibold text-slate-700">Usage This Cycle</p>
+              <p className="text-[13.5px] font-semibold text-slate-700">Usage This Cycle</p>
               {[
                 { label: 'Users', used: 0, limit: 'Unlimited', pct: 0, showBar: false },
                 { label: 'Active Assessments', used: 0, limit: 'Unlimited', pct: 0, showBar: false },
                 { label: 'Storage Used', used: '0 GB', limit: '50 GB', pct: 0, showBar: true },
               ].map(u => (
                 <div key={u.label}>
-                  <div className="flex items-center justify-between mb-1 text-[12px]">
+                  <div className="flex items-center justify-between mb-1 text-[14px]">
                     <span className="text-slate-600">{u.label}</span>
                     <span className="text-slate-500">{u.used} of {u.limit}</span>
                   </div>
@@ -387,22 +387,22 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
               ))}
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
             <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-[13px] font-semibold text-slate-800">Invoice History</p>
+              <p className="text-[15px] font-semibold text-slate-800">Invoice History</p>
             </div>
-            <table className="w-full text-[12px]">
+            <table className="w-full text-[14px]">
               <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-                {['Invoice', 'Date', 'Amount', 'Status', ''].map(h => <th key={h} className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">{h}</th>)}
+                {['Invoice', 'Date', 'Amount', 'Status', ''].map(h => <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>)}
               </tr></thead>
               <tbody>
                 {[['INV-2025-04', 'Apr 1, 2025', '₹1,20,000', 'Paid'], ['INV-2025-03', 'Mar 1, 2025', '₹1,20,000', 'Paid'], ['INV-2025-02', 'Feb 1, 2025', '₹1,20,000', 'Paid']].map(([inv, date, amt, status], i) => (
                   <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-mono text-[10.5px] text-slate-700">{inv}</td>
+                    <td className="px-4 py-2.5 font-mono text-[12.5px] text-slate-700">{inv}</td>
                     <td className="px-4 py-2.5 text-slate-600">{date}</td>
                     <td className="px-4 py-2.5 font-semibold text-slate-800">{amt}</td>
-                    <td className="px-4 py-2.5"><span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10.5px] font-medium">{status}</span></td>
-                    <td className="px-4 py-2.5"><button className="text-[11px] text-slate-600 hover:text-slate-800 flex items-center gap-1"><Download className="w-3 h-3" /> Download</button></td>
+                    <td className="px-4 py-2.5"><span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[12.5px] font-medium">{status}</span></td>
+                    <td className="px-4 py-2.5"><button className="text-[13px] text-slate-600 hover:text-slate-800 flex items-center gap-1"><Download className="w-3 h-3" /> Download</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -415,22 +415,22 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
       {activeTab === 'Activity Log' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <input type="date" className="h-8 px-2 rounded-md border border-slate-200 text-[12px] text-slate-700 focus:outline-none focus:border-slate-400" />
-            <input type="date" className="h-8 px-2 rounded-md border border-slate-200 text-[12px] text-slate-700 focus:outline-none focus:border-slate-400" />
-            <select className="h-8 px-2 rounded-md border border-slate-200 text-[12px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
+            <input type="date" className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400" />
+            <input type="date" className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400" />
+            <select className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
               {['All Users', 'Priya Sharma', 'Manish Kumar', 'Rahul Mehta'].map(u => <option key={u}>{u}</option>)}
             </select>
-            <select className="h-8 px-2 rounded-md border border-slate-200 text-[12px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
+            <select className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
               {['All Modules', 'Assets', 'Assessments', 'Tasks', 'Users', 'Settings'].map(m => <option key={m}>{m}</option>)}
             </select>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 ml-auto">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-medium border border-[#64748B]/20 rounded-lg hover:bg-slate-50 text-slate-600 ml-auto">
               <Download className="w-3.5 h-3.5" /> Export CSV
             </button>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full text-[12px]">
+          <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
+            <table className="w-full text-[14px]">
               <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-                {['Timestamp', 'User', 'Role', 'Action', 'Module', 'Details'].map(h => <th key={h} className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide">{h}</th>)}
+                {['Timestamp', 'User', 'Role', 'Action', 'Module', 'Details'].map(h => <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>)}
               </tr></thead>
               <tbody>
                 {[
@@ -442,11 +442,11 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
                   { ts: '2025-04-22 08:15', user: 'Manish Kumar', role: 'IT Admin', action: 'Asset Added', module: 'Assets', detail: 'New asset: Payment Analytics Dashboard (Finance)' },
                 ].map((l, i) => (
                   <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-2.5 text-slate-400 font-mono text-[10.5px]">{l.ts}</td>
+                    <td className="px-4 py-2.5 text-slate-400 font-mono text-[12.5px]">{l.ts}</td>
                     <td className="px-4 py-2.5 font-medium text-slate-800">{l.user}</td>
                     <td className="px-4 py-2.5 text-slate-500">{l.role}</td>
                     <td className="px-4 py-2.5 text-slate-700">{l.action}</td>
-                    <td className="px-4 py-2.5"><span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-semibold">{l.module}</span></td>
+                    <td className="px-4 py-2.5"><span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[12px] font-semibold">{l.module}</span></td>
                     <td className="px-4 py-2.5 text-slate-400 max-w-[220px]"><p className="truncate">{l.detail}</p></td>
                   </tr>
                 ))}
@@ -492,19 +492,19 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-green-50">
         <CheckCircle2 className="w-9 h-9 text-green-600" />
       </div>
-      <h2 className="text-[18px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>
+      <h2 className="text-[22px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>
         Invitation Sent Successfully
       </h2>
-      <p className="text-[13px] text-slate-500 mb-1">
+      <p className="text-[15px] text-slate-500 mb-1">
         A setup link has been sent to <strong className="text-slate-700">{form.ceoEmail}</strong>.
       </p>
-      <p className="text-[12px] text-slate-400 mb-6">
+      <p className="text-[14px] text-slate-400 mb-6">
         Organization will appear as "Onboarding" until the CEO completes setup.
       </p>
       <div className="flex gap-3 justify-center">
         <button
           onClick={onBack}
-          className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[13px] font-medium transition-colors"
+          className="px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white rounded-lg text-[15px] font-medium transition-colors"
         >
           View Organizations →
         </button>
@@ -517,7 +517,7 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
               tenantPortalUrl: '', notes: '',
             })
           }}
-          className="px-5 py-2 border border-slate-200 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-50 transition-colors"
+          className="px-5 py-2 border border-[#64748B]/20 text-slate-600 rounded-lg text-[15px] font-medium hover:bg-slate-50 transition-colors"
         >
           Onboard Another →
         </button>
@@ -526,24 +526,24 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
   )
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-[1200px] mx-auto">
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-1.5 text-[14px] text-slate-500 hover:text-slate-800 border border-[#64748B]/20 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Organizations
         </button>
         <span className="text-slate-300">/</span>
-        <span className="text-[13px] font-semibold text-slate-800">Onboard New Organization</span>
+        <span className="text-[15px] font-semibold text-slate-800">Onboard New Organization</span>
       </div>
 
       {/* Step indicators */}
       <div className="flex items-center gap-3 mb-5">
         {[1, 2].map(s => (
           <React.Fragment key={s}>
-            <div className={`flex items-center gap-2 text-[12px] font-medium ${step === s ? 'text-slate-900' : step > s ? 'text-green-600' : 'text-slate-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step === s ? 'bg-slate-900 text-white' : step > s ? 'bg-green-500 text-white' : 'border-2 border-slate-200 text-slate-400'}`}>
+            <div className={`flex items-center gap-2 text-[14px] font-medium ${step === s ? 'text-slate-900' : step > s ? 'text-green-600' : 'text-slate-400'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold transition-all ${step === s ? 'bg-[#1A3E5C] text-white' : step > s ? 'bg-green-500 text-white' : 'border-2 border-[#64748B]/20 text-slate-400'}`}>
                 {step > s ? <CheckCircle2 className="w-3.5 h-3.5" /> : s}
               </div>
               {s === 1 ? 'Organization Details' : 'Review & Send'}
@@ -553,32 +553,47 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-5">
+      <div className="flex gap-5 items-start">
+      <div className="flex-1 max-w-2xl bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-5">
         {step === 1 ? (
           <div className="space-y-4">
-            <h2 className="text-[15px] font-bold text-slate-900">Organization Details</h2>
-            <p className="text-[12px] text-slate-400">
+            <h2 className="text-[17px] font-bold text-slate-900">Organization Details</h2>
+            <p className="text-[14px] text-slate-400">
               Enter details to create a new client tenant and send invitation to the CEO.
             </p>
 
-            {[
-              { label: 'Organization Name', key: 'orgName', type: 'text', placeholder: 'e.g., Acme Corp Pvt. Ltd.' },
-              { label: 'CEO Full Name', key: 'ceoName', type: 'text', placeholder: 'e.g., Rahul Sharma' },
-              { label: 'CEO Email Address', key: 'ceoEmail', type: 'email', placeholder: 'ceo@company.com' },
-            ].map(f => (
-              <div key={f.key}>
-                <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
-                  {f.label} <span className="text-slate-300 font-normal normal-case">*</span>
-                </label>
-                <input
-                  type={f.type}
-                  value={(form as any)[f.key]}
-                  onChange={e => up(f.key, e.target.value)}
-                  placeholder={f.placeholder}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all"
-                />
-              </div>
-            ))}
+            <div>
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+                Organization Name <span className="text-slate-300 font-normal normal-case">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.orgName}
+                onChange={e => up('orgName', e.target.value)}
+                placeholder="e.g., Acme Corp Pvt. Ltd."
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'CEO Full Name', key: 'ceoName', type: 'text', placeholder: 'e.g., Rahul Sharma' },
+                { label: 'CEO Email Address', key: 'ceoEmail', type: 'email', placeholder: 'ceo@company.com' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+                    {f.label} <span className="text-slate-300 font-normal normal-case">*</span>
+                  </label>
+                  <input
+                    type={f.type}
+                    value={(form as any)[f.key]}
+                    onChange={e => up(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all"
+                  />
+                </div>
+              ))}
+            </div>
 
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -587,13 +602,13 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
                 { label: 'Billing Plan', key: 'plan', options: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'] },
               ].map(f => (
                 <div key={f.key}>
-                  <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+                  <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                     {f.label} <span className="text-slate-300 font-normal normal-case">*</span>
                   </label>
                   <select
                     value={(form as any)[f.key]}
                     onChange={e => up(f.key, e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-all"
+                    className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-all"
                   >
                     {f.options.map(o => <option key={o}>{o}</option>)}
                   </select>
@@ -602,9 +617,9 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Tenant Portal URL{' '}
-                <span className="text-slate-400 font-normal normal-case text-[10.5px]">
+                <span className="text-slate-400 font-normal normal-case text-[12.5px]">
                   (optional · set after deployment)
                 </span>
               </label>
@@ -613,18 +628,18 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
                 value={form.tenantPortalUrl}
                 onChange={e => up('tenantPortalUrl', e.target.value)}
                 placeholder="e.g., https://compliance.technova.in"
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all"
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all"
               />
-              <p className="text-[10.5px] text-slate-400 mt-1">
+              <p className="text-[12.5px] text-slate-400 mt-1">
                 The URL where this org's compliance portal is deployed on their Azure.
                 CEO invitation link will point here.
               </p>
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Internal Notes{' '}
-                <span className="text-slate-400 font-normal normal-case text-[10.5px]">
+                <span className="text-slate-400 font-normal normal-case text-[12.5px]">
                   (optional · not shown to org)
                 </span>
               </label>
@@ -633,7 +648,7 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
                 value={form.notes}
                 onChange={e => up('notes', e.target.value)}
                 placeholder="e.g., Referred by partner Infosys. Priority onboarding."
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 resize-none transition-all"
+                className="w-full px-3 py-2.5 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 resize-none transition-all"
               />
             </div>
 
@@ -641,7 +656,7 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
               <button
                 onClick={() => setStep(2)}
                 disabled={!form.orgName || !form.ceoEmail || !form.ceoName}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[13px] font-semibold rounded-lg transition-all"
+                className="px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[15px] font-semibold rounded-lg transition-all"
               >
                 Next: Review and Send →
               </button>
@@ -649,11 +664,11 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <h2 className="text-[15px] font-bold text-slate-900">Review and Send Invitation</h2>
+            <h2 className="text-[17px] font-bold text-slate-900">Review and Send Invitation</h2>
 
             {error && (
               <div className="p-3 bg-red-50 rounded-lg">
-                <p className="text-[12.5px] text-red-700">
+                <p className="text-[14.5px] text-red-700">
                   {(error as Error).message || 'Failed to create organization'}
                 </p>
               </div>
@@ -670,7 +685,7 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
                 ...(form.tenantPortalUrl ? [['Portal URL', form.tenantPortalUrl]] : []),
                 ...(form.notes ? [['Notes', form.notes]] : []),
               ].map(([k, v]) => (
-                <div key={k} className="flex gap-3 text-[12.5px]">
+                <div key={k} className="flex gap-3 text-[14.5px]">
                   <span className="text-slate-400 w-28 flex-shrink-0">{k}</span>
                   <span className="text-slate-800 font-medium">{v}</span>
                 </div>
@@ -679,7 +694,7 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
 
             <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 rounded-xl">
               <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-[12px] text-amber-700 leading-relaxed">
+              <p className="text-[14px] text-amber-700 leading-relaxed">
                 An invitation email will be sent to{' '}
                 <strong>{form.ceoEmail}</strong>. The link expires in{' '}
                 {48} hours. If unused,
@@ -690,14 +705,14 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2 border border-slate-200 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 border border-[#64748B]/20 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 ← Back
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isPending}
-                className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-2 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.98] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
               >
                 {isPending ? (
                   <>
@@ -714,6 +729,38 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Context / tips panel — fills the width honestly instead of leaving it empty */}
+      <div className="w-80 flex-shrink-0 space-y-3 sticky top-5">
+        <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
+          <p className="text-[13px] font-bold text-[#64748B] uppercase tracking-widest mb-3">What Happens Next</p>
+          <div className="space-y-3">
+            {[
+              { n: 1, t: 'Invitation sent', d: 'The CEO gets a setup link by email as soon as you submit.' },
+              { n: 2, t: 'CEO completes setup', d: 'They set a password and confirm organization details.' },
+              { n: 3, t: 'Status updates automatically', d: 'The org shows "Onboarding" until setup finishes, then "Active".' },
+              { n: 4, t: 'Resend anytime', d: "If the link expires unused, resend it from the org's detail page." },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#64748B]/10 text-[#64748B] text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{s.n}</span>
+                <div>
+                  <p className="text-[13.5px] font-semibold text-slate-700 leading-tight">{s.t}</p>
+                  <p className="text-[12.5px] text-slate-400 mt-0.5 leading-snug">{s.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-[#1A3E5C]/[0.04] border border-[#64748B]/15 rounded-xl p-4">
+          <p className="text-[13px] font-bold text-[#1A3E5C] uppercase tracking-widest mb-2">Tips</p>
+          <ul className="space-y-2 text-[12.5px] text-slate-500 leading-snug list-disc list-inside">
+            <li>Use the registered legal name — it appears on generated compliance reports.</li>
+            <li>Portal URL is optional here; it can be set later once the org is deployed.</li>
+            <li>Billing plan can be changed anytime from the organization's detail page.</li>
+          </ul>
+        </div>
+      </div>
       </div>
     </div>
   )
@@ -757,37 +804,37 @@ export function AdminOrganizationsPage() {
   }
 
   return (
-    <div className="space-y-4" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="space-y-4" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-[20px] font-bold text-slate-900 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            className="text-[24px] font-bold text-slate-900 tracking-tight"
+            style={{ fontFamily: 'Cinzel, serif' }}
           >
             Organizations
           </h1>
-          <p className="text-[12px] text-slate-400 mt-0.5">
+          <p className="text-[14px] text-slate-400 mt-0.5">
             {total} total ·{' '}
             {orgs.filter((o: any) => o.status === 'ACTIVE').length} active
           </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-[13px] font-medium rounded-lg transition-all shadow-sm"
+          className="flex items-center gap-2 px-3.5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.98] text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" /> Onboard New Organization
         </button>
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex-wrap">
+      <div className="flex items-center gap-2 bg-white border border-[#64748B]/20 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex-wrap">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search organizations…"
-            className="w-full pl-8 pr-3 h-8 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors"
+            className="w-full pl-8 pr-3 h-8 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors"
           />
         </div>
         {[
@@ -799,25 +846,25 @@ export function AdminOrganizationsPage() {
             key={f.label}
             value={f.val}
             onChange={e => f.set(e.target.value)}
-            className="h-8 px-2 rounded-lg border border-slate-200 text-[12px] text-slate-700 focus:outline-none focus:border-slate-800 bg-white transition-colors"
+            className="h-8 px-2 rounded-lg border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-800 bg-white transition-colors"
           >
             {f.opts.map(o => <option key={o}>{o}</option>)}
           </select>
         ))}
-        <span className="ml-auto text-[11px] text-slate-400 font-medium">
+        <span className="ml-auto text-[13px] text-slate-400 font-medium">
           {total} result{total !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-[13px]">Loading organizations...</span>
+            <span className="text-[15px]">Loading organizations...</span>
           </div>
         ) : (
-          <table className="w-full text-[12px]">
+          <table className="w-full text-[14px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left">
                 {[
@@ -826,7 +873,7 @@ export function AdminOrganizationsPage() {
                 ].map(h => (
                   <th
                     key={h}
-                    className="px-4 py-2.5 text-[10.5px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap"
+                    className="px-4 py-2.5 text-[12.5px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -836,7 +883,7 @@ export function AdminOrganizationsPage() {
             <tbody>
               {orgs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-[13px] text-slate-400">
+                  <td colSpan={7} className="px-4 py-12 text-center text-[15px] text-slate-400">
                     No organizations found.{' '}
                     <button
                       onClick={() => setShowForm(true)}
@@ -858,14 +905,14 @@ export function AdminOrganizationsPage() {
                       <p className="font-semibold text-slate-900 truncate max-w-[180px]">
                         {org.name}
                       </p>
-                      <p className="text-[10.5px] text-slate-400 mt-0.5">
+                      <p className="text-[12.5px] text-slate-400 mt-0.5">
                         CEO: {org.ceoName}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-slate-500">{org.industry}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PLAN_BADGE[org.plan] ?? 'bg-slate-100 text-slate-600'
+                        className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${PLAN_BADGE[org.plan] ?? 'bg-slate-100 text-slate-600'
                           }`}
                       >
                         {org.plan.charAt(0) + org.plan.slice(1).toLowerCase()}
@@ -873,7 +920,7 @@ export function AdminOrganizationsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${STATUS_BADGE[org.status] ?? 'bg-slate-100 text-slate-500'
+                        className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${STATUS_BADGE[org.status] ?? 'bg-slate-100 text-slate-500'
                           }`}
                       >
                         {org.status.charAt(0) + org.status.slice(1).toLowerCase()}
@@ -883,14 +930,14 @@ export function AdminOrganizationsPage() {
                       {org.licenseKey ? (
                         <div>
                           <span
-                            className={`text-[10px] font-semibold ${org.licenseKey.status === 'ACTIVE'
+                            className={`text-[12px] font-semibold ${org.licenseKey.status === 'ACTIVE'
                                 ? 'text-green-600'
                                 : 'text-red-600'
                               }`}
                           >
                             {org.licenseKey.status}
                           </span>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[12px] text-slate-400">
                             Exp:{' '}
                             {new Date(org.licenseKey.expiresAt).toLocaleDateString(
                               'en-IN'
@@ -898,10 +945,10 @@ export function AdminOrganizationsPage() {
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[10.5px] text-slate-400">—</span>
+                        <span className="text-[12.5px] text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[11px] text-slate-400">
+                    <td className="px-4 py-3 text-[13px] text-slate-400">
                       {new Date(org.createdAt).toLocaleDateString('en-IN', {
                         year: 'numeric',
                         month: 'short',
@@ -912,24 +959,24 @@ export function AdminOrganizationsPage() {
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => setSelectedOrg(org.id)}
-                          className="flex items-center gap-1 px-2 py-1 border border-slate-200 rounded-md text-[10.5px] text-slate-600 hover:bg-slate-100 transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 border border-[#64748B]/20 rounded-md text-[12.5px] text-slate-600 hover:bg-slate-100 transition-colors"
                         >
                           <Eye className="w-3 h-3" /> View
                         </button>
-                        <button className="flex items-center gap-1 px-2 py-1 border border-slate-200 rounded-md text-[10.5px] text-slate-600 hover:bg-slate-100 transition-colors">
+                        <button className="flex items-center gap-1 px-2 py-1 border border-[#64748B]/20 rounded-md text-[12.5px] text-slate-600 hover:bg-slate-100 transition-colors">
                           <Headphones className="w-3 h-3" /> Support
                         </button>
                         {org.status !== 'SUSPENDED' ? (
                           <button
                             onClick={() => suspendOrg(org.id)}
-                            className="flex items-center gap-1 px-2 py-1 border border-rose-200 rounded-md text-[10.5px] text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 border border-rose-200 rounded-md text-[12.5px] text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             <Ban className="w-3 h-3" /> Suspend
                           </button>
                         ) : (
                           <button
                             onClick={() => activateOrg(org.id)}
-                            className="flex items-center gap-1 px-2 py-1 border border-green-200 rounded-md text-[10.5px] text-green-600 hover:bg-green-50 transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 border border-green-200 rounded-md text-[12.5px] text-green-600 hover:bg-green-50 transition-colors"
                           >
                             <CheckCircle2 className="w-3 h-3" /> Activate
                           </button>

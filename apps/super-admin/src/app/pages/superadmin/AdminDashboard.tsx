@@ -52,7 +52,7 @@ function timeAgo(dateStr: string): string {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl text-[11.5px]">
+    <div className="bg-[#1A3E5C] text-white px-3 py-2 rounded-lg shadow-xl text-[13.5px]">
       <p className="font-semibold mb-1 text-slate-300">{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} style={{ color: p.color || '#fff' }}>
@@ -74,7 +74,7 @@ function KpiCard({
   trend?: 'up' | 'down' | 'neutral'
 }) {
   return (
-    <div className="bg-white rounded-xl p-4 shadow-[0_1px_8px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-200 group">
+    <div className="bg-white border border-[#64748B]/20 rounded-xl p-4 shadow-[0_1px_8px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-200 group">
       <div className="flex items-start justify-between mb-3.5">
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
@@ -84,7 +84,7 @@ function KpiCard({
         </div>
         {trend && trend !== 'neutral' && (
           <div
-            className={`flex items-center gap-0.5 text-[10.5px] font-semibold ${
+            className={`flex items-center gap-0.5 text-[12.5px] font-semibold ${
               trend === 'up' ? 'text-emerald-600' : 'text-red-500'
             }`}
           >
@@ -97,15 +97,15 @@ function KpiCard({
         )}
       </div>
       <p
-        className="text-[26px] font-bold text-slate-900 leading-none mb-1.5 tracking-tight"
-        style={{ fontFamily: 'Sora, sans-serif' }}
+        className="text-[32px] font-bold text-slate-900 leading-none mb-1.5 tracking-tight"
+        style={{ fontFamily: 'Cinzel, serif' }}
       >
         {value}
       </p>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em]">
+      <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.12em]">
         {label}
       </p>
-      <p className="text-[11.5px] text-slate-500 mt-0.5">{sub}</p>
+      <p className="text-[13.5px] text-slate-500 mt-0.5">{sub}</p>
     </div>
   )
 }
@@ -119,7 +119,7 @@ export function AdminDashboardPage() {
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center gap-3 text-slate-400">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-[13px]">Loading platform data...</span>
+          <span className="text-[15px]">Loading platform data...</span>
         </div>
       </div>
     )
@@ -130,10 +130,10 @@ export function AdminDashboardPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <XCircle className="w-10 h-10 text-red-300 mx-auto mb-3" />
-          <p className="text-[14px] font-semibold text-slate-700">
+          <p className="text-[16px] font-semibold text-slate-700">
             Failed to load dashboard
           </p>
-          <p className="text-[12px] text-slate-400 mt-1">
+          <p className="text-[14px] text-slate-400 mt-1">
             Check your connection and try again
           </p>
         </div>
@@ -155,18 +155,18 @@ export function AdminDashboardPage() {
   ]
 
   return (
-    <div className="space-y-5" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="space-y-5" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b border-[#64748B]/25">
         <div>
           <h1
-            className="text-[20px] font-bold text-slate-900 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            className="text-[24px] font-bold text-[#1A3E5C] tracking-tight"
+            style={{ fontFamily: 'Cinzel, serif' }}
           >
             Platform Overview
           </h1>
-          <p className="text-[12px] text-slate-400 mt-0.5">
-            DPDP CMS · Super Admin ·{' '}
+          <p className="text-[14px] text-slate-400 mt-0.5">
+            NiyamSaathi · Super Admin ·{' '}
             {new Date().toLocaleDateString('en-IN', {
               weekday: 'long',
               year: 'numeric',
@@ -228,15 +228,15 @@ export function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-2 gap-4">
         {/* Onboarding trend */}
-        <div className="bg-white rounded-xl p-5 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
+        <div className="bg-white border border-[#64748B]/20 rounded-xl p-5 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-[13.5px] font-bold text-slate-900">
+              <p className="text-[15.5px] font-bold text-slate-900">
                 Organizations Onboarded
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Cumulative trend</p>
+              <p className="text-[13px] text-slate-400 mt-0.5">Cumulative trend</p>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
               <TrendingUp className="w-3 h-3" />
               {stats.orgs.total} total
             </div>
@@ -275,12 +275,12 @@ export function AdminDashboardPage() {
         </div>
 
         {/* Regulation usage */}
-        <div className="bg-white rounded-xl p-5 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
+        <div className="bg-white border border-[#64748B]/20 rounded-xl p-5 shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
           <div className="mb-5">
-            <p className="text-[13.5px] font-bold text-slate-900">
+            <p className="text-[15.5px] font-bold text-slate-900">
               Regulation Coverage
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[13px] text-slate-400 mt-0.5">
               Organizations per regulation
             </p>
           </div>
@@ -321,24 +321,24 @@ export function AdminDashboardPage() {
       {/* Bottom Row */}
       <div className="grid grid-cols-2 gap-4">
         {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.05)] overflow-hidden">
+        <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.05)] overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <p className="text-[13.5px] font-bold text-slate-900">
+              <p className="text-[15.5px] font-bold text-slate-900">
                 Recent Activity
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[13px] text-slate-400 mt-0.5">
                 Latest platform events
               </p>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10.5px] text-slate-400 font-medium">Live</span>
+              <span className="text-[12.5px] text-slate-400 font-medium">Live</span>
             </div>
           </div>
           <div className="divide-y divide-slate-50">
             {stats.recentActivity.length === 0 ? (
-              <div className="px-5 py-8 text-center text-[12px] text-slate-400">
+              <div className="px-5 py-8 text-center text-[14px] text-slate-400">
                 No activity yet
               </div>
             ) : (
@@ -353,15 +353,15 @@ export function AdminDashboardPage() {
                     }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-slate-800">
+                    <p className="text-[14px] font-semibold text-slate-800">
                       {ACTION_LABELS[item.action] || item.action.replace(/_/g, ' ')}
                     </p>
-                    <p className="text-[11px] text-slate-400 truncate">
+                    <p className="text-[13px] text-slate-400 truncate">
                       {item.targetName}
                       {item.tenant && ` · ${item.tenant.name}`}
                     </p>
                   </div>
-                  <span className="text-[10px] text-slate-400 flex-shrink-0 flex items-center gap-1">
+                  <span className="text-[12px] text-slate-400 flex-shrink-0 flex items-center gap-1">
                     <Clock className="w-2.5 h-2.5" />
                     {timeAgo(item.createdAt)}
                   </span>
@@ -372,25 +372,25 @@ export function AdminDashboardPage() {
         </div>
 
         {/* Recent Orgs */}
-        <div className="bg-white rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.05)] overflow-hidden">
+        <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.05)] overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <p className="text-[13.5px] font-bold text-slate-900">
+              <p className="text-[15.5px] font-bold text-slate-900">
                 Recently Onboarded
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[13px] text-slate-400 mt-0.5">
                 Latest organizations
               </p>
             </div>
             {stats.orgs.onboarding > 0 && (
-              <span className="text-[10.5px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              <span className="text-[12.5px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                 {stats.orgs.onboarding} onboarding
               </span>
             )}
           </div>
           <div className="divide-y divide-slate-50">
             {stats.recentOrgs.length === 0 ? (
-              <div className="px-5 py-8 text-center text-[12px] text-slate-400">
+              <div className="px-5 py-8 text-center text-[14px] text-slate-400">
                 No organizations yet.{' '}
                 <button
                   onClick={() => navigate('/admin/organizations')}
@@ -410,10 +410,10 @@ export function AdminDashboardPage() {
                     <Building2 className="w-3.5 h-3.5 text-slate-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-slate-800 truncate">
+                    <p className="text-[14.5px] font-semibold text-slate-800 truncate">
                       {org.name}
                     </p>
-                    <p className="text-[10.5px] text-slate-400">
+                    <p className="text-[12.5px] text-slate-400">
                       {org.industry} ·{' '}
                       <span
                         className={`font-medium ${
@@ -430,7 +430,7 @@ export function AdminDashboardPage() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${
                         org.status === 'ACTIVE'
                           ? 'bg-green-50 text-green-700'
                           : org.status === 'ONBOARDING'
@@ -440,7 +440,7 @@ export function AdminDashboardPage() {
                     >
                       {org.status.charAt(0) + org.status.slice(1).toLowerCase()}
                     </span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <p className="text-[12px] text-slate-400 mt-0.5">
                       {timeAgo(org.createdAt)}
                     </p>
                   </div>
@@ -452,7 +452,7 @@ export function AdminDashboardPage() {
             <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50">
               <button
                 onClick={() => navigate('/admin/organizations')}
-                className="text-[11.5px] text-slate-600 hover:text-slate-900 font-medium transition-colors"
+                className="text-[13.5px] text-slate-600 hover:text-slate-900 font-medium transition-colors"
               >
                 View all organizations →
               </button>

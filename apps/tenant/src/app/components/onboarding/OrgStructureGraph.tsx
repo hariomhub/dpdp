@@ -61,7 +61,7 @@ const isPositiveNumber = (v: string) => /^\d+$/.test(v.replace(/,/g, '')) && par
 
 // ─── Form primitives ──────────────────────────────────────────────────────────
 function Ferr({ msg }: { msg?: string }) {
-  return msg ? <p className="text-[10.5px] text-red-600 mt-0.5">{msg}</p> : null;
+  return msg ? <p className="text-[12.5px] text-red-600 mt-0.5">{msg}</p> : null;
 }
 export function F({ label, value, onChange, placeholder, required, type = 'text', error, onBlur }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
@@ -69,9 +69,9 @@ export function F({ label, value, onChange, placeholder, required, type = 'text'
 }) {
   return (
     <div>
-      <label className="block text-[11.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+      <label className="block text-[13.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder}
-        className={`w-full h-8 px-3 rounded-md border text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors bg-white ${error ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
+        className={`w-full h-8 px-3 rounded-md border text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#1A3E5C] transition-colors bg-white ${error ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
       <Ferr msg={error} />
     </div>
   );
@@ -82,9 +82,9 @@ function S({ label, value, onChange, options, required, error, onBlur, placehold
 }) {
   return (
     <div>
-      <label className="block text-[11.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+      <label className="block text-[13.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <select value={value} onChange={e => onChange(e.target.value)} onBlur={onBlur}
-        className={`w-full h-8 px-3 rounded-md border text-[13px] focus:outline-none focus:border-blue-500 transition-colors bg-white ${error ? 'border-red-400 bg-red-50 text-red-700' : value === '' ? 'border-slate-300 text-slate-400' : 'border-slate-300 text-slate-900'}`}>
+        className={`w-full h-8 px-3 rounded-md border text-[15px] focus:outline-none focus:border-[#1A3E5C] transition-colors bg-white ${error ? 'border-red-400 bg-red-50 text-red-700' : value === '' ? 'border-slate-300 text-slate-400' : 'border-slate-300 text-slate-900'}`}>
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -97,11 +97,11 @@ function Toggle({ label, value, onChange, required, error }: {
 }) {
   return (
     <div>
-      <label className="block text-[11.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+      <label className="block text-[13.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <div className="flex gap-2">
         {([true, false] as const).map(v => (
           <button key={String(v)} type="button" onClick={() => onChange(v)}
-            className={`flex-1 h-8 text-[12px] font-medium rounded-md border transition-colors ${value === v ? (v ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-600 text-white border-slate-600') : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+            className={`flex-1 h-8 text-[14px] font-medium rounded-md border transition-colors ${value === v ? (v ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]' : 'bg-slate-600 text-white border-slate-600') : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
             {v ? 'Yes' : 'No'}
           </button>
         ))}
@@ -123,20 +123,20 @@ export function MultiSelect({ label, value, onChange, options, required, error }
   const toggle = (opt: string) => onChange(value.includes(opt) ? value.filter(v => v !== opt) : [...value, opt]);
   return (
     <div ref={ref} className="relative">
-      <label className="block text-[11.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+      <label className="block text-[13.5px] font-medium text-slate-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
       <button onClick={() => setOpen(v => !v)} type="button"
         className={`w-full min-h-8 px-3 py-1.5 rounded-md border text-left flex items-center justify-between gap-2 focus:outline-none bg-white transition-colors ${error ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}>
-        <span className={`flex-1 truncate text-[12.5px] ${value.length ? 'text-slate-900' : 'text-slate-400'}`}>
+        <span className={`flex-1 truncate text-[14.5px] ${value.length ? 'text-slate-900' : 'text-slate-400'}`}>
           {value.length ? value.join(', ') : 'Select categories…'}
         </span>
         <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
       </button>
       {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-1.5 max-h-44 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] shadow-lg p-1.5 max-h-44 overflow-y-auto">
           {options.map(o => (
             <label key={o} className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer">
               <input type="checkbox" checked={value.includes(o)} onChange={() => toggle(o)} className="rounded" />
-              <span className="text-[12px] text-slate-700">{o}</span>
+              <span className="text-[14px] text-slate-700">{o}</span>
             </label>
           ))}
         </div>
@@ -149,9 +149,9 @@ export function G2({ children }: { children: React.ReactNode }) { return <div cl
 export function FormSaveBar({ onSave, onCancel, saveLabel = 'Save', disabled }: { onSave: () => void; onCancel: () => void; saveLabel?: string; disabled?: boolean; }) {
   return (
     <div className="flex items-center gap-2 pt-3 mt-3 border-t border-slate-100">
-      <button type="button" onClick={onCancel} className="px-4 h-8 text-[12.5px] text-slate-600 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">Cancel</button>
+      <button type="button" onClick={onCancel} className="px-4 h-8 text-[14.5px] text-slate-600 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">Cancel</button>
       <button type="button" onClick={onSave} disabled={disabled}
-        className={`px-5 h-8 text-[12.5px] font-semibold text-white rounded-md transition-colors ${disabled ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+        className={`px-5 h-8 text-[14.5px] font-semibold text-white rounded-md transition-colors ${disabled ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#1A3E5C] hover:bg-[#15324a]'}`}>
         {saveLabel}
       </button>
     </div>
@@ -340,7 +340,7 @@ type PanelState =
 
 // ─── Enhanced Tree Node ───────────────────────────────────────────────────────
 const TYPE_META = {
-  dept:      { emoji: '🏢', badge: 'DEPT',         badgeCls: 'bg-blue-100 text-blue-700' },
+  dept:      { emoji: '🏢', badge: 'DEPT',         badgeCls: 'bg-[#1A3E5C]/12 text-[#1A3E5C]' },
   asset:     { emoji: '🗄️', badge: 'OWN ASSET',    badgeCls: 'bg-green-100 text-green-700' },
   supplier:  { emoji: '🤝', badge: 'SUPPLIER',      badgeCls: 'bg-orange-100 text-orange-700' },
   suppAsset: { emoji: '📦', badge: 'VENDOR ASSET',  badgeCls: 'bg-amber-100 text-amber-700' },
@@ -364,7 +364,7 @@ function TreeNodeRow({
     <div>
       <div
         className={`flex items-start gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors
-          ${isSelected ? 'bg-blue-50 border border-blue-200' : hov ? 'bg-slate-50 border border-transparent' : 'border border-transparent'}`}
+          ${isSelected ? 'bg-[#1A3E5C]/8 border border-[#D4AF37]/40' : hov ? 'bg-slate-50 border border-transparent' : 'border border-transparent'}`}
         style={{ paddingLeft: depth * 14 + 8 }}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
@@ -380,17 +380,17 @@ function TreeNodeRow({
         </button>
 
         {/* Emoji */}
-        <span className="text-[13px] flex-shrink-0 mt-0.5 leading-none">{meta.emoji}</span>
+        <span className="text-[15px] flex-shrink-0 mt-0.5 leading-none">{meta.emoji}</span>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[12.5px] font-semibold text-slate-800 truncate">{label || <span className="text-slate-400 italic">Unnamed</span>}</span>
-            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${meta.badgeCls}`}>{meta.badge}</span>
+            <span className="text-[14.5px] font-semibold text-slate-800 truncate">{label || <span className="text-slate-400 italic">Unnamed</span>}</span>
+            <span className={`text-[11.5px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${meta.badgeCls}`}>{meta.badge}</span>
           </div>
-          {summary && <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{summary}</p>}
+          {summary && <p className="text-[13px] text-slate-400 mt-0.5 leading-relaxed">{summary}</p>}
           {warning && (
-            <p className="text-[10.5px] text-orange-500 flex items-center gap-1 mt-0.5">
+            <p className="text-[12.5px] text-orange-500 flex items-center gap-1 mt-0.5">
               <AlertTriangle className="w-3 h-3 flex-shrink-0" />{warning}
             </p>
           )}
@@ -402,7 +402,7 @@ function TreeNodeRow({
             {onAdd && (
               <button type="button" onClick={onAdd} title="Add child" className="p-1 text-slate-300 hover:text-green-600 rounded transition-colors"><Plus className="w-3.5 h-3.5" /></button>
             )}
-            <button type="button" onClick={onEdit} title="Edit" className="p-1 text-slate-300 hover:text-blue-600 rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+            <button type="button" onClick={onEdit} title="Edit" className="p-1 text-slate-300 hover:text-[#D4AF37] rounded transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
             <button type="button" onClick={() => setConfirming(true)} title="Delete" className="p-1 text-slate-300 hover:text-red-500 rounded transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
         )}
@@ -411,14 +411,14 @@ function TreeNodeRow({
       {/* Inline delete confirm */}
       {confirming && (
         <div
-          className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 bg-red-50 border border-red-200 rounded-lg text-[11.5px]"
+          className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 bg-red-50 border border-red-200 rounded-lg text-[13.5px]"
           style={{ marginLeft: depth * 14 + 8 + 22 }}
         >
           <span className="flex-1 text-red-700 font-medium">Delete this?</span>
           <button type="button" onClick={() => { setConfirming(false); onDelete(); }}
-            className="px-3 py-1 bg-red-500 text-white rounded text-[11px] font-semibold hover:bg-red-600 transition-colors">Yes, Delete</button>
+            className="px-3 py-1 bg-red-500 text-white rounded text-[13px] font-semibold hover:bg-red-600 transition-colors">Yes, Delete</button>
           <button type="button" onClick={() => setConfirming(false)}
-            className="px-3 py-1 border border-red-200 text-red-600 rounded text-[11px] hover:bg-red-50 transition-colors">Cancel</button>
+            className="px-3 py-1 border border-red-200 text-red-600 rounded text-[13px] hover:bg-red-50 transition-colors">Cancel</button>
         </div>
       )}
     </div>
@@ -456,8 +456,8 @@ function EnhancedTree({ departments, setDepartments, panel, setPanel, selectedId
     <div className="space-y-0.5">
       {departments.length === 0 && (
         <div className="text-center py-8 px-4">
-          <p className="text-[12px] text-slate-400">No departments yet.</p>
-          <p className="text-[11px] text-slate-400 mt-1">Use "+ Add Department" below to start.</p>
+          <p className="text-[14px] text-slate-400">No departments yet.</p>
+          <p className="text-[13px] text-slate-400 mt-1">Use "+ Add Department" below to start.</p>
         </div>
       )}
       {departments.map(dept => {
@@ -573,16 +573,16 @@ function SuccessBanner({ msg }: { msg: string }) {
       <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
         <Check className="w-3 h-3 text-white" />
       </div>
-      <p className="text-[12.5px] font-semibold text-green-800">{msg}</p>
+      <p className="text-[14.5px] font-semibold text-green-800">{msg}</p>
     </div>
   );
 }
 function PromptBtn({ label, primary, sub, onClick }: { label: string; primary?: boolean; sub?: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${primary ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-      <p className={`text-[13px] font-semibold ${primary ? 'text-white' : 'text-slate-800'}`}>{label}</p>
-      {sub && <p className={`text-[11px] mt-0.5 ${primary ? 'text-blue-100' : 'text-slate-400'}`}>{sub}</p>}
+      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${primary ? 'bg-[#1A3E5C] border-[#1A3E5C] text-white hover:bg-[#15324a]' : 'bg-white border-[#D4AF37]/35 text-slate-700 hover:bg-slate-50'}`}>
+      <p className={`text-[15px] font-semibold ${primary ? 'text-white' : 'text-slate-800'}`}>{label}</p>
+      {sub && <p className={`text-[13px] mt-0.5 ${primary ? 'text-white/80' : 'text-slate-400'}`}>{sub}</p>}
     </button>
   );
 }
@@ -607,12 +607,12 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
   if (!panel) return (
     <div className="h-full flex flex-col items-center justify-center text-center px-8">
       <FileText className="w-10 h-10 text-slate-200 mb-3" />
-      <p className="text-[13.5px] font-semibold text-slate-600 mb-1">Select any item in the tree to edit</p>
-      <p className="text-[12px] text-slate-400 mb-6 leading-relaxed">or use the + buttons to add new items.</p>
+      <p className="text-[15.5px] font-semibold text-slate-600 mb-1">Select any item in the tree to edit</p>
+      <p className="text-[14px] text-slate-400 mb-6 leading-relaxed">or use the + buttons to add new items.</p>
       <div className="w-full max-w-xs">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Add</p>
+        <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Add</p>
         <button type="button" onClick={() => setPanel({ type: 'addDept' })}
-          className="w-full flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors text-[13px] font-medium justify-center">
+          className="w-full flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-[#1A3E5C]/30 text-[#1A3E5C] rounded-xl hover:bg-[#1A3E5C]/8 transition-colors text-[15px] font-medium justify-center">
           <Plus className="w-4 h-4" /> Department
         </button>
       </div>
@@ -622,7 +622,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
   // ── Add Department ────────────────────────────────────────────────────────
   if (panel.type === 'addDept') return (
     <div>
-      <p className="text-[15px] font-bold text-slate-900 mb-4">Add Department</p>
+      <p className="text-[17px] font-bold text-slate-900 mb-4">Add Department</p>
       <DeptForm key="addDept" initial={{}} existingNames={allDeptNames}
         onCancel={() => setPanel(null)}
         onSave={data => {
@@ -640,25 +640,25 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg={`${d.name} saved`} />
-        <p className="text-[15px] font-bold text-slate-900 mb-1">What would you like to add to <span className="text-blue-600">{d.name}</span>?</p>
-        <p className="text-[12px] text-slate-400 mb-4">You can always come back and add more later.</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-1">What would you like to add to <span className="text-[#1A3E5C]">{d.name}</span>?</p>
+        <p className="text-[14px] text-slate-400 mb-4">You can always come back and add more later.</p>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <button type="button" onClick={() => setPanel({ type: 'addAsset', deptId: panel.deptId })}
-            className="p-4 border-2 border-slate-200 rounded-xl hover:border-green-400 hover:bg-green-50 text-left transition-all group">
-            <span className="text-[20px] block mb-2">🗄️</span>
-            <p className="text-[13px] font-bold text-slate-800 mb-1">Own Asset</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">Systems, databases, and applications your department owns</p>
+            className="p-4 border-2 border-[#D4AF37]/35 rounded-xl hover:border-green-400 hover:bg-green-50 text-left transition-all group">
+            <span className="text-[24px] block mb-2">🗄️</span>
+            <p className="text-[15px] font-bold text-slate-800 mb-1">Own Asset</p>
+            <p className="text-[13px] text-slate-400 leading-relaxed">Systems, databases, and applications your department owns</p>
           </button>
           <button type="button" onClick={() => setPanel({ type: 'addSupplier', deptId: panel.deptId })}
-            className="p-4 border-2 border-slate-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 text-left transition-all">
-            <span className="text-[20px] block mb-2">🤝</span>
-            <p className="text-[13px] font-bold text-slate-800 mb-1">Supplier</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">Third-party vendors your department works with</p>
+            className="p-4 border-2 border-[#D4AF37]/35 rounded-xl hover:border-orange-400 hover:bg-orange-50 text-left transition-all">
+            <span className="text-[24px] block mb-2">🤝</span>
+            <p className="text-[15px] font-bold text-slate-800 mb-1">Supplier</p>
+            <p className="text-[13px] text-slate-400 leading-relaxed">Third-party vendors your department works with</p>
           </button>
         </div>
         <div className="space-y-1.5 pt-3 border-t border-slate-100">
-          <button type="button" onClick={() => setPanel({ type: 'addDept' })} className="w-full text-left text-[12.5px] text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 flex items-center gap-2"><Plus className="w-3.5 h-3.5" /> Add Another Department</button>
-          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[12px] text-slate-400 px-3 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
+          <button type="button" onClick={() => setPanel({ type: 'addDept' })} className="w-full text-left text-[14.5px] text-[#1A3E5C] font-medium px-3 py-2 rounded-lg hover:bg-[#1A3E5C]/8 flex items-center gap-2"><Plus className="w-3.5 h-3.5" /> Add Another Department</button>
+          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[14px] text-slate-400 px-3 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
         </div>
       </div>
     );
@@ -669,8 +669,8 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const d = getDept(panel.deptId);
     return (
       <div>
-        <p className="text-[12px] text-slate-400 mb-1">Adding to <span className="font-semibold text-slate-700">{d?.name}</span></p>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Add Own Asset</p>
+        <p className="text-[14px] text-slate-400 mb-1">Adding to <span className="font-semibold text-slate-700">{d?.name}</span></p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Add Own Asset</p>
         <AssetForm key={`addAsset-${panel.deptId}`} initial={{}} existingNames={(d?.assets || []).map(a => a.name)}
           onCancel={() => setPanel({ type: 'promptDept', deptId: panel.deptId })}
           onSave={data => {
@@ -687,17 +687,17 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg={`${a?.name} saved`} />
-        <div className="p-5 border-2 border-slate-200 rounded-xl text-center">
-          <span className="text-[32px] block mb-2">📋</span>
-          <p className="text-[15px] font-bold text-slate-900 mb-2">Does this asset store or process personal data?</p>
-          <p className="text-[12px] text-slate-400 mb-5 max-w-sm mx-auto leading-relaxed">Personal data includes names, emails, phone numbers, health records, financial data, or any information that identifies a person.</p>
+        <div className="p-5 border-2 border-[#D4AF37]/35 rounded-xl text-center">
+          <span className="text-[38px] block mb-2">📋</span>
+          <p className="text-[17px] font-bold text-slate-900 mb-2">Does this asset store or process personal data?</p>
+          <p className="text-[14px] text-slate-400 mb-5 max-w-sm mx-auto leading-relaxed">Personal data includes names, emails, phone numbers, health records, financial data, or any information that identifies a person.</p>
           <div className="flex gap-3 justify-center">
             <button type="button" onClick={() => setPanel({ type: 'addPII', deptId: panel.deptId, assetId: panel.assetId })}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-[13px] font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#1A3E5C] text-white text-[15px] font-semibold rounded-lg hover:bg-[#15324a] transition-colors">
               <Plus className="w-4 h-4" /> Add PII Record
             </button>
             <button type="button" onClick={() => setPanel({ type: 'promptDept', deptId: panel.deptId })}
-              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-600 text-[13px] rounded-lg hover:bg-slate-50 transition-colors">
+              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-600 text-[15px] rounded-lg hover:bg-slate-50 transition-colors">
               <AlertTriangle className="w-3.5 h-3.5 text-orange-400" /> Skip — No PII
             </button>
           </div>
@@ -711,8 +711,8 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const a = getAsset(panel.deptId, panel.assetId);
     return (
       <div>
-        <p className="text-[12px] text-slate-400 mb-1">Adding PII to <span className="font-semibold text-slate-700">{a?.name}</span></p>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Add PII Record</p>
+        <p className="text-[14px] text-slate-400 mb-1">Adding PII to <span className="font-semibold text-slate-700">{a?.name}</span></p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Add PII Record</p>
         <PIIForm key={`addPII-${panel.assetId}`} initial={{}}
           onCancel={() => setPanel({ type: 'promptAsset', deptId: panel.deptId, assetId: panel.assetId })}
           onSave={data => {
@@ -730,13 +730,13 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg="PII Record saved" />
-        <p className="text-[15px] font-bold text-slate-900 mb-3">What would you like to do next?</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-3">What would you like to do next?</p>
         <div className="space-y-2">
           <PromptBtn primary label="+ Add Another PII Record" onClick={() => setPanel({ type: 'addPII', deptId: panel.deptId, assetId: panel.assetId })} />
           <PromptBtn label={`+ Add Another Asset to ${d?.name}`} onClick={() => setPanel({ type: 'addAsset', deptId: panel.deptId })} />
           <PromptBtn label={`+ Add Supplier to ${d?.name}`} onClick={() => setPanel({ type: 'addSupplier', deptId: panel.deptId })} />
           <PromptBtn label="+ Add Another Department" onClick={() => setPanel({ type: 'addDept' })} />
-          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[12px] text-slate-400 px-4 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
+          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[14px] text-slate-400 px-4 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
         </div>
       </div>
     );
@@ -747,8 +747,8 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const d = getDept(panel.deptId);
     return (
       <div>
-        <p className="text-[12px] text-slate-400 mb-1">Adding to <span className="font-semibold text-slate-700">{d?.name}</span></p>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Add Supplier</p>
+        <p className="text-[14px] text-slate-400 mb-1">Adding to <span className="font-semibold text-slate-700">{d?.name}</span></p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Add Supplier</p>
         <SupplierForm key={`addSup-${panel.deptId}`} initial={{}}
           onCancel={() => setPanel({ type: 'promptDept', deptId: panel.deptId })}
           onSave={data => {
@@ -765,17 +765,17 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg={`${s?.name} saved`} />
-        <div className="p-5 border-2 border-slate-200 rounded-xl text-center">
-          <span className="text-[32px] block mb-2">📦</span>
-          <p className="text-[15px] font-bold text-slate-900 mb-2">Add assets that <span className="text-orange-600">{s?.name}</span> manages on your behalf</p>
-          <p className="text-[12px] text-slate-400 mb-5 max-w-sm mx-auto leading-relaxed">Vendor assets are systems, storage, or services the supplier operates with access to your data.</p>
+        <div className="p-5 border-2 border-[#D4AF37]/35 rounded-xl text-center">
+          <span className="text-[38px] block mb-2">📦</span>
+          <p className="text-[17px] font-bold text-slate-900 mb-2">Add assets that <span className="text-orange-600">{s?.name}</span> manages on your behalf</p>
+          <p className="text-[14px] text-slate-400 mb-5 max-w-sm mx-auto leading-relaxed">Vendor assets are systems, storage, or services the supplier operates with access to your data.</p>
           <div className="flex gap-3 justify-center">
             <button type="button" onClick={() => setPanel({ type: 'addSuppAsset', deptId: panel.deptId, suppId: panel.suppId })}
-              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white text-[13px] font-semibold rounded-lg hover:bg-amber-600 transition-colors">
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white text-[15px] font-semibold rounded-lg hover:bg-amber-600 transition-colors">
               <Plus className="w-4 h-4" /> Add Supplier Asset
             </button>
             <button type="button" onClick={() => setPanel({ type: 'promptDept', deptId: panel.deptId })}
-              className="px-4 py-2.5 border border-slate-300 text-slate-600 text-[13px] rounded-lg hover:bg-slate-50 transition-colors">Skip</button>
+              className="px-4 py-2.5 border border-slate-300 text-slate-600 text-[15px] rounded-lg hover:bg-slate-50 transition-colors">Skip</button>
           </div>
         </div>
       </div>
@@ -787,8 +787,8 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const s = getSupp(panel.deptId, panel.suppId);
     return (
       <div>
-        <p className="text-[12px] text-slate-400 mb-1">Vendor asset for <span className="font-semibold text-slate-700">{s?.name}</span></p>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Add Supplier Asset</p>
+        <p className="text-[14px] text-slate-400 mb-1">Vendor asset for <span className="font-semibold text-slate-700">{s?.name}</span></p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Add Supplier Asset</p>
         <AssetForm key={`addSA-${panel.suppId}`} initial={{}} existingNames={(s?.assets || []).map(a => a.name)}
           onCancel={() => setPanel({ type: 'promptSupplier', deptId: panel.deptId, suppId: panel.suppId })}
           onSave={data => {
@@ -805,16 +805,16 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg={`${sa?.name} saved`} />
-        <div className="p-5 border-2 border-slate-200 rounded-xl text-center">
-          <span className="text-[32px] block mb-2">📋</span>
-          <p className="text-[15px] font-bold text-slate-900 mb-2">Does <span className="text-amber-600">{sa?.name}</span> store or process personal data?</p>
+        <div className="p-5 border-2 border-[#D4AF37]/35 rounded-xl text-center">
+          <span className="text-[38px] block mb-2">📋</span>
+          <p className="text-[17px] font-bold text-slate-900 mb-2">Does <span className="text-amber-600">{sa?.name}</span> store or process personal data?</p>
           <div className="flex gap-3 justify-center mt-4">
             <button type="button" onClick={() => setPanel({ type: 'addSuppPII', deptId: panel.deptId, suppId: panel.suppId, suppAssetId: panel.suppAssetId })}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-[13px] font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#1A3E5C] text-white text-[15px] font-semibold rounded-lg hover:bg-[#15324a] transition-colors">
               <Plus className="w-4 h-4" /> Add PII Record
             </button>
             <button type="button" onClick={() => setPanel({ type: 'promptDept', deptId: panel.deptId })}
-              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-600 text-[13px] rounded-lg hover:bg-slate-50 transition-colors">
+              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-600 text-[15px] rounded-lg hover:bg-slate-50 transition-colors">
               <AlertTriangle className="w-3.5 h-3.5 text-orange-400" /> Skip — No PII
             </button>
           </div>
@@ -828,8 +828,8 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const sa = getSA(panel.deptId, panel.suppId, panel.suppAssetId);
     return (
       <div>
-        <p className="text-[12px] text-slate-400 mb-1">Adding PII to <span className="font-semibold text-slate-700">{sa?.name}</span></p>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Add PII Record</p>
+        <p className="text-[14px] text-slate-400 mb-1">Adding PII to <span className="font-semibold text-slate-700">{sa?.name}</span></p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Add PII Record</p>
         <PIIForm key={`addSuppPII-${panel.suppAssetId}`} initial={{}}
           onCancel={() => setPanel({ type: 'promptSuppAsset', deptId: panel.deptId, suppId: panel.suppId, suppAssetId: panel.suppAssetId })}
           onSave={data => {
@@ -846,13 +846,13 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     return (
       <div>
         <SuccessBanner msg="PII Record saved" />
-        <p className="text-[15px] font-bold text-slate-900 mb-3">What would you like to do next?</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-3">What would you like to do next?</p>
         <div className="space-y-2">
           <PromptBtn primary label="+ Add Another PII Record" onClick={() => setPanel({ type: 'addSuppPII', deptId: panel.deptId, suppId: panel.suppId, suppAssetId: panel.suppAssetId })} />
           <PromptBtn label={`+ Add Another Supplier Asset`} onClick={() => setPanel({ type: 'addSuppAsset', deptId: panel.deptId, suppId: panel.suppId })} />
           <PromptBtn label={`+ Back to ${d?.name}`} onClick={() => setPanel({ type: 'promptDept', deptId: panel.deptId })} />
           <PromptBtn label="+ Add Another Department" onClick={() => setPanel({ type: 'addDept' })} />
-          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[12px] text-slate-400 px-4 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
+          <button type="button" onClick={onSkipToTeam} className="w-full text-left text-[14px] text-slate-400 px-4 py-2 rounded-lg hover:bg-slate-50">Skip to Team →</button>
         </div>
       </div>
     );
@@ -863,7 +863,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const d = getDept(panel.deptId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit Department</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit Department</p>
         <DeptForm key={`ed-${panel.deptId}`} initial={d || {}} existingNames={allDeptNames}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, ...data } : d)); setPanel(null); }} />
@@ -874,7 +874,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const d = getDept(panel.deptId); const a = getAsset(panel.deptId, panel.assetId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit Own Asset</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit Own Asset</p>
         <AssetForm key={`ea-${panel.assetId}`} initial={a || {}} existingNames={(d?.assets || []).filter(x => x.id !== panel.assetId).map(x => x.name)}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, assets: d.assets.map(a => a.id === panel.assetId ? { ...a, ...data } : a) } : d)); setPanel(null); }} />
@@ -885,7 +885,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const pii = getPII(panel.deptId, panel.assetId, panel.piiId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit PII Record</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit PII Record</p>
         <PIIForm key={`ep-${panel.piiId}`} initial={pii || {}}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, assets: d.assets.map(a => a.id === panel.assetId ? { ...a, piiRecords: a.piiRecords.map(pi => pi.id === panel.piiId ? { ...pi, ...data } : pi) } : a) } : d)); setPanel(null); }} />
@@ -896,7 +896,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const s = getSupp(panel.deptId, panel.suppId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit Supplier</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit Supplier</p>
         <SupplierForm key={`es-${panel.suppId}`} initial={s || {}}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, suppliers: d.suppliers.map(s => s.id === panel.suppId ? { ...s, ...data } : s) } : d)); setPanel(null); }} />
@@ -907,7 +907,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const s = getSupp(panel.deptId, panel.suppId); const sa = getSA(panel.deptId, panel.suppId, panel.suppAssetId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit Vendor Asset</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit Vendor Asset</p>
         <AssetForm key={`esa-${panel.suppAssetId}`} initial={sa || {}} existingNames={(s?.assets || []).filter(x => x.id !== panel.suppAssetId).map(x => x.name)}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, suppliers: d.suppliers.map(s => s.id === panel.suppId ? { ...s, assets: s.assets.map(a => a.id === panel.suppAssetId ? { ...a, ...data } : a) } : s) } : d)); setPanel(null); }} />
@@ -918,7 +918,7 @@ function FormPanel({ panel, setPanel, departments, setDepartments, onSkipToTeam 
     const pii = getSuppPII(panel.deptId, panel.suppId, panel.suppAssetId, panel.piiId);
     return (
       <div>
-        <p className="text-[15px] font-bold text-slate-900 mb-4">Edit PII Record</p>
+        <p className="text-[17px] font-bold text-slate-900 mb-4">Edit PII Record</p>
         <PIIForm key={`esp-${panel.piiId}`} initial={pii || {}}
           onCancel={() => setPanel(null)}
           onSave={data => { upDepts(p => p.map(d => d.id === panel.deptId ? { ...d, suppliers: d.suppliers.map(s => s.id === panel.suppId ? { ...s, assets: s.assets.map(a => a.id === panel.suppAssetId ? { ...a, piiRecords: a.piiRecords.map(pi => pi.id === panel.piiId ? { ...pi, ...data } : pi) } : a) } : s) } : d)); setPanel(null); }} />
@@ -952,10 +952,10 @@ export function OrgStructureStep({ orgName, departments, setDepartments, onSkipT
       {/* Two-panel content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Tree panel (40%) */}
-        <div className="w-[40%] flex-shrink-0 border-r border-slate-200 flex flex-col overflow-hidden">
+        <div className="w-[40%] flex-shrink-0 border-r border-[#D4AF37]/35 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50 flex-shrink-0">
-            <p className="text-[10.5px] font-bold text-slate-500 uppercase tracking-widest">{orgName || 'Organization'}</p>
-            <span className="text-[10px] text-slate-400">✏ edit · hover to delete</span>
+            <p className="text-[12.5px] font-bold text-slate-500 uppercase tracking-widest">{orgName || 'Organization'}</p>
+            <span className="text-[12px] text-slate-400">✏ edit · hover to delete</span>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             <EnhancedTree
@@ -968,9 +968,9 @@ export function OrgStructureStep({ orgName, departments, setDepartments, onSkipT
             />
           </div>
           {/* Pinned add dept button */}
-          <div className="flex-shrink-0 p-3 border-t border-slate-200 bg-white">
+          <div className="flex-shrink-0 p-3 border-t border-[#D4AF37]/35 bg-white">
             <button type="button" onClick={() => setPanel({ type: 'addDept' })}
-              className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-[12.5px] font-medium">
+              className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-[#1A3E5C]/30 text-[#1A3E5C] rounded-lg hover:bg-[#1A3E5C]/8 transition-colors text-[14.5px] font-medium">
               <Plus className="w-3.5 h-3.5" /> Add Department
             </button>
           </div>
@@ -989,7 +989,7 @@ export function OrgStructureStep({ orgName, departments, setDepartments, onSkipT
       </div>
 
       {/* Summary bar */}
-      <div className="flex-shrink-0 border-t border-slate-200 bg-white px-5 py-2.5 flex items-center gap-4 flex-wrap">
+      <div className="flex-shrink-0 border-t border-[#D4AF37]/35 bg-white px-5 py-2.5 flex items-center gap-4 flex-wrap">
         {[
           { v: departments.length, l: 'Departments',  c: '#4F46E5' },
           { v: totalAssets,        l: 'Own Assets',   c: '#16A34A' },
@@ -997,13 +997,13 @@ export function OrgStructureStep({ orgName, departments, setDepartments, onSkipT
           { v: totalSuppAssets,    l: 'Vendor Assets',c: '#D97706' },
           { v: totalPII,           l: 'PII Records',  c: '#DC2626' },
         ].map(s => (
-          <span key={s.l} className="text-[11.5px]" style={{ color: s.c }}>
+          <span key={s.l} className="text-[13.5px]" style={{ color: s.c }}>
             <span className="font-bold">{s.v}</span>{' '}
             <span className="text-slate-500 font-normal">{s.l}</span>
           </span>
         ))}
         {incompleteCount > 0 && (
-          <span className="flex items-center gap-1 text-[11.5px] text-orange-600 font-semibold ml-auto">
+          <span className="flex items-center gap-1 text-[13.5px] text-orange-600 font-semibold ml-auto">
             <AlertTriangle className="w-3.5 h-3.5" /> {incompleteCount} Asset{incompleteCount !== 1 ? 's' : ''} incomplete
           </span>
         )}

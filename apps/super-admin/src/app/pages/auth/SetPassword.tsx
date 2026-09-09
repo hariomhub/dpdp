@@ -56,7 +56,7 @@ export function SetPasswordPage() {
     return (
       <div
         className="min-h-screen bg-slate-50 flex items-center justify-center p-4"
-        style={{ fontFamily: 'DM Sans, sans-serif' }}
+        style={{ fontFamily: 'Inter, sans-serif' }}
       >
         {/* Dot grid */}
         <div
@@ -71,12 +71,12 @@ export function SetPasswordPage() {
             <CheckCircle2 className="w-8 h-8 text-green-600" />
           </div>
           <h2
-            className="text-[22px] font-bold text-slate-900 mb-2 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            className="text-[26px] font-bold text-slate-900 mb-2 tracking-tight"
+            style={{ fontFamily: 'Cinzel, serif' }}
           >
             Password Set Successfully!
           </h2>
-          <p className="text-[13px] text-slate-500 mb-7 leading-relaxed">
+          <p className="text-[15px] text-slate-500 mb-7 leading-relaxed">
             Welcome to DPDP CMS, <strong className="text-slate-700">{inviteData.name}</strong>.
             Your account is ready.{' '}
             {inviteData.isFirstLogin
@@ -85,24 +85,24 @@ export function SetPasswordPage() {
           </p>
 
           <div className="p-4 bg-slate-50 rounded-xl mb-6 text-left">
-            <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+            <p className="text-[12.5px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               Your account
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-[12px] font-bold text-slate-600 flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-[14px] font-bold text-slate-600 flex-shrink-0">
                 {initials}
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-slate-900">{inviteData.name}</p>
-                <p className="text-[11.5px] text-slate-500">{inviteData.email}</p>
-                <p className="text-[11.5px] text-slate-500">{inviteData.role} · {inviteData.org}</p>
+                <p className="text-[15px] font-semibold text-slate-900">{inviteData.name}</p>
+                <p className="text-[13.5px] text-slate-500">{inviteData.email}</p>
+                <p className="text-[13.5px] text-slate-500">{inviteData.role} · {inviteData.org}</p>
               </div>
             </div>
           </div>
 
           <button
             onClick={handleContinue}
-            className="w-full h-10 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-[13px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25"
+            className="w-full h-10 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.99] text-white text-[15px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm shadow-[#1A3E5C]/25"
           >
             {inviteData.isFirstLogin ? 'Start Organization Setup' : 'Go to Dashboard'}
             <ArrowRight className="w-4 h-4" />
@@ -115,7 +115,7 @@ export function SetPasswordPage() {
   return (
     <div
       className="min-h-screen bg-slate-50 flex items-center justify-center p-4"
-      style={{ fontFamily: 'DM Sans, sans-serif' }}
+      style={{ fontFamily: 'Inter, sans-serif' }}
     >
       {/* Dot grid */}
       <div
@@ -131,23 +131,23 @@ export function SetPasswordPage() {
         {/* Header */}
         <div className="text-center mb-7">
           <div className="flex items-center justify-center gap-2.5 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30">
+            <div className="w-9 h-9 rounded-xl bg-[#1A3E5C] flex items-center justify-center shadow-md shadow-[#1A3E5C]/30">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <span
-              className="text-[18px] font-bold text-slate-900 tracking-tight"
-              style={{ fontFamily: 'Sora, sans-serif' }}
+              className="text-[22px] font-bold text-slate-900 tracking-tight"
+              style={{ fontFamily: 'Cinzel, serif' }}
             >
               DPDP CMS
             </span>
           </div>
           <h1
-            className="text-[21px] font-bold text-slate-900 mb-1.5 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            className="text-[25px] font-bold text-slate-900 mb-1.5 tracking-tight"
+            style={{ fontFamily: 'Cinzel, serif' }}
           >
             Set Your Password
           </h1>
-          <p className="text-[13px] text-slate-500 leading-relaxed">
+          <p className="text-[15px] text-slate-500 leading-relaxed">
             You've been invited by Super Admin to join{' '}
             <strong className="text-slate-700">{inviteData.org}</strong>
           </p>
@@ -157,12 +157,12 @@ export function SetPasswordPage() {
 
           {/* Invite info card */}
           <div className="flex items-center gap-3 p-3.5 bg-blue-50 rounded-xl mb-6">
-            <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-[12px] font-bold text-blue-700 flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-[14px] font-bold text-blue-700 flex-shrink-0">
               {initials}
             </div>
             <div>
-              <p className="text-[12.5px] font-semibold text-slate-800">{inviteData.name}</p>
-              <p className="text-[11.5px] text-slate-500">{inviteData.email} · {inviteData.role}</p>
+              <p className="text-[14.5px] font-semibold text-slate-800">{inviteData.name}</p>
+              <p className="text-[13.5px] text-slate-500">{inviteData.email} · {inviteData.role}</p>
             </div>
           </div>
 
@@ -170,7 +170,7 @@ export function SetPasswordPage() {
 
             {/* New Password */}
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 New Password
               </label>
               <div className="relative group">
@@ -180,7 +180,7 @@ export function SetPasswordPage() {
                   placeholder="Create a strong password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full h-10 pl-9 pr-10 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                  className="w-full h-10 pl-9 pr-10 rounded-lg bg-slate-50 border border-[#64748B]/20 text-slate-900 placeholder-slate-400 text-[15px] focus:outline-none focus:bg-white focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 transition-all"
                 />
                 <button
                   type="button"
@@ -202,7 +202,7 @@ export function SetPasswordPage() {
                       />
                     ))}
                   </div>
-                  <p className={`text-[11px] font-semibold ${strengthTextColor}`}>
+                  <p className={`text-[13px] font-semibold ${strengthTextColor}`}>
                     {strengthLabel} password
                   </p>
                 </div>
@@ -211,7 +211,7 @@ export function SetPasswordPage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Confirm Password
               </label>
               <div className="relative group">
@@ -221,10 +221,10 @@ export function SetPasswordPage() {
                   placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-50 border text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white transition-all focus:ring-2 ${
+                  className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-50 border text-slate-900 placeholder-slate-400 text-[15px] focus:outline-none focus:bg-white transition-all focus:ring-2 ${
                     confirmPassword && confirmPassword !== password
                       ? 'border-red-400 focus:border-red-400 focus:ring-red-500/10'
-                      : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/10'
+                      : 'border-[#64748B]/20 focus:border-[#1A3E5C] focus:ring-[#1A3E5C]/10'
                   }`}
                 />
                 <button
@@ -236,7 +236,7 @@ export function SetPasswordPage() {
                 </button>
               </div>
               {confirmPassword && confirmPassword !== password && (
-                <p className="text-[11px] text-red-500 mt-1.5 flex items-center gap-1">
+                <p className="text-[13px] text-red-500 mt-1.5 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
                   Passwords do not match
                 </p>
@@ -258,7 +258,7 @@ export function SetPasswordPage() {
                       </svg>
                     )}
                   </div>
-                  <span className={`text-[11.5px] transition-colors duration-200 ${req.met ? 'text-green-600 font-medium' : 'text-slate-400'}`}>
+                  <span className={`text-[13.5px] transition-colors duration-200 ${req.met ? 'text-green-600 font-medium' : 'text-slate-400'}`}>
                     {req.label}
                   </span>
                 </div>
@@ -269,13 +269,13 @@ export function SetPasswordPage() {
           <button
             onClick={handleSubmit}
             disabled={!password || password !== confirmPassword || strength < 2}
-            className="w-full h-10 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-lg transition-all mt-5 shadow-sm shadow-blue-600/25 flex items-center justify-center gap-2"
+            className="w-full h-10 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[15px] font-semibold rounded-lg transition-all mt-5 shadow-sm shadow-[#1A3E5C]/25 flex items-center justify-center gap-2"
           >
             Set Password & Continue
           </button>
         </div>
 
-        <p className="text-center text-[11.5px] text-slate-400 mt-5">
+        <p className="text-center text-[13.5px] text-slate-400 mt-5">
           Having trouble? Contact your Super Admin.
         </p>
       </div>

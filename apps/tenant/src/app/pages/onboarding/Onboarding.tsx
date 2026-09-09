@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  ShieldCheck, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown,
+  CheckCircle2, ChevronRight, ChevronLeft, ChevronDown,
   Plus, Trash2, Info, Building2, Package, Truck, AlertCircle,
   Shield, Scale, BarChart3, Users, Edit2, Check, X, Zap, AlertTriangle,
   Loader2,
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { OrgStructureStep, Department, InviteUser, uid } from '../../components/onboarding/OrgStructureGraph';
 import { CloudConnectionsPanel } from '../../components/cloud/CloudConnectionsPanel';
 import { TeamInviteStep } from '../../components/onboarding/TeamInviteStep';
+import { LogoIcon } from '../../components/shared/DesignSystem';
 import {
   useOnboardingStatus,
   useSaveOrgDetails,
@@ -192,15 +193,15 @@ export function OnboardingPage() {
   const goBack = () => setStep(s => Math.max(0, s - 1));
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
 
       {/* ── Top bar ───────────────────────────────────────────────────────── */}
-      <div className="h-14 bg-white border-b border-slate-200 flex items-center px-8 gap-6 flex-shrink-0">
+      <div className="h-14 bg-white border-b border-[#D4AF37]/35 flex items-center px-8 gap-6 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <ShieldCheck className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+            <LogoIcon className="w-6 h-6" />
           </div>
-          <span className="text-[15px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>DPDP CMS</span>
+          <span className="text-[17px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>NiyamSaathi</span>
         </div>
 
         {/* Progress stepper */}
@@ -208,11 +209,11 @@ export function OnboardingPage() {
           {STEPS.map((s, i) => (
             <React.Fragment key={s.label}>
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11.5px] font-bold transition-all
-                  ${i < step ? 'bg-green-500 text-white' : i === step ? 'bg-blue-600 text-white' : 'border-2 border-slate-200 text-slate-400 bg-white'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[13.5px] font-bold transition-all
+                  ${i < step ? 'bg-green-500 text-white' : i === step ? 'bg-[#1A3E5C] text-white' : 'border-2 border-[#D4AF37]/35 text-slate-400 bg-white'}`}>
                   {i < step ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
                 </div>
-                <span className={`text-[12px] font-medium hidden md:block whitespace-nowrap transition-colors
+                <span className={`text-[14px] font-medium hidden md:block whitespace-nowrap transition-colors
                   ${i === step ? 'text-slate-900' : i < step ? 'text-green-600' : 'text-slate-400'}`}>
                   {s.label}
                 </span>
@@ -224,7 +225,7 @@ export function OnboardingPage() {
           ))}
         </div>
 
-        <button onClick={() => navigate('/org/dashboard')} className="text-[12px] text-slate-400 hover:text-slate-700 transition-colors">
+        <button onClick={() => navigate('/org/dashboard')} className="text-[14px] text-slate-400 hover:text-slate-700 transition-colors">
           Save & Exit
         </button>
       </div>
@@ -233,7 +234,7 @@ export function OnboardingPage() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* Left: Persistent progress panel (always visible) */}
-        <div className="w-[280px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+        <div className="w-[280px] flex-shrink-0 border-r border-[#D4AF37]/35 bg-white overflow-y-auto">
           <ProgressPanel step={step} setStep={setStep} departments={departments} />
         </div>
 
@@ -241,7 +242,7 @@ export function OnboardingPage() {
         <form id="onboarding-form" onSubmit={(e) => { e.preventDefault(); goNext(); }} className="flex-1 flex flex-col overflow-hidden bg-slate-50">
           {step !== 2 ? (
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-3xl mx-auto px-8 py-8">
+              <div className="max-w-4xl mx-auto px-8 py-8">
 
             {/* ═══════════════ STEP 1: Organization Details ═══════════════════ */}
             {step === 0 && (
@@ -255,12 +256,12 @@ export function OnboardingPage() {
                     <SField label="Industry / Sector" value={industry} onChange={setIndustry} options={INDUSTRIES} required />
                   </TwoCol>
                   <div>
-                    <label className="block text-[12px] font-semibold text-slate-700 mb-2">Organization Size <span className="text-red-500">*</span></label>
+                    <label className="block text-[14px] font-semibold text-slate-700 mb-2">Organization Size <span className="text-red-500">*</span></label>
                     <div className="grid grid-cols-4 gap-2">
                       {ORG_SIZES.map(s => (
                         <button key={s} type="button" onClick={() => setOrgSize(s)}
-                          className={`py-2 px-3 rounded-lg text-[12.5px] font-medium border transition-all
-                            ${orgSize === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400 hover:text-blue-600'}`}>
+                          className={`py-2 px-3 rounded-lg text-[14.5px] font-medium border transition-all
+                            ${orgSize === s ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]' : 'bg-white border-slate-300 text-slate-700 hover:border-[#1A3E5C]/40 hover:text-[#D4AF37]'}`}>
                           {s}
                         </button>
                       ))}
@@ -273,8 +274,8 @@ export function OnboardingPage() {
                   </TwoCol>
 
                   <div className="pt-1">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">Data Protection Officer (DPO)</label>
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <label className="block text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-3">Data Protection Officer (DPO)</label>
+                    <div className="p-4 bg-slate-50 border border-[#D4AF37]/35 rounded-xl space-y-3">
                       <TwoCol>
                         <FField label="DPO Name" value={dpoName} onChange={setDpoName} required />
                         <FField label="DPO Email" value={dpoEmail} onChange={setDpoEmail} required type="email" />
@@ -283,15 +284,15 @@ export function OnboardingPage() {
                         <FField label="DPO Phone" value={dpoPhone} onChange={setDpoPhone} placeholder="+91 98765 43210" />
                         <FField label="Organization Website" value={website} onChange={setWebsite} placeholder="https://example.com" />
                       </TwoCol>
-                      <div className="flex items-start gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                        <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-blue-700">A DPO is mandated by the DPDP Act for organizations processing significant volumes of personal data.</p>
+                      <div className="flex items-start gap-2 p-2.5 bg-[#1A3E5C]/8 border border-[#D4AF37]/40 rounded-lg">
+                        <Info className="w-3.5 h-3.5 text-[#1A3E5C] flex-shrink-0 mt-0.5" />
+                        <p className="text-[13px] text-[#1A3E5C]">A DPO is mandated by the DPDP Act for organizations processing significant volumes of personal data.</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-1">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax Identifiers <span className="font-normal normal-case text-slate-400">(Optional)</span></label>
+                    <label className="block text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax Identifiers <span className="font-normal normal-case text-slate-400">(Optional)</span></label>
                     <TwoCol>
                       <FField label="PAN Number" value={panNumber} onChange={setPanNumber} placeholder="e.g., AABCT1234P" />
                       <FField label="GST Number" value={gstNumber} onChange={setGstNumber} placeholder="e.g., 29AABCT1234P1Z5" />
@@ -331,19 +332,19 @@ export function OnboardingPage() {
                       return (
                         <button key={card.value} onClick={() => setClassification(card.value)}
                           className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-4
-                            ${selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${selected ? 'bg-blue-600' : 'bg-slate-100'}`}>
+                            ${selected ? 'border-[#1A3E5C] bg-[#1A3E5C]/8' : 'border-[#D4AF37]/35 bg-white hover:border-[#D4AF37]/40'}`}>
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${selected ? 'bg-[#1A3E5C]' : 'bg-slate-100'}`}>
                             <Icon className={`w-4.5 h-4.5 ${selected ? 'text-white' : 'text-slate-500'}`} />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'border-blue-600' : 'border-slate-300'}`}>
-                                {selected && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'border-[#1A3E5C]' : 'border-slate-300'}`}>
+                                {selected && <div className="w-2 h-2 rounded-full bg-[#1A3E5C]" />}
                               </div>
-                              <span className="text-[13.5px] font-bold text-slate-900">{card.title}</span>
+                              <span className="text-[15.5px] font-bold text-slate-900">{card.title}</span>
                             </div>
-                            <p className="text-[11.5px] text-slate-600 leading-relaxed mb-2">{card.desc}</p>
-                            <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded ${selected ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{card.note}</span>
+                            <p className="text-[13.5px] text-slate-600 leading-relaxed mb-2">{card.desc}</p>
+                            <span className={`text-[12.5px] font-medium px-2 py-0.5 rounded ${selected ? 'bg-[#1A3E5C]/12 text-[#1A3E5C]' : 'bg-slate-100 text-slate-500'}`}>{card.note}</span>
                           </div>
                         </button>
                       );
@@ -358,16 +359,16 @@ export function OnboardingPage() {
                       {classUncertain && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
-                      <p className="text-[13px] font-medium text-slate-800">I'm not sure about my classification yet</p>
-                      <p className="text-[12px] text-slate-500 mt-0.5">This won't block your progress. Your Compliance Officer can confirm and update the classification when creating the first assessment.</p>
+                      <p className="text-[15px] font-medium text-slate-800">I'm not sure about my classification yet</p>
+                      <p className="text-[14px] text-slate-500 mt-0.5">This won't block your progress. Your Compliance Officer can confirm and update the classification when creating the first assessment.</p>
                     </div>
                   </label>
 
                   {/* Collapsible help */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="border border-[#D4AF37]/35 rounded-xl overflow-hidden">
                     <button onClick={() => setHelpExpanded(v => !v)}
                       className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
-                      <span className="text-[13px] font-medium text-blue-600">Help me understand the difference</span>
+                      <span className="text-[15px] font-medium text-[#1A3E5C]">Help me understand the difference</span>
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${helpExpanded ? 'rotate-180' : ''}`} />
                     </button>
                     {helpExpanded && (
@@ -379,15 +380,15 @@ export function OnboardingPage() {
                             { label: 'Typical examples?', df: 'SaaS companies, e-commerce platforms, HR systems, fintech apps.', sdf: 'Large social media platforms, major banks, healthcare providers, telecom companies.' },
                           ].map(row => (
                             <div key={row.label}>
-                              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">{row.label}</p>
+                              <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wide mb-2">{row.label}</p>
                               <div className="space-y-2">
-                                <div className="p-2.5 bg-blue-50 rounded-lg">
-                                  <p className="text-[10.5px] font-semibold text-blue-700 mb-1">Data Fiduciary</p>
-                                  <p className="text-[11px] text-blue-600 leading-relaxed">{row.df}</p>
+                                <div className="p-2.5 bg-[#1A3E5C]/8 rounded-lg">
+                                  <p className="text-[12.5px] font-semibold text-[#1A3E5C] mb-1">Data Fiduciary</p>
+                                  <p className="text-[13px] text-[#1A3E5C] leading-relaxed">{row.df}</p>
                                 </div>
                                 <div className="p-2.5 bg-purple-50 rounded-lg">
-                                  <p className="text-[10.5px] font-semibold text-purple-700 mb-1">Significant Data Fiduciary</p>
-                                  <p className="text-[11px] text-purple-600 leading-relaxed">{row.sdf}</p>
+                                  <p className="text-[12.5px] font-semibold text-purple-700 mb-1">Significant Data Fiduciary</p>
+                                  <p className="text-[13px] text-purple-600 leading-relaxed">{row.sdf}</p>
                                 </div>
                               </div>
                             </div>
@@ -398,19 +399,19 @@ export function OnboardingPage() {
                   </div>
 
                   {/* Available regulations */}
-                  <div className="p-4 bg-white border border-slate-200 rounded-xl">
-                    <p className="text-[12px] font-semibold text-slate-700 mb-3">Regulations available on this platform</p>
+                  <div className="p-4 bg-white border border-[#D4AF37]/35 rounded-xl">
+                    <p className="text-[14px] font-semibold text-slate-700 mb-3">Regulations available on this platform</p>
                     <div className="flex flex-wrap gap-2 mb-3">
                       {REGULATIONS.map(r => {
                         const Icon = r.icon;
                         return (
-                          <span key={r.label} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-[11.5px] font-medium text-green-700">
+                          <span key={r.label} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-[13.5px] font-medium text-green-700">
                             <Icon className="w-3 h-3" /> {r.label}
                           </span>
                         );
                       })}
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                    <p className="text-[13px] text-slate-400 leading-relaxed">
                       You will select applicable regulations when creating assessments. Controls will be loaded based on your selected regulation and classification.
                     </p>
                   </div>
@@ -441,15 +442,15 @@ export function OnboardingPage() {
 
                   {/* Org Details */}
                   <ReviewCard title="Organization Details" onEdit={() => setStep(0)}>
-                    <p className="text-[14px] font-bold text-slate-900">{orgName}</p>
-                    <p className="text-[12px] text-slate-500 mt-1">{industry} · {orgSize} employees · {jurisdiction}</p>
-                    <p className="text-[12px] text-slate-500">{address}</p>
-                    <p className="text-[12px] text-slate-500 mt-1">DPO: {dpoName} · {dpoEmail} · {dpoPhone}</p>
-                    {contactEmail && <p className="text-[12px] text-slate-500">Contact: {contactEmail}</p>}
+                    <p className="text-[16px] font-bold text-slate-900">{orgName}</p>
+                    <p className="text-[14px] text-slate-500 mt-1">{industry} · {orgSize} employees · {jurisdiction}</p>
+                    <p className="text-[14px] text-slate-500">{address}</p>
+                    <p className="text-[14px] text-slate-500 mt-1">DPO: {dpoName} · {dpoEmail} · {dpoPhone}</p>
+                    {contactEmail && <p className="text-[14px] text-slate-500">Contact: {contactEmail}</p>}
                     {(panNumber || gstNumber) && (
                       <div className="flex gap-4 mt-1">
-                        {panNumber && <p className="text-[11px] text-slate-400">PAN: <span className="text-slate-700 font-medium">{panNumber}</span></p>}
-                        {gstNumber && <p className="text-[11px] text-slate-400">GST: <span className="text-slate-700 font-medium">{gstNumber}</span></p>}
+                        {panNumber && <p className="text-[13px] text-slate-400">PAN: <span className="text-slate-700 font-medium">{panNumber}</span></p>}
+                        {gstNumber && <p className="text-[13px] text-slate-400">GST: <span className="text-slate-700 font-medium">{gstNumber}</span></p>}
                       </div>
                     )}
                   </ReviewCard>
@@ -457,8 +458,8 @@ export function OnboardingPage() {
                   {/* Classification */}
                   <ReviewCard title="Regulatory Classification" onEdit={() => setStep(1)}>
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-blue-600 text-white text-[12px] font-semibold rounded-full">{classification}</span>
-                      {classUncertain && <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 text-[12px] font-medium rounded-full">Classification Uncertain</span>}
+                      <span className="px-3 py-1 bg-[#1A3E5C] text-white text-[14px] font-semibold rounded-full">{classification}</span>
+                      {classUncertain && <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 text-[14px] font-medium rounded-full">Classification Uncertain</span>}
                     </div>
                   </ReviewCard>
 
@@ -468,7 +469,7 @@ export function OnboardingPage() {
                       {REGULATIONS.map(r => {
                         const Icon = r.icon;
                         return (
-                          <span key={r.label} className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 text-[11px] text-green-700 rounded-full font-medium">
+                          <span key={r.label} className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 text-[13px] text-green-700 rounded-full font-medium">
                             <Icon className="w-3 h-3" /> {r.label}
                           </span>
                         );
@@ -480,22 +481,22 @@ export function OnboardingPage() {
                   <ReviewCard title="Organization Structure" onEdit={() => setStep(2)}>
                     <div className="grid grid-cols-4 gap-3 mb-3">
                       {[
-                        { v: departments.length, l: 'Departments', c: 'text-indigo-600 bg-indigo-50', Icon: Building2 },
+                        { v: departments.length, l: 'Departments', c: 'text-[#1A3E5C] bg-[#1A3E5C]/8', Icon: Building2 },
                         { v: totalAssets,        l: 'Own Assets',  c: 'text-green-700 bg-green-50',  Icon: Package },
                         { v: totalSuppliers,     l: 'Suppliers',   c: 'text-orange-700 bg-orange-50', Icon: Truck },
                         { v: totalPII,           l: 'PII Records', c: 'text-red-700 bg-red-50',       Icon: AlertCircle },
                       ].map(s => (
                         <div key={s.l} className={`p-3 rounded-lg ${s.c}`}>
                           <s.Icon className="w-4 h-4 mb-1" />
-                          <p className="text-[22px] font-bold leading-none">{s.v}</p>
-                          <p className="text-[10.5px] font-medium mt-0.5">{s.l}</p>
+                          <p className="text-[26px] font-bold leading-none">{s.v}</p>
+                          <p className="text-[12.5px] font-medium mt-0.5">{s.l}</p>
                         </div>
                       ))}
                     </div>
                     <div className="space-y-1.5">
                       {departments.map(dept => (
-                        <div key={dept.id} className="flex items-center gap-3 py-1.5 border-t border-slate-100 first:border-0 text-[12px]">
-                          <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0" />
+                        <div key={dept.id} className="flex items-center gap-3 py-1.5 border-t border-slate-100 first:border-0 text-[14px]">
+                          <div className="w-2 h-2 rounded-full bg-[#1A3E5C]/80 flex-shrink-0" />
                           <span className="font-medium text-slate-800 flex-1">{dept.name}</span>
                           <span className="text-green-600">{dept.assets.length} assets</span>
                           <span className="text-orange-600">{dept.suppliers.length} suppliers</span>
@@ -507,13 +508,13 @@ export function OnboardingPage() {
 
 
                   {/* Estimated controls */}
-                  <div className="p-5 bg-white border border-blue-200 rounded-xl">
+                  <div className="p-5 bg-white border border-[#D4AF37]/40 rounded-xl">
                     <div className="flex items-center gap-3 mb-2">
-                      <Zap className="w-5 h-5 text-blue-500" />
-                      <p className="text-[13px] font-bold text-slate-800">Estimated Applicable Controls</p>
+                      <Zap className="w-5 h-5 text-[#1A3E5C]" />
+                      <p className="text-[15px] font-bold text-slate-800">Estimated Applicable Controls</p>
                     </div>
-                    <p className="text-[44px] font-bold text-blue-600 leading-none" style={{ fontFamily: 'Sora, sans-serif' }}>{estimatedControls}+</p>
-                    <p className="text-[11.5px] text-slate-500 mt-2 leading-relaxed">
+                    <p className="text-[50px] font-bold text-[#1A3E5C] leading-none" style={{ fontFamily: 'Cinzel, serif' }}>{estimatedControls}+</p>
+                    <p className="text-[13.5px] text-slate-500 mt-2 leading-relaxed">
                       Based on your classification as <strong>{classification}</strong>. Exact controls will be confirmed when your Compliance Officer creates the first assessment.
                     </p>
                   </div>
@@ -522,21 +523,21 @@ export function OnboardingPage() {
             )}
 
             {/* ── Navigation (steps 0,1,3,4) ──────────────────────────────── */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200">
+            <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#D4AF37]/35">
               {step > 0 ? (
                 <button type="button" onClick={goBack}
-                  className="flex items-center gap-2 px-5 py-2.5 text-[13px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                  className="flex items-center gap-2 px-5 py-2.5 text-[15px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </button>
               ) : <div />}
               {step < 4 ? (
                 <button type="submit" disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors">
                   {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>{step === 3 && invites.length === 0 ? 'Skip & Continue' : step === 3 ? 'Send Invites & Continue' : 'Continue'} <ChevronRight className="w-4 h-4" /></>}
                 </button>
               ) : (
                 <button type="button" onClick={handleComplete} disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors">
                   {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Completing…</> : <><CheckCircle2 className="w-4 h-4" /> Complete Onboarding →</>}
                 </button>
               )}
@@ -547,8 +548,8 @@ export function OnboardingPage() {
             /* Step 2 — Organization Structure */
             <>
               <div className="px-6 py-3.5 border-b border-slate-100 flex-shrink-0 bg-white">
-                <h2 className="text-[17px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>Organization Structure</h2>
-                <p className="text-[12px] text-slate-500 mt-0.5">Map your departments, assets, suppliers, and the personal data that flows through them.</p>
+                <h2 className="text-[19px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Organization Structure</h2>
+                <p className="text-[14px] text-slate-500 mt-0.5">Map your departments, assets, suppliers, and the personal data that flows through them.</p>
               </div>
               <div className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
                 <CloudConnectionsPanel />
@@ -561,12 +562,12 @@ export function OnboardingPage() {
                   onSkipToTeam={goNext}
                 />
               </div>
-              <div className="flex-shrink-0 border-t border-slate-200 bg-white px-8 py-3 flex items-center justify-between">
-                <button type="button" onClick={goBack} className="flex items-center gap-2 px-5 py-2 text-[13px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+              <div className="flex-shrink-0 border-t border-[#D4AF37]/35 bg-white px-8 py-3 flex items-center justify-between">
+                <button type="button" onClick={goBack} className="flex items-center gap-2 px-5 py-2 text-[15px] text-slate-600 font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </button>
-                <button type="button" onClick={() => navigate('/org/dashboard')} className="text-[12.5px] text-slate-400 hover:text-slate-700 transition-colors">Save & Exit</button>
-                <button type="button" onClick={handleSaveStructure} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+                <button type="button" onClick={() => navigate('/org/dashboard')} className="text-[14.5px] text-slate-400 hover:text-slate-700 transition-colors">Save & Exit</button>
+                <button type="button" onClick={handleSaveStructure} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors">
                   {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>Continue to Review <ChevronRight className="w-4 h-4" /></>}
                 </button>
               </div>
@@ -582,8 +583,8 @@ export function OnboardingPage() {
 function StepHeader({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="mb-6">
-      <h2 className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{title}</h2>
-      <p className="text-[13px] text-slate-500 mt-1 leading-relaxed">{desc}</p>
+      <h2 className="text-[26px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{title}</h2>
+      <p className="text-[15px] text-slate-500 mt-1 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -598,11 +599,11 @@ function FField({ label, value, onChange, placeholder, required, type = 'text' }
 }) {
   return (
     <div>
-      <label className="block text-[12px] font-medium text-slate-700 mb-1.5">
+      <label className="block text-[14px] font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required={required}
-        className="w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors" />
+        className="w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#1A3E5C] transition-colors" />
     </div>
   );
 }
@@ -612,11 +613,11 @@ function SField({ label, value, onChange, options, required }: {
 }) {
   return (
     <div>
-      <label className="block text-[12px] font-medium text-slate-700 mb-1.5">
+      <label className="block text-[14px] font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <select value={value} onChange={e => onChange(e.target.value)} required={required}
-        className={`w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[13px] focus:outline-none focus:border-blue-500 transition-colors ${!value ? 'text-slate-400' : 'text-slate-900'}`}>
+        className={`w-full h-9 px-3 rounded-lg bg-white border border-slate-300 text-[15px] focus:outline-none focus:border-[#1A3E5C] transition-colors ${!value ? 'text-slate-400' : 'text-slate-900'}`}>
         <option value="" disabled>Select...</option>
         {options.map(o => <option value={o} key={o}>{o}</option>)}
       </select>
@@ -628,11 +629,11 @@ function ReviewCard({ title, children, onEdit, showEdit = true }: {
   title: string; children: React.ReactNode; onEdit?: () => void; showEdit?: boolean;
 }) {
   return (
-    <div className="p-5 bg-white border border-slate-200 rounded-xl">
+    <div className="p-5 bg-white border border-[#D4AF37]/35 rounded-xl">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[13px] font-bold text-slate-800">{title}</h3>
+        <h3 className="text-[15px] font-bold text-slate-800">{title}</h3>
         {showEdit && onEdit && (
-          <button onClick={onEdit} className="flex items-center gap-1.5 text-[12px] text-blue-600 font-medium hover:text-blue-700 transition-colors">
+          <button onClick={onEdit} className="flex items-center gap-1.5 text-[14px] text-[#1A3E5C] font-medium hover:text-[#D4AF37] transition-colors">
             <Edit2 className="w-3.5 h-3.5" /> Edit
           </button>
         )}
@@ -680,7 +681,7 @@ function ProgressPanel({ step, setStep, departments }: {
 
   return (
     <div className="h-full flex flex-col px-5 py-6 overflow-hidden">
-      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-5">Your Onboarding Progress</p>
+      <p className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-5">Your Onboarding Progress</p>
       <div className="flex-1 space-y-1 overflow-y-auto">
         {STEPS_META.map(s => {
           const done    = s.idx < step;
@@ -693,23 +694,23 @@ function ProgressPanel({ step, setStep, departments }: {
                 disabled={!done}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors
                   ${done ? 'hover:bg-green-50 cursor-pointer' : 'cursor-default'}
-                  ${active ? 'bg-blue-50' : ''}`}>
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px]
-                  ${done ? 'bg-green-500' : active ? 'bg-blue-500' : 'border-2 border-slate-200 bg-white'}`}>
+                  ${active ? 'bg-[#1A3E5C]/8' : ''}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[11px]
+                  ${done ? 'bg-green-500' : active ? 'bg-[#D4AF37]' : 'border-2 border-[#D4AF37]/35 bg-white'}`}>
                   {done && <Check className="w-3 h-3 text-white" />}
                   {active && <div className="w-2 h-2 rounded-full bg-white" />}
                 </div>
-                <span className={`text-[12px] font-medium flex-1 ${done ? 'text-green-700' : active ? 'text-blue-700' : 'text-slate-400'}`}>
+                <span className={`text-[14px] font-medium flex-1 ${done ? 'text-green-700' : active ? 'text-[#1A3E5C]' : 'text-slate-400'}`}>
                   {s.label}
                 </span>
-                {done && <span className="text-[10px] text-green-600 font-semibold flex-shrink-0">Complete</span>}
-                {active && <span className="text-[10px] text-blue-500 font-semibold flex-shrink-0">Active</span>}
-                {pending && <span className="text-[10px] text-slate-300 flex-shrink-0">Pending</span>}
+                {done && <span className="text-[12px] text-green-600 font-semibold flex-shrink-0">Complete</span>}
+                {active && <span className="text-[12px] text-[#1A3E5C] font-semibold flex-shrink-0">Active</span>}
+                {pending && <span className="text-[12px] text-slate-300 flex-shrink-0">Pending</span>}
               </button>
 
               {/* Step 3 sub-items */}
               {s.idx === 2 && active && (
-                <div className="ml-7 mt-1 mb-1 space-y-0.5 pl-3 border-l-2 border-blue-100">
+                <div className="ml-7 mt-1 mb-1 space-y-0.5 pl-3 border-l-2 border-[#D4AF37]/30">
                   {[
                     { label: 'Departments', count: departments.length, warn: false },
                     { label: 'Own Assets',  count: totalAssets,        warn: false },
@@ -717,10 +718,10 @@ function ProgressPanel({ step, setStep, departments }: {
                     { label: 'Suppliers',   count: totalSuppliers,     warn: false },
                   ].map(sub => (
                     <div key={sub.label} className="flex items-center gap-2 py-0.5">
-                      <span className="text-[11px] text-slate-600 flex-1">{sub.label}</span>
-                      <span className="text-[11px] font-semibold text-slate-700">{sub.count} added</span>
+                      <span className="text-[13px] text-slate-600 flex-1">{sub.label}</span>
+                      <span className="text-[13px] font-semibold text-slate-700">{sub.count} added</span>
                       {sub.warn && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-orange-500 font-medium">
+                        <span className="flex items-center gap-0.5 text-[12px] text-orange-500 font-medium">
                           <AlertTriangle className="w-2.5 h-2.5" /> {incompleteAssets} incomplete
                         </span>
                       )}
@@ -736,11 +737,11 @@ function ProgressPanel({ step, setStep, departments }: {
       {/* Progress bar */}
       <div className="mt-5 pt-4 border-t border-slate-100 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-medium text-slate-500">Overall Progress</span>
-          <span className="text-[13px] font-bold text-slate-800">{progress}%</span>
+          <span className="text-[13px] font-medium text-slate-500">Overall Progress</span>
+          <span className="text-[15px] font-bold text-slate-800">{progress}%</span>
         </div>
         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-2 bg-blue-500 rounded-full transition-all duration-700"
+          <div className="h-2 bg-[#D4AF37] rounded-full transition-all duration-700"
             style={{ width: `${progress}%` }} />
         </div>
       </div>

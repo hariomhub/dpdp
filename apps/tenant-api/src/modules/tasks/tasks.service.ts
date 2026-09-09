@@ -48,8 +48,16 @@ function buildTaskWhere(
   if (query.status)       where.status       = query.status as TaskStatus
   if (query.assessmentId) where.assessmentId = query.assessmentId
   if (query.assetId)      where.assetId      = query.assetId
+  if (query.controlId)    where.controlId    = query.controlId
   if (query.assignedToId) where.assignedToId = query.assignedToId
   if (query.priority)     where.priority     = query.priority
+  if (query.departmentId) where.asset        = { departmentId: query.departmentId }
+  if (query.dateFrom || query.dateTo) {
+    where.dueDate = {
+      ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+      ...(query.dateTo   ? { lte: new Date(query.dateTo + 'T23:59:59Z') } : {}),
+    }
+  }
   if (query.search) {
     where.title = { contains: String(query.search), mode: 'insensitive' }
   }

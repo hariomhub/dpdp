@@ -42,11 +42,11 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
       <CloudModal title="Connection added" onClose={onClose}>
         <div className="flex flex-col items-center text-center py-6">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mb-3" />
-          <p className="text-[14px] font-semibold text-slate-800">"{alias}" is connecting</p>
-          <p className="text-[12.5px] text-slate-500 mt-1.5 max-w-xs">
+          <p className="text-[16px] font-semibold text-slate-800">"{alias}" is connecting</p>
+          <p className="text-[14.5px] text-slate-500 mt-1.5 max-w-xs">
             Prowler is testing this connection in the background — the status will update automatically in a few seconds.
           </p>
-          <button onClick={onClose} className="mt-5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg transition-colors">
+          <button onClick={onClose} className="mt-5 px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg transition-colors">
             Done
           </button>
         </div>
@@ -60,7 +60,7 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
         {isLoading ? (
           <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
         ) : providers.length === 0 ? (
-          <p className="text-[13px] text-slate-500 py-8 text-center">No providers are active yet — ask your administrator to enable one.</p>
+          <p className="text-[15px] text-slate-500 py-8 text-center">No providers are active yet — ask your administrator to enable one.</p>
         ) : (
           <div className="space-y-5">
             {Object.entries(grouped).map(([category, items]) => {
@@ -68,7 +68,7 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
               const CategoryIcon = meta.icon;
               return (
                 <div key={category}>
-                  <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.12em] mb-2 flex items-center gap-1.5">
+                  <p className="text-[12.5px] font-bold text-slate-400 uppercase tracking-[0.12em] mb-2 flex items-center gap-1.5">
                     <CategoryIcon className="w-3 h-3" /> {meta.label}
                   </p>
                   <div className="grid grid-cols-3 gap-2">
@@ -76,12 +76,12 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
                       <button
                         key={p.key}
                         onClick={() => setSelected(p)}
-                        className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors text-center"
+                        className="flex flex-col items-center gap-2 p-3 rounded-lg border border-[#D4AF37]/35 hover:border-[#1A3E5C]/40 hover:bg-[#1A3E5C]/8 transition-colors text-center"
                       >
-                        <span className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-[13px] font-bold text-slate-600">
+                        <span className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-[15px] font-bold text-slate-600">
                           {p.displayName[0]}
                         </span>
-                        <span className="text-[11.5px] font-medium text-slate-700 leading-tight">{p.displayName}</span>
+                        <span className="text-[13.5px] font-medium text-slate-700 leading-tight">{p.displayName}</span>
                       </button>
                     ))}
                   </div>
@@ -104,21 +104,21 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
     >
       <button
         onClick={() => { setSelected(null); setCredentials({}); }}
-        className="flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-800 mb-4 transition-colors"
+        className="flex items-center gap-1 text-[14px] text-slate-500 hover:text-slate-800 mb-4 transition-colors"
       >
         <ChevronLeft className="w-3.5 h-3.5" /> Choose a different provider
       </button>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-[12px] font-medium text-slate-600 mb-1">
+          <label className="block text-[14px] font-medium text-slate-600 mb-1">
             Connection Name <span className="text-red-500">*</span>
           </label>
           <input
             value={alias}
             onChange={e => setAlias(e.target.value)}
             placeholder={`e.g., Production ${selected.displayName}`}
-            className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[15px] focus:outline-none focus:border-[#1A3E5C] focus:ring-1 focus:ring-[#1A3E5C]"
           />
         </div>
 
@@ -128,13 +128,13 @@ export function ConnectCloudAccountModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex gap-3 pt-5 mt-5 border-t border-slate-100">
-        <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+        <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
           Cancel
         </button>
         <button
           onClick={handleSubmit}
           disabled={!isValid || createMut.isPending}
-          className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
         >
           {createMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           Connect

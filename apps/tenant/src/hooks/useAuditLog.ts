@@ -14,7 +14,7 @@ export interface AuditLogResult {
 }
 
 export function useAuditLog(params: {
-  page?: number; limit?: number; module?: string; action?: string; from?: string; to?: string
+  page?: number; limit?: number; module?: string; action?: string; from?: string; to?: string; targetId?: string
 }) {
   return useQuery({
     queryKey: queryKeys.auditLog.list(params as Record<string, unknown>),
@@ -26,6 +26,7 @@ export function useAuditLog(params: {
       if (params.action && params.action !== 'All') q.set('action', params.action)
       if (params.from)   q.set('from', params.from)
       if (params.to)     q.set('to',   params.to)
+      if (params.targetId) q.set('targetId', params.targetId)
       return apiClient.get<{ success: boolean; data: AuditLogResult }>(`/audit-log?${q.toString()}`)
         .then(r => r.data)
     },

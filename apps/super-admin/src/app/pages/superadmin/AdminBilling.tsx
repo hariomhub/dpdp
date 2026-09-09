@@ -31,8 +31,8 @@ export function AdminBillingPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[20px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>Billing</h1>
-        <p className="text-[12px] text-slate-400 mt-0.5">Platform-wide billing overview · All amounts in INR</p>
+        <h1 className="text-[24px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Billing</h1>
+        <p className="text-[14px] text-slate-400 mt-0.5">Platform-wide billing overview · All amounts in INR</p>
       </div>
 
       {/* KPI Row */}
@@ -43,12 +43,12 @@ export function AdminBillingPage() {
           { label: 'Total Paying Orgs', value: '47', sub: '1 overdue', color: '#8B5CF6' },
           { label: 'Avg Revenue / Org', value: `₹${Math.round(totalMRR / 48).toLocaleString()}`, sub: 'Per month', color: '#F97316' },
         ].map(s => (
-          <div key={s.label} className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-200">
+          <div key={s.label} className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-200">
             <div className="h-0.5 w-full" style={{ background: s.color }} />
             <div className="p-4">
-              <p className="text-[10.5px] text-slate-400 uppercase tracking-wide font-semibold mb-1.5">{s.label}</p>
-              <p className="text-[24px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>{s.value}</p>
-              <div className="flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-500" /><span className="text-[10.5px] text-slate-400">{s.sub}</span></div>
+              <p className="text-[12.5px] text-slate-400 uppercase tracking-wide font-semibold mb-1.5">{s.label}</p>
+              <p className="text-[28px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>{s.value}</p>
+              <div className="flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-500" /><span className="text-[12.5px] text-slate-400">{s.sub}</span></div>
             </div>
           </div>
         ))}
@@ -56,8 +56,8 @@ export function AdminBillingPage() {
 
       {/* MRR Chart + Plan Distribution */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">MRR Trend (₹ Lakhs)</p>
+        <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">MRR Trend (₹ Lakhs)</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={MRR_DATA}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -69,18 +69,18 @@ export function AdminBillingPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
-          <p className="text-[13px] font-semibold text-slate-800 mb-3">Revenue by Plan</p>
+        <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3">Revenue by Plan</p>
           <div className="space-y-3">
             {PLAN_DIST.map(p => (
               <div key={p.plan}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: p.color }} />
-                    <span className="text-[12.5px] font-medium text-slate-800">{p.plan}</span>
-                    <span className="text-[10.5px] text-slate-400">{p.count} orgs</span>
+                    <span className="text-[14.5px] font-medium text-slate-800">{p.plan}</span>
+                    <span className="text-[12.5px] text-slate-400">{p.count} orgs</span>
                   </div>
-                  <span className="text-[12.5px] font-semibold text-slate-800">₹{(p.count * p.price / 100000).toFixed(1)}L</span>
+                  <span className="text-[14.5px] font-semibold text-slate-800">₹{(p.count * p.price / 100000).toFixed(1)}L</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${(p.count * p.price / totalMRR) * 100}%`, background: p.color }} />
@@ -92,27 +92,27 @@ export function AdminBillingPage() {
       </div>
 
       {/* Org Billing Table */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
         <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-slate-800">Organization Billing</p>
-          <span className="text-[11px] text-slate-700 font-medium bg-red-50 px-2 py-0.5 rounded">1 overdue</span>
+          <p className="text-[15px] font-semibold text-slate-800">Organization Billing</p>
+          <span className="text-[13px] text-slate-700 font-medium bg-red-50 px-2 py-0.5 rounded">1 overdue</span>
         </div>
-        <table className="w-full text-[12px]">
+        <table className="w-full text-[14px]">
           <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-            {['Organization', 'Plan', 'MRR', 'Status', 'Next Invoice', 'Actions'].map(h => <th key={h} className="px-4 py-2.5 text-[10.5px] font-bold text-slate-400 uppercase tracking-wide">{h}</th>)}
+            {['Organization', 'Plan', 'MRR', 'Status', 'Next Invoice', 'Actions'].map(h => <th key={h} className="px-4 py-2.5 text-[12.5px] font-bold text-slate-400 uppercase tracking-wide">{h}</th>)}
           </tr></thead>
           <tbody>
             {ORG_BILLING.map((o, i) => (
               <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
                 <td className="px-4 py-2.5 font-medium text-slate-800">{o.org}</td>
-                <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10.5px] font-medium ${o.plan === 'Enterprise' ? 'bg-violet-50 text-violet-700' : o.plan === 'Professional' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>{o.plan}</span></td>
+                <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12.5px] font-medium ${o.plan === 'Enterprise' ? 'bg-violet-50 text-violet-700' : o.plan === 'Professional' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>{o.plan}</span></td>
                 <td className="px-4 py-2.5 font-semibold text-slate-800">{o.mrr}</td>
-                <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10.5px] font-medium ${o.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-slate-800'}`}>{o.status}</span></td>
+                <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12.5px] font-medium ${o.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-slate-800'}`}>{o.status}</span></td>
                 <td className={`px-4 py-2.5 ${o.status === 'Overdue' ? 'text-slate-700 font-medium' : 'text-slate-500'}`}>{o.next}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex gap-2">
-                    <button className="px-2 py-1 text-[10.5px] border border-slate-200 rounded hover:bg-slate-50 text-slate-600">View</button>
-                    {o.status === 'Overdue' && <button className="px-2 py-1 text-[10.5px] border border-slate-200 rounded hover:bg-slate-50 text-slate-700">Send Reminder</button>}
+                    <button className="px-2 py-1 text-[12.5px] border border-[#64748B]/20 rounded hover:bg-slate-50 text-slate-600">View</button>
+                    {o.status === 'Overdue' && <button className="px-2 py-1 text-[12.5px] border border-[#64748B]/20 rounded hover:bg-slate-50 text-slate-700">Send Reminder</button>}
                   </div>
                 </td>
               </tr>

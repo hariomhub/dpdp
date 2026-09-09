@@ -28,16 +28,16 @@ export function ActionNewPage() {
 
   return (
     <div>
-      <button onClick={() => navigate('/org/actions')} className="flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-slate-800 mb-3">
+      <button onClick={() => navigate('/org/actions')} className="flex items-center gap-1.5 text-[15px] text-slate-500 hover:text-slate-800 mb-3">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to Actions
       </button>
       <PageHeader title="Create Improvement Action" sub="Link this action to an assessment, asset, and control" />
 
       <div className="max-w-2xl space-y-4">
         {/* Section 1: Linkage */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
-          <h2 className="text-[13px] font-semibold text-slate-800 mb-0.5">Section 1 — Linkage</h2>
-          <p className="text-[11px] text-slate-400 mb-4">All three fields are required before continuing.</p>
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-5">
+          <h2 className="text-[15px] font-semibold text-slate-800 mb-0.5">Section 1 — Linkage</h2>
+          <p className="text-[13px] text-slate-400 mb-4">All three fields are required before continuing.</p>
 
           <div className="space-y-3">
             <SelectField
@@ -82,23 +82,23 @@ export function ActionNewPage() {
         </div>
 
         {/* Section 2: Action Details */}
-        <div className={`bg-white border border-slate-200 rounded-lg p-5 ${!step1Complete ? 'opacity-50 pointer-events-none' : ''}`}>
-          <h2 className="text-[13px] font-semibold text-slate-800 mb-4">Section 2 — Action Details</h2>
+        <div className={`bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-5 ${!step1Complete ? 'opacity-50 pointer-events-none' : ''}`}>
+          <h2 className="text-[15px] font-semibold text-slate-800 mb-4">Section 2 — Action Details</h2>
           <div className="space-y-3">
             <InputField label="Action Title *" placeholder="Brief, actionable title for this improvement task" value={title} onChange={setTitle} />
             <TextareaField label="Description *" placeholder="Detailed description of what needs to be done and why..." value={description} onChange={setDescription} rows={3} />
 
             <div>
-              <label className="block text-[12px] font-medium text-slate-600 mb-2">Priority *</label>
+              <label className="block text-[14px] font-medium text-slate-600 mb-2">Priority *</label>
               <div className="grid grid-cols-2 gap-2">
                 {PRIORITIES.map(p => (
                   <button key={p.value} onClick={() => setPriority(p.value)}
                     className={`flex items-start gap-2 p-3 rounded-lg border text-left transition-all
-                      ${priority === p.value ? `${p.bg} ${p.border}` : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                      ${priority === p.value ? `${p.bg} ${p.border}` : 'border-[#D4AF37]/35 bg-white hover:border-slate-300'}`}>
                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: p.color }} />
                     <div>
-                      <p className="text-[12px] font-semibold text-slate-800">{p.value}</p>
-                      <p className="text-[11px] text-slate-400">{p.desc}</p>
+                      <p className="text-[14px] font-semibold text-slate-800">{p.value}</p>
+                      <p className="text-[13px] text-slate-400">{p.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -121,9 +121,9 @@ export function ActionNewPage() {
         </div>
 
         {/* Section 3: Guidance */}
-        <div className={`bg-white border border-slate-200 rounded-lg p-5 ${!step1Complete ? 'opacity-50 pointer-events-none' : ''}`}>
-          <h2 className="text-[13px] font-semibold text-slate-800 mb-0.5">Section 3 — Guidance for IT Admin</h2>
-          <p className="text-[11px] text-slate-400 mb-4">Optional but highly recommended.</p>
+        <div className={`bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-5 ${!step1Complete ? 'opacity-50 pointer-events-none' : ''}`}>
+          <h2 className="text-[15px] font-semibold text-slate-800 mb-0.5">Section 3 — Guidance for IT Admin</h2>
+          <p className="text-[13px] text-slate-400 mb-4">Optional but highly recommended.</p>
           <div className="space-y-3">
             <TextareaField
               label="Instructions for IT Admin"

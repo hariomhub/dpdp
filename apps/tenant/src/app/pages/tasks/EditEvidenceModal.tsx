@@ -47,52 +47,52 @@ export function EditEvidenceModal({ taskId, evidence, onClose }: EditEvidenceMod
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[440px]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <p className="text-[15px] font-bold text-slate-900">Edit Evidence</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4AF37]/35">
+          <p className="text-[17px] font-bold text-slate-900">Edit Evidence</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
 
         <div className="p-4 space-y-3.5">
           <div>
-            <label className="text-[12px] text-slate-500">Title</label>
+            <label className="text-[14px] text-slate-500">Title</label>
             <input value={title} onChange={e => setTitle(e.target.value)}
-              className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+              className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40" />
           </div>
 
           {evidence.type === 'LINK' ? (
             <div>
-              <label className="text-[12px] text-slate-500">Link URL</label>
+              <label className="text-[14px] text-slate-500">Link URL</label>
               <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
-                className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40" />
             </div>
           ) : evidence.type === 'TEXT_NOTE' ? (
             <div>
-              <label className="text-[12px] text-slate-500">Note</label>
+              <label className="text-[14px] text-slate-500">Note</label>
               <textarea rows={3} value={textContent} onChange={e => setTextContent(e.target.value)}
-                className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+                className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg resize-none focus:outline-none focus:border-[#1A3E5C]/40" />
             </div>
           ) : isFileBased ? (
             <div>
-              <label className="text-[12px] text-slate-500">File</label>
-              <label className="mt-0.5 flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400">
+              <label className="text-[14px] text-slate-500">File</label>
+              <label className="mt-0.5 flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#1A3E5C]/40">
                 <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="text-[13px] text-slate-500 truncate">{file ? file.name : `Current: ${evidence.fileName ?? '—'} (click to replace)`}</span>
+                <span className="text-[15px] text-slate-500 truncate">{file ? file.name : `Current: ${evidence.fileName ?? '—'} (click to replace)`}</span>
                 <input type="file" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)} />
               </label>
             </div>
           ) : null}
 
           <div>
-            <label className="text-[12px] text-slate-500">Description</label>
+            <label className="text-[14px] text-slate-500">Description</label>
             <textarea rows={2} value={description} onChange={e => setDescription(e.target.value)}
-              className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+              className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg resize-none focus:outline-none focus:border-[#1A3E5C]/40" />
           </div>
         </div>
 
-        <div className="flex gap-3 px-5 py-4 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[14px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+        <div className="flex gap-3 px-5 py-4 border-t border-[#D4AF37]/35">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[16px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
           <button onClick={handleSubmit} disabled={!title.trim() || updateMut.isPending}
-            className="flex-1 py-2 bg-slate-900 text-white text-[14px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 py-2 bg-slate-900 text-white text-[16px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
             {updateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Changes
           </button>

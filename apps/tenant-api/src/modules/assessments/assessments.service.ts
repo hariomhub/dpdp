@@ -128,7 +128,13 @@ export const assessmentsService = {
     })
     if (!regulation) throw new Error('Regulation not found or not active')
 
-    const allControls    = regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control))
+    // Tenant-authored custom controls are always optional (no chapter/mandatory concept)
+    // and apply regardless of which regulation was picked for this assessment.
+    const customControls = await adminDb.control.findMany({
+      where: { isCustom: true, tenantId, status: 'PUBLISHED' },
+    })
+
+    const allControls    = [...regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control)), ...customControls]
     const exclusionsMap  = new Map(data.exclusions?.map(e => [e.controlId, e.reason]) ?? [])
 
     // Server-side enforcement: controls under a mandatory chapter can never be excluded,
@@ -276,11 +282,25 @@ export const assessmentsService = {
         include: { chapters: { include: { controlMappings: { include: { control: true } } } } },
       })
       if (regDetails) {
+        // Controls not found under this regulation's chapters (e.g. tenant-authored
+        // custom controls, which have no chapter/mandatory concept) are resolved directly.
+        const unresolvedIds = assessment.controls
+          .filter(ac => !regDetails.chapters.some(ch => ch.controlMappings.some(cm => cm.control.id === ac.controlId)))
+          .map(ac => ac.controlId)
+        const customControls = unresolvedIds.length > 0
+          ? await adminDb.control.findMany({ where: { id: { in: unresolvedIds } } })
+          : []
+        const customControlMap = new Map(customControls.map(c => [c.id, c]))
+
         const enriched = assessment.controls.map(ac => {
           let superCtrl = null, chapterName = 'Unknown Chapter'
           for (const ch of regDetails.chapters) {
             const found = ch.controlMappings.find(cm => cm.control.id === ac.controlId)
             if (found) { superCtrl = found.control; chapterName = ch.name; break }
+          }
+          if (!superCtrl && customControlMap.has(ac.controlId)) {
+            superCtrl = customControlMap.get(ac.controlId)!
+            chapterName = 'Custom Control'
           }
           return { ...ac, title: superCtrl?.title ?? ac.controlId, description: superCtrl?.description ?? '', chapter: chapterName }
         });

@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
 import {
-  ShieldCheck,
   Mail,
   Lock,
   Eye,
   EyeOff,
-  Loader2,
   Building2,
   Database,
   Users,
@@ -15,6 +13,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLogin } from '../../../hooks/useAuth'
+import { BrandSpinner, LogoIcon } from '../../components/shared/DesignSystem'
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -24,7 +23,9 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 // Nodes represent tenant orgs / platform resources governed from this console —
-// the card sits over the hub, and lines converge into it.
+// the card sits over the hub, and lines converge into it. Same hub-and-spoke
+// concept as before, reskinned to navy/cyan with proper staggered animation
+// instead of static blur blobs.
 const NODES: { top: string; left: string; Icon: typeof Building2 }[] = [
   { top: '10%', left: '14%', Icon: Building2 },
   { top: '8%', left: '82%', Icon: Database },
@@ -34,19 +35,10 @@ const NODES: { top: string; left: string; Icon: typeof Building2 }[] = [
 
 function LoginBackdrop() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#05070f] via-slate-900 to-[#170b30]">
-      {/* deep color wash for richness */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(135deg, rgba(79,70,229,0.28) 0%, rgba(30,27,75,0.15) 45%, rgba(88,28,135,0.22) 100%)',
-        }}
-      />
-
+    <div className="absolute inset-0 overflow-hidden bg-[#132C40]">
       {/* dot grid texture */}
       <div
-        className="absolute inset-0 opacity-[0.1]"
+        className="absolute inset-0 opacity-[0.08]"
         style={{
           backgroundImage:
             'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
@@ -54,26 +46,15 @@ function LoginBackdrop() {
         }}
       />
 
-      {/* ambient glows */}
-      <div
-        className="absolute top-[-14%] right-[-8%] w-[620px] h-[620px] rounded-full opacity-30 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #6366f1, transparent 70%)' }}
-      />
-      <div
-        className="absolute bottom-[-18%] left-[-10%] w-[560px] h-[560px] rounded-full opacity-25 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #7c3aed, transparent 70%)' }}
-      />
-      <div
-        className="absolute top-[38%] left-[45%] w-[380px] h-[380px] rounded-full opacity-[0.14] blur-3xl"
-        style={{ background: 'radial-gradient(circle, #22d3ee, transparent 70%)' }}
-      />
-
-      {/* concentric protection rings, centered on the card */}
-      {[420, 620, 820].map((size) => (
+      {/* concentric protection rings, centered on the card, slowly breathing */}
+      {[420, 620, 820].map((size, i) => (
         <div
           key={size}
-          className="absolute top-1/2 left-1/2 rounded-full border border-white/[0.06]"
-          style={{ width: size, height: size, transform: 'translate(-50%, -50%)' }}
+          className="absolute top-1/2 left-1/2 rounded-full border border-[#94A3B8]/[0.08]"
+          style={{
+            width: size, height: size, transform: 'translate(-50%, -50%)',
+            animation: `adminRingPulse 5s ease-in-out infinite ${i * 0.6}s`,
+          }}
         />
       ))}
 
@@ -82,27 +63,64 @@ function LoginBackdrop() {
         {NODES.map((n, i) => (
           <line
             key={i}
-            x1={50}
-            y1={50}
-            x2={parseFloat(n.left)}
-            y2={parseFloat(n.top)}
-            stroke="white"
-            strokeOpacity={0.14}
-            strokeWidth={0.15}
+            x1={50} y1={50}
+            x2={parseFloat(n.left)} y2={parseFloat(n.top)}
+            stroke="#94A3B8" strokeOpacity={0.16} strokeWidth={0.15}
           />
         ))}
       </svg>
 
-      {/* governed-node markers */}
+      {/* governed-node markers, staggered pulse */}
       {NODES.map(({ top, left, Icon }, i) => (
         <div
           key={i}
-          className="absolute w-10 h-10 rounded-xl bg-white/[0.06] ring-1 ring-white/[0.12] flex items-center justify-center backdrop-blur-sm shadow-lg shadow-black/20"
-          style={{ top, left, transform: 'translate(-50%, -50%)' }}
+          className="absolute w-10 h-10 rounded-xl bg-white/[0.06] ring-1 ring-[#94A3B8]/20 flex items-center justify-center backdrop-blur-sm shadow-lg shadow-black/20"
+          style={{ top, left, transform: 'translate(-50%, -50%)', animation: `adminNodePulse 3s ease-in-out infinite ${i * 0.4}s` }}
         >
-          <Icon className="w-[18px] h-[18px] text-indigo-200/70" />
+          <Icon className="w-[18px] h-[18px] text-[#CBD5E1]" />
         </div>
       ))}
+
+      {/* slow scan ring around the hub */}
+      <div
+        className="absolute top-1/2 left-1/2 w-16 h-16 rounded-full border border-dashed border-[#94A3B8]/30"
+        style={{ transform: 'translate(-50%, -50%)', animation: 'adminSpinSlow 16s linear infinite' }}
+      />
+
+      <style>{`
+        @keyframes adminRingPulse {
+          0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.97); }
+          50%      { opacity: 0.7; transform: translate(-50%, -50%) scale(1.02); }
+        }
+        @keyframes adminNodePulse {
+          0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+          50%      { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+        }
+        @keyframes adminSpinSlow {
+          from { transform: translate(-50%, -50%) rotate(0deg); }
+          to   { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// Full-screen animated state shown while credentials are verified.
+function VerifyingOverlay() {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#132C40]">
+      <div className="relative flex items-center justify-center w-28 h-28 mb-6">
+        <span className="absolute inset-0 rounded-full border border-[#94A3B8]/50 animate-ping" style={{ animationDuration: '2.1s' }} />
+        <span className="absolute inset-2.5 rounded-full border border-[#94A3B8]/40 animate-ping" style={{ animationDuration: '2.1s', animationDelay: '0.35s' }} />
+        <span className="absolute inset-5 rounded-full border border-white/30 animate-ping" style={{ animationDuration: '2.1s', animationDelay: '0.7s' }} />
+        <div className="relative w-14 h-14 animate-pulse" style={{ filter: 'brightness(0) invert(1)' }}>
+          <LogoIcon className="w-14 h-14" />
+        </div>
+      </div>
+      <p className="text-white text-[15px] font-semibold tracking-wide" style={{ fontFamily: 'Cinzel, serif' }}>
+        Authenticating session…
+      </p>
+      <p className="text-white/50 text-[14px] mt-1.5">Verifying platform administrator access</p>
     </div>
   )
 }
@@ -126,24 +144,23 @@ export function LoginPage() {
   return (
     <div
       className="relative h-screen flex items-center justify-center overflow-hidden px-4 py-5"
-      style={{ fontFamily: 'DM Sans, sans-serif' }}
+      style={{ fontFamily: 'Inter, sans-serif' }}
     >
+      {isPending && <VerifyingOverlay />}
       <LoginBackdrop />
 
       <div className="relative z-10 w-full max-w-[440px]">
-        <div className="bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)] p-7 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)] pt-4 px-6 sm:px-7 pb-6 sm:pb-7">
           {/* Logo */}
-          <div className="flex flex-col items-center text-center mb-5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center shadow-lg shadow-slate-900/25 mb-2.5 ring-1 ring-slate-900/5">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex flex-col items-center text-center mb-2">
+            <LogoIcon className="w-16 h-16" />
             <span
               className="text-[18px] font-bold text-slate-900 tracking-tight"
-              style={{ fontFamily: 'Sora, sans-serif' }}
+              style={{ fontFamily: 'Cinzel, serif' }}
             >
-              DPDP CMS
+              NiyamSaathi
             </span>
-            <span className="text-[10px] font-semibold text-slate-400 tracking-[0.18em] uppercase mt-0.5">
+            <span className="text-[12px] font-semibold text-[#64748B] tracking-[0.18em] uppercase mt-0.5">
               Admin Console
             </span>
           </div>
@@ -151,11 +168,11 @@ export function LoginPage() {
           {/* Heading */}
           <h2
             className="text-[20px] font-bold text-slate-900 text-center mb-1 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            style={{ fontFamily: 'Cinzel, serif' }}
           >
             System Access
           </h2>
-          <p className="text-[13px] text-slate-400 text-center mb-5">
+          <p className="text-[14.5px] text-slate-500 text-center mb-4">
             Authenticate to manage platform infrastructure
           </p>
 
@@ -163,29 +180,29 @@ export function LoginPage() {
           {error && (
             <div className="mb-4 flex items-center gap-2.5 p-3 bg-red-50 rounded-lg">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-              <p className="text-[12.5px] text-red-700">
+              <p className="text-[14px] text-red-700">
                 {error.message || 'Invalid email or password'}
               </p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 mb-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 mb-3">
             {/* Email field */}
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Email Address
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-700 transition-colors" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#1A3E5C] transition-colors" />
                 <input
                   type="email"
-                  placeholder="admin@dpdpcms.in"
+                  placeholder="admin@niyamsaathi.in"
                   {...register('email')}
-                  className="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all duration-150"
+                  className="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[14.5px] focus:outline-none focus:bg-white focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 transition-all duration-150"
                 />
               </div>
               {errors.email && (
-                <p className="text-[11px] text-rose-500 mt-1.5 flex items-center gap-1">
+                <p className="text-[12.5px] text-rose-500 mt-1.5 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-500 inline-block" />
                   {errors.email.message}
                 </p>
@@ -194,27 +211,27 @@ export function LoginPage() {
 
             {/* Password field */}
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-700 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#1A3E5C] transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
-                  className="w-full h-11 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/6 transition-all duration-150"
+                  className="w-full h-11 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-[14.5px] focus:outline-none focus:bg-white focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 transition-all duration-150"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-[11px] text-rose-500 mt-1.5 flex items-center gap-1">
+                <p className="text-[12.5px] text-rose-500 mt-1.5 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-rose-500 inline-block" />
                   {errors.password.message}
                 </p>
@@ -225,12 +242,12 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full h-11 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-xl transition-all duration-150 flex items-center justify-center gap-2 mt-1 shadow-sm shadow-slate-900/20"
+              className="w-full h-11 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[14.5px] font-semibold rounded-full transition-all duration-150 flex items-center justify-center gap-2 mt-1 shadow-sm shadow-[#1A3E5C]/25"
             >
               {isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  <BrandSpinner size={18} ring="light" />
+                  Authenticating...
                 </>
               ) : (
                 'Authenticate Session'
@@ -238,7 +255,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-[11.5px] text-slate-400 leading-relaxed">
+          <p className="text-center text-[13px] text-slate-500 leading-relaxed">
             This console is restricted to authorized platform administrators only.
           </p>
         </div>
@@ -250,11 +267,11 @@ export function LoginPage() {
               <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping motion-reduce:animate-none" />
               <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-emerald-400" />
             </span>
-            <span className="text-[11px] font-medium text-slate-300 tracking-wide">
+            <span className="text-[12.5px] font-medium text-slate-200 tracking-wide">
               All systems operational
             </span>
           </div>
-          <p className="text-[11px] text-slate-500">Restricted access — authorized personnel only</p>
+          <p className="text-[12.5px] text-slate-500">Restricted access — authorized personnel only</p>
         </div>
       </div>
     </div>

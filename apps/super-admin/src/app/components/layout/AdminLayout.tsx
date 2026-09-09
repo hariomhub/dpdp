@@ -1,12 +1,13 @@
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import {
-  LayoutDashboard, Building2, ShieldCheck, GraduationCap,
+  LayoutDashboard, Building2, GraduationCap,
   CreditCard, Settings, ChevronLeft, ChevronRight,
   LogOut, ScrollText, ClipboardList, Loader2, Package, Boxes, Cloud, Layers, Link2
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useLogout, useMe } from '../../../hooks/useAuth'
+import { LogoIcon } from '../shared/DesignSystem'
 
 const ADMIN_NAV = [
   { label: 'Platform', type: 'section' },
@@ -34,58 +35,58 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="flex h-screen bg-slate-50 overflow-hidden"
-      style={{ fontFamily: 'DM Sans, sans-serif' }}
+      style={{ fontFamily: 'Inter, sans-serif' }}
     >
       {/* Sidebar */}
       <aside
-        className={`flex flex-col bg-white border-r border-slate-100 transition-all duration-200 flex-shrink-0 relative ${sidebarCollapsed ? 'w-12' : 'w-[220px]'
+        className={`flex flex-col bg-[#1A3E5C] border-r border-[#64748B]/30 transition-all duration-200 flex-shrink-0 relative ${sidebarCollapsed ? 'w-14' : 'w-60'
           }`}
       >
         {/* Logo */}
-        <div className="flex items-center h-12 px-3 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center h-14 px-3 border-b border-white/10 flex-shrink-0">
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2.5 flex-1 pl-1">
-              <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <ShieldCheck className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <LogoIcon className="w-8 h-8" />
               </div>
               <div className="flex flex-col justify-center">
                 <span
-                  className="text-[14.5px] font-bold text-slate-900 leading-tight"
-                  style={{ fontFamily: 'Sora, sans-serif' }}
+                  className="text-[16.5px] font-bold text-white leading-tight"
+                  style={{ fontFamily: 'Cinzel, serif' }}
                 >
-                  DPDP CMS
+                  NiyamSaathi
                 </span>
-                <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-tight mt-[2px]">
+                <span className="text-[11.5px] text-white/78 font-bold uppercase tracking-[0.2em] leading-tight mt-[2px]">
                   Super Admin
                 </span>
               </div>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center mx-auto">
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center mx-auto shadow-sm">
+              <LogoIcon className="w-8 h-8" />
             </div>
           )}
           {!sidebarCollapsed && (
             <button
               onClick={() => setSidebarCollapsed(true)}
-              className="ml-auto p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="ml-auto p-1.5 rounded-full bg-white/10 ring-1 ring-white/15 text-white hover:bg-white/20 hover:ring-white/25 transition-colors flex-shrink-0"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
           )}
         </div>
 
         {/* Admin Badge */}
         {!sidebarCollapsed && (
-          <div className="mx-3 mt-3 px-2.5 py-1.5 bg-slate-50 rounded-lg">
+          <div className="mx-3 mt-3 px-2.5 py-1.5 bg-white/[0.1] rounded-lg ring-1 ring-white/10">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[11px] font-bold text-white/80 uppercase tracking-[0.15em]">
                 Super Admin Console
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Platform-level access</p>
+            <p className="text-[12px] text-white/70 mt-0.5">Platform-level access</p>
           </div>
         )}
 
@@ -93,11 +94,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto py-2 mt-1">
           {ADMIN_NAV.map((item, i) => {
             if (item.type === 'section') {
-              if (sidebarCollapsed) return <div key={i} className="h-px bg-slate-100 my-2 mx-2" />
+              if (sidebarCollapsed) return <div key={i} className="h-px bg-white/10 my-2 mx-2" />
               return (
                 <p
                   key={i}
-                  className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.18em] px-3 pt-3 pb-1"
+                  className="text-[11px] font-bold text-white/55 uppercase tracking-[0.18em] px-3 pt-3 pb-1"
                 >
                   {item.label}
                 </p>
@@ -111,15 +112,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path!}
-                className={`flex items-center gap-2.5 mx-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-medium transition-all relative group ${isActive
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`flex items-center gap-2.5 mx-2 px-2.5 py-1.5 rounded-md text-[14.5px] font-medium transition-all relative group ${isActive
+                    ? 'bg-[#64748B] text-white shadow-sm shadow-black/20'
+                    : 'text-white/75 hover:text-white hover:bg-white/[0.08]'
                   }`}
               >
-                <Icon className="flex-shrink-0" style={{ width: 15, height: 15 }} />
+                <Icon className="flex-shrink-0" style={{ width: 16, height: 16 }} />
                 {!sidebarCollapsed && <span>{item.label}</span>}
                 {sidebarCollapsed && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white rounded-md text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity shadow-lg">
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-[#1A3E5C] text-white rounded-md text-[13px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity shadow-lg ring-1 ring-[#64748B]/30">
                     {item.label}
                   </div>
                 )}
@@ -129,19 +130,19 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-slate-100 p-2 flex-shrink-0">
+        <div className="border-t border-white/10 p-2 flex-shrink-0">
           {sidebarCollapsed ? (
             <div className="flex flex-col items-center gap-1.5">
               <button
                 onClick={() => setSidebarCollapsed(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-full bg-white/10 ring-1 ring-white/15 text-white hover:bg-white/20 hover:ring-white/25 transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => logout()}
                 disabled={loggingOut}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors"
+                className="p-1.5 text-white/70 hover:text-white rounded-md hover:bg-white/10 transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -149,25 +150,25 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           ) : (
             <div>
               <div className="flex items-center gap-2 p-1.5 mb-1">
-                <span className="w-7 h-7 rounded-full bg-slate-900 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-[#1A3E5C] bg-[#64748B] flex-shrink-0">
                   {me?.name
                     ? me.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                     : 'SA'
                   }
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-slate-800 truncate">
+                  <p className="text-[13px] font-semibold text-white truncate">
                     {me?.name ?? 'Super Admin'}
                   </p>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    {me?.email ?? 'admin@dpdpcms.in'}
+                  <p className="text-[12px] text-white/70 truncate">
+                    {me?.email ?? 'admin@niyamsaathi.in'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => logout()}
                 disabled={loggingOut}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-slate-500 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-[13px] text-white/78 hover:text-white rounded-md hover:bg-white/10 transition-colors disabled:opacity-50"
               >
                 {loggingOut ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -183,18 +184,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
-        <header className="h-12 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0">
+        <header className="h-14 bg-white border-b border-[#64748B]/25 flex items-center px-4 gap-3 flex-shrink-0">
           <div className="flex-1">
-            <nav className="flex items-center gap-1 text-[12px]">
+            <nav className="flex items-center gap-1 text-[14px]">
               <span className="text-slate-400 font-medium">Super Admin</span>
               <span className="text-slate-300 mx-1">/</span>
-              <span className="text-slate-800 font-semibold capitalize">
+              <span className="text-[#1A3E5C] font-semibold capitalize">
                 {location.pathname.split('/').slice(-1)[0].replace(/-/g, ' ') ||
                   'Dashboard'}
               </span>
             </nav>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">
+          <span className="text-[12px] font-semibold text-[#64748B] bg-[#64748B]/[0.08] px-2.5 py-1 rounded-full">
             Internal · Not visible to orgs
           </span>
         </header>

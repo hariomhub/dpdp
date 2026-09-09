@@ -8,12 +8,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "concurrently -n turbo,scanner -c blue,magenta \"turbo dev\" \"node scripts/dev-scanner.js\"",
     "build": "turbo build",
     "lint": "turbo lint",
     "clean": "turbo clean"
   },
   "devDependencies": {
+    "concurrently": "^9.1.0",
     "turbo": "^2.9.7"
   },
   "engines": {

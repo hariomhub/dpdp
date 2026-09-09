@@ -17,7 +17,7 @@ function relativeTime(date: Date): string {
 }
 
 /** Compute an overall risk score (0-100) from existing snapshot or derive from controls */
-async function computeOrgRiskScore(tenantId: string): Promise<number> {
+export async function computeOrgRiskScore(tenantId: string): Promise<number> {
   // Try latest org-level risk snapshot
   const snap = await db.riskSnapshot.findFirst({
     where: { tenantId, entityType: 'org' },
@@ -55,6 +55,9 @@ export const dashboardService = {
       auditLogs,
       assets,
       tenant,
+      crossBorderPiiCount,
+      suppliersWithoutDpa,
+      recentEvidence,
     ] = await Promise.all([
       db.department.findMany({
         where: { tenantId },
@@ -100,6 +103,14 @@ export const dashboardService = {
         where: { id: tenantId },
         select: { name: true, classification: true },
       }),
+      db.piiRecord.count({ where: { tenantId, crossBorderTransfer: true } }),
+      db.supplier.count({ where: { tenantId, dpaSigned: false } }),
+      db.evidence.findMany({
+        where: { tenantId, submittedById: userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: { task: { select: { status: true, asset: { select: { name: true } } } } },
+      }),
     ])
 
     const now = new Date()
@@ -131,6 +142,49 @@ export const dashboardService = {
 
     // ── Risk score ─────────────────────────────────────────────────────────────
     const riskScore = await computeOrgRiskScore(tenantId)
+
+    // ── Overdue tasks by priority ──────────────────────────────────────────────
+    const overdueByPriority = {
+      CRITICAL: overdueTasks.filter(t => t.priority === 'CRITICAL').length,
+      HIGH:     overdueTasks.filter(t => t.priority === 'HIGH').length,
+      MEDIUM:   overdueTasks.filter(t => t.priority === 'MEDIUM').length,
+      LOW:      overdueTasks.filter(t => t.priority === 'LOW').length,
+    }
+
+    // ── Internal Auditor: this user's own review activity ──────────────────────
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
+    const myReviewed = allTasks.filter(t => t.reviewedById === userId && t.reviewedAt)
+    const myReviewedToday  = myReviewed.filter(t => t.reviewedAt! >= startOfToday).length
+    const myApprovedTotal  = myReviewed.filter(t => t.approvedAt).length
+    const myRejectedTotal  = myReviewed.filter(t => t.status === 'REJECTED' && !t.approvedAt).length
+    const myRecentlyReviewed = [...myReviewed]
+      .sort((a, b) => b.reviewedAt!.getTime() - a.reviewedAt!.getTime())
+      .slice(0, 5)
+      .map(t => ({
+        title: t.title, asset: t.asset.name,
+        decision: t.approvedAt ? 'Approved' as const : 'Rejected' as const,
+        time: relativeTime(t.reviewedAt!),
+      }))
+
+    // ── External Auditor: tenant-wide sign-off activity (no per-user field on the model) ──
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000)
+    const signedOffTasks = allTasks.filter(t => t.signedOffAt)
+    const signedOffLast30Days = signedOffTasks.filter(t => t.signedOffAt! >= thirtyDaysAgo).length
+    const recentSignOffs = [...signedOffTasks]
+      .sort((a, b) => b.signedOffAt!.getTime() - a.signedOffAt!.getTime())
+      .slice(0, 5)
+      .map(t => ({ title: t.title, asset: t.asset.name, time: relativeTime(t.signedOffAt!) }))
+
+    // ── IT Admin: this user's own recently submitted evidence ──────────────────
+    const myRecentEvidence = recentEvidence.map(ev => ({
+      title:  ev.title,
+      asset:  ev.task.asset.name,
+      type:   ev.type,
+      date:   ev.createdAt.toISOString().split('T')[0],
+      status: ev.task.status === 'REJECTED' ? 'Rejected' as const
+        : ['COMPLIANT', 'APPROVED_INTERNAL', 'FINAL_REVIEW'].includes(ev.task.status) ? 'Approved' as const
+        : 'Pending Review' as const,
+    }))
 
     // ── Department compliance overview ─────────────────────────────────────────
     const deptCompliance = departments.map(dept => {
@@ -180,6 +234,17 @@ export const dashboardService = {
           else if (c.complianceStatus === 'NON_COMPLIANT') r.nonCompliant++
           else                                              r.notStarted++
         }
+      }
+    }
+
+    // Resolve raw regulation UUIDs to their real shortCode/name from super-admin
+    const regulationIds = Object.keys(regulationMap)
+    if (regulationIds.length > 0) {
+      const regulationRecords = await superAdminDb.regulation.findMany({
+        where: { id: { in: regulationIds } }, select: { id: true, shortCode: true, name: true },
+      })
+      for (const rec of regulationRecords) {
+        if (regulationMap[rec.id]) regulationMap[rec.id].name = rec.shortCode || rec.name
       }
     }
 
@@ -274,12 +339,22 @@ export const dashboardService = {
         inProgressTasks:   allTasks.filter(t => t.status === 'IN_PROGRESS').length,
         rejectedTasks:     allTasks.filter(t => t.status === 'REJECTED').length,
         unassignedTasks:   allTasks.filter(t => !t.assignedToId && t.status === 'PENDING').length,
+        crossBorderPiiTransfers: crossBorderPiiCount,
+        suppliersWithoutDpa,
+        myReviewedToday,
+        myApprovedTotal,
+        myRejectedTotal,
+        signedOffLast30Days,
       },
 
       complianceScore,
       riskScore,
       totalControls,
       compliantControls,
+      overdueByPriority,
+      myRecentlyReviewed,
+      recentSignOffs,
+      myRecentEvidence,
 
       deptCompliance,
       regulationCompliance: Object.values(regulationMap),

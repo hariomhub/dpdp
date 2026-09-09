@@ -75,7 +75,7 @@ function ProductPicker({ selected, onChange }: {
 
   return (
     <div className="space-y-2">
-      <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide">
+      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide">
         Recommended Products
         <span className="ml-1 text-slate-400 font-normal normal-case">(tools that implement this action)</span>
       </label>
@@ -84,7 +84,7 @@ function ProductPicker({ selected, onChange }: {
       {selectedProducts.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selectedProducts.map((p: any) => (
-            <span key={p.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[11px] rounded-full font-medium">
+            <span key={p.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[13px] rounded-full font-medium">
               {p.name}
               <button onClick={() => toggle(p.id)} className="hover:text-red-500 ml-0.5">×</button>
             </span>
@@ -93,10 +93,10 @@ function ProductPicker({ selected, onChange }: {
       )}
 
       {/* Mode tabs */}
-      <div className="flex gap-1 border-b border-slate-200 mb-2">
+      <div className="flex gap-1 border-b border-[#64748B]/20 mb-2">
         {(['family', 'all'] as const).map(m => (
           <button key={m} onClick={() => setMode(m)}
-            className={`px-3 py-1.5 text-[11.5px] font-medium border-b-2 -mb-px transition-colors ${mode === m ? 'border-slate-800 text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+            className={`px-3 py-1.5 text-[13.5px] font-medium border-b-2 -mb-px transition-colors ${mode === m ? 'border-slate-800 text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
             {m === 'family' ? '🗂 By Product Family' : '📋 All Products'}
           </button>
         ))}
@@ -106,7 +106,7 @@ function ProductPicker({ selected, onChange }: {
       {mode === 'family' && (
         <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
           {(families as any[]).length === 0 && (
-            <p className="text-[11.5px] text-slate-400 py-2 text-center">No product families yet. Create them in Product Families.</p>
+            <p className="text-[13.5px] text-slate-400 py-2 text-center">No product families yet. Create them in Product Families.</p>
           )}
           {(families as any[]).map((fam: any) => (
             <div key={fam.id}>
@@ -130,16 +130,16 @@ function ProductPicker({ selected, onChange }: {
                   }}
                 />
                 <button onClick={() => setExpanded(expandedFamily === fam.id ? null : fam.id)} className="flex-1 text-left flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-slate-700">{fam.name}</span>
-                  <span className="text-[10px] text-slate-400">{fam._count.products}</span>
+                  <span className="text-[14px] font-semibold text-slate-700">{fam.name}</span>
+                  <span className="text-[12px] text-slate-400">{fam._count.products}</span>
                 </button>
               </div>
               {expandedFamily === fam.id && fam.products.map((p: any) => (
                 <label key={p.id} className="flex items-center gap-2.5 pl-7 pr-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">
                   <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)}
                     className="accent-slate-800 w-3.5 h-3.5" />
-                  <span className="text-[12px] text-slate-700 flex-1">{p.name}</span>
-                  {p.vendor && <span className="text-[10px] text-slate-400">{p.vendor}</span>}
+                  <span className="text-[14px] text-slate-700 flex-1">{p.name}</span>
+                  {p.vendor && <span className="text-[12px] text-slate-400">{p.vendor}</span>}
                 </label>
               ))}
             </div>
@@ -154,9 +154,9 @@ function ProductPicker({ selected, onChange }: {
             <label key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
               <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)}
                 className="accent-slate-800 w-3.5 h-3.5" />
-              <span className="text-[12px] text-slate-700 flex-1">{p.name}</span>
-              {p.productFamily && <span className="text-[10px] text-slate-400">{p.productFamily.name}</span>}
-              {p.vendor && <span className="text-[10px] text-slate-400">{p.vendor}</span>}
+              <span className="text-[14px] text-slate-700 flex-1">{p.name}</span>
+              {p.productFamily && <span className="text-[12px] text-slate-400">{p.productFamily.name}</span>}
+              {p.vendor && <span className="text-[12px] text-slate-400">{p.vendor}</span>}
             </label>
           ))}
         </div>
@@ -164,21 +164,21 @@ function ProductPicker({ selected, onChange }: {
 
       {/* Quick-add standalone product */}
       {showQuickAdd ? (
-        <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-2 mt-1">
-          <p className="text-[11px] font-semibold text-slate-600">Quick-add Product</p>
+        <div className="p-2 bg-slate-50 border border-[#64748B]/20 rounded-lg space-y-2 mt-1">
+          <p className="text-[13px] font-semibold text-slate-600">Quick-add Product</p>
           <div className="flex gap-2">
             <input value={quickName} onChange={e => setQuickName(e.target.value)}
               placeholder="Product name *"
-              className="flex-1 h-8 px-2 rounded border border-slate-300 text-[12px] focus:outline-none focus:border-slate-700" />
+              className="flex-1 h-8 px-2 rounded border border-slate-300 text-[14px] focus:outline-none focus:border-slate-700" />
             <input value={quickVendor} onChange={e => setQuickVendor(e.target.value)}
               placeholder="Vendor"
-              className="w-32 h-8 px-2 rounded border border-slate-300 text-[12px] focus:outline-none focus:border-slate-700" />
+              className="w-32 h-8 px-2 rounded border border-slate-300 text-[14px] focus:outline-none focus:border-slate-700" />
           </div>
           <div className="flex gap-2">
             <button onClick={() => { setShowQuickAdd(false); setQuickName(''); setQuickVendor('') }}
-              className="px-2 py-1 text-[11.5px] border border-slate-300 rounded text-slate-600 hover:bg-slate-100">Cancel</button>
+              className="px-2 py-1 text-[13.5px] border border-slate-300 rounded text-slate-600 hover:bg-slate-100">Cancel</button>
             <button onClick={handleQuickAdd} disabled={!quickName.trim() || createProductMut.isPending}
-              className="px-3 py-1 text-[11.5px] bg-slate-800 text-white rounded hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1">
+              className="px-3 py-1 text-[13.5px] bg-[#15324a] text-white rounded hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1">
               {createProductMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
               Add &amp; Select →
             </button>
@@ -186,7 +186,7 @@ function ProductPicker({ selected, onChange }: {
         </div>
       ) : (
         <button onClick={() => setShowQuickAdd(true)}
-          className="text-[11.5px] text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1">
+          className="text-[13.5px] text-[#1A3E5C] hover:text-[#64748B] flex items-center gap-1 mt-1">
           <Plus className="w-3 h-3" /> Add product not in any family
         </button>
       )}
@@ -215,8 +215,8 @@ function EditRegulationModal({ reg, onClose }: { reg: any; onClose: () => void }
       <div className="bg-white rounded-xl shadow-xl w-[640px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 sticky top-0 bg-white">
           <div>
-            <p className="text-[15px] font-bold text-slate-900">Edit Regulation</p>
-            <p className="text-[11.5px] text-slate-400 mt-0.5">
+            <p className="text-[17px] font-bold text-slate-900">Edit Regulation</p>
+            <p className="text-[13.5px] text-slate-400 mt-0.5">
               <span className="font-mono font-bold text-slate-600">{reg.shortCode}</span> · Short code cannot be changed
             </p>
           </div>
@@ -224,30 +224,30 @@ function EditRegulationModal({ reg, onClose }: { reg: any; onClose: () => void }
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Name *</label>
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Name *</label>
             <input value={form.name} onChange={e => up('name', e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] focus:outline-none focus:border-slate-800" />
+              className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] focus:outline-none focus:border-slate-800" />
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Issuing Authority</label>
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Issuing Authority</label>
             <input value={form.issuingAuthority} onChange={e => up('issuingAuthority', e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] focus:outline-none focus:border-slate-800" />
+              className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] focus:outline-none focus:border-slate-800" />
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Description</label>
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Description</label>
             <textarea rows={3} value={form.description} onChange={e => up('description', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-[12.5px] resize-none focus:outline-none focus:border-slate-800" />
+              className="w-full px-3 py-2 rounded-lg border border-[#64748B]/20 text-[14.5px] resize-none focus:outline-none focus:border-slate-800" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Jurisdiction</label>
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Jurisdiction</label>
               <select value={form.jurisdiction} onChange={e => up('jurisdiction', e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] focus:outline-none focus:border-slate-800 bg-white">
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] focus:outline-none focus:border-slate-800 bg-white">
                 {['India','European Union','United States','United Kingdom','Singapore','Global'].map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Status</label>
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Status</label>
               <div className="flex gap-2">
                 {[
                   { val: 'DRAFT',     label: 'Draft',     color: 'bg-amber-50 text-amber-700 border-amber-300' },
@@ -255,22 +255,22 @@ function EditRegulationModal({ reg, onClose }: { reg: any; onClose: () => void }
                   { val: 'ARCHIVED',  label: 'Archived',  color: 'bg-slate-100 text-slate-600 border-slate-300' },
                 ].map(s => (
                   <button key={s.val} onClick={() => up('status', s.val)}
-                    className={`flex-1 h-10 rounded-lg text-[12px] font-semibold border-2 transition-all ${
-                      form.status === s.val ? s.color + ' ring-2 ring-offset-1 ring-slate-400' : 'border-slate-200 text-slate-500 hover:border-slate-400'
+                    className={`flex-1 h-10 rounded-lg text-[14px] font-semibold border-2 transition-all ${
+                      form.status === s.val ? s.color + ' ring-2 ring-offset-1 ring-slate-400' : 'border-[#64748B]/20 text-slate-500 hover:border-slate-400'
                     }`}>
                     {s.label}
                   </button>
                 ))}
               </div>
-              <p className="text-[10.5px] text-slate-400 mt-1">
+              <p className="text-[12.5px] text-slate-400 mt-1">
                 Set to <strong>Active</strong> to make visible to tenant organizations.
               </p>
             </div>
           </div>
           <div className="flex gap-3 pt-2 border-t border-slate-100">
-            <button onClick={onClose} className="px-4 py-2 border border-slate-200 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+            <button onClick={onClose} className="px-4 py-2 border border-[#64748B]/20 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
             <button onClick={handleSave} disabled={isPending}
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2">
+              className="flex-1 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg flex items-center justify-center gap-2">
               {isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Changes →'}
             </button>
           </div>
@@ -312,70 +312,70 @@ function RegulationForm({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[760px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <p className="text-[15px] font-bold text-slate-900">Create New Regulation</p>
+          <p className="text-[17px] font-bold text-slate-900">Create New Regulation</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-700" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <p className="text-[12px] text-slate-400">Define a regulation that organizations can assess against.</p>
+          <p className="text-[14px] text-slate-400">Define a regulation that organizations can assess against.</p>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
               Regulation Name <span className="text-slate-300">*</span>
             </label>
             <input value={form.name} onChange={e => up('name', e.target.value)}
               placeholder="e.g., Digital Personal Data Protection Act 2023"
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+              className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Short Code <span className="text-slate-300">*</span>
                 <span className="text-slate-400 font-normal normal-case ml-1">(max 10 chars)</span>
               </label>
               <input value={form.shortCode}
                 onChange={e => up('shortCode', e.target.value.toUpperCase().slice(0, 10))}
                 placeholder="e.g., DPDP"
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 font-mono transition-colors" />
-              <p className="text-[10.5px] text-slate-400 mt-0.5">Used as a tag throughout the platform. Must be unique.</p>
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 font-mono transition-colors" />
+              <p className="text-[12.5px] text-slate-400 mt-0.5">Used as a tag throughout the platform. Must be unique.</p>
             </div>
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Issuing Authority <span className="text-slate-300">*</span>
               </label>
               <input value={form.authority} onChange={e => up('authority', e.target.value)}
                 placeholder="e.g., Ministry of Electronics and IT"
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
             </div>
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
               Description <span className="text-slate-300">*</span>
             </label>
             <textarea rows={3} value={form.desc} onChange={e => up('desc', e.target.value)}
               placeholder="Full description of what this regulation covers and who it applies to."
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none transition-colors" />
+              className="w-full px-3 py-2 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none transition-colors" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Jurisdiction <span className="text-slate-300">*</span>
               </label>
               <select value={form.jurisdiction} onChange={e => up('jurisdiction', e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white">
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white">
                 {['India', 'European Union', 'United States', 'United Kingdom', 'Singapore', 'Global'].map(c => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Effective Date <span className="text-slate-300">*</span>
               </label>
               <input type="date" value={form.effectiveDate} onChange={e => up('effectiveDate', e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 focus:outline-none focus:border-slate-800 transition-colors" />
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 focus:outline-none focus:border-slate-800 transition-colors" />
             </div>
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-2">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-2">
               Status <span className="text-slate-300">*</span>
             </label>
             <div className="flex gap-4">
@@ -387,8 +387,8 @@ function RegulationForm({ onClose }: { onClose: () => void }) {
                   <input type="radio" name="regStatus" checked={form.status === s.val}
                     onChange={() => up('status', s.val)} className="accent-slate-800" />
                   <div>
-                    <p className="text-[12.5px] font-medium text-slate-800">{s.label}</p>
-                    <p className="text-[10.5px] text-slate-400">{s.desc}</p>
+                    <p className="text-[14.5px] font-medium text-slate-800">{s.label}</p>
+                    <p className="text-[12.5px] text-slate-400">{s.desc}</p>
                   </div>
                 </label>
               ))}
@@ -396,11 +396,11 @@ function RegulationForm({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
             <button onClick={onClose}
-              className="px-4 py-2 border border-slate-200 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+              className="px-4 py-2 border border-[#64748B]/20 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
               Cancel
             </button>
             <button onClick={handleSave} disabled={isPending}
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+              className="flex-1 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
               {isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Regulation →'}
             </button>
           </div>
@@ -432,16 +432,16 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
   const [newSectionTitle, setNewSectionTitle] = useState('')
 
   return (
-    <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3 relative">
-      <p className="text-[13px] font-bold text-slate-800">{regulation.shortCode} <span className="font-normal text-slate-500">— {regulation.name}</span></p>
+    <div className="p-4 border border-[#64748B]/20 rounded-lg bg-slate-50 space-y-3 relative">
+      <p className="text-[15px] font-bold text-slate-800">{regulation.shortCode} <span className="font-normal text-slate-500">— {regulation.name}</span></p>
       <div className="grid grid-cols-2 gap-3">
         {/* Chapter */}
         <div>
-          <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Chapter</label>
+          <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Chapter</label>
           {isLoading ? (
-            <div className="h-9 px-3 rounded-lg border border-slate-200 flex items-center gap-2 text-slate-400 bg-white">
+            <div className="h-9 px-3 rounded-lg border border-[#64748B]/20 flex items-center gap-2 text-slate-400 bg-white">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="text-[12px]">Loading...</span>
+              <span className="text-[14px]">Loading...</span>
             </div>
           ) : (
             <>
@@ -451,7 +451,7 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                   if (e.target.value === '__new__') setShowNewChapter(true)
                   else { onChange({ chapterId: e.target.value, sectionId: '' }); setShowNewChapter(false) }
                 }}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-colors">
+                className="w-full h-9 px-3 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-colors">
                 <option value="">No chapter</option>
                 {chapters.map((ch: any) => (
                   <option key={ch.id} value={ch.id}>{ch.name}{ch.title ? ` — ${ch.title}` : ''}</option>
@@ -459,11 +459,11 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                 <option value="__new__">+ Add new chapter...</option>
               </select>
               {showNewChapter && (
-                <div className="mt-2 p-3 bg-white rounded-lg border border-slate-200 shadow-sm space-y-2">
+                <div className="mt-2 p-3 bg-white rounded-lg border border-[#64748B]/20 shadow-sm space-y-2">
                   <input value={newChapterName} onChange={e => setNewChapterName(e.target.value)} placeholder="Chapter name e.g. Chapter 2 *"
-                    className="w-full h-8 px-2.5 rounded-md border border-slate-200 text-[12px] focus:outline-none focus:border-slate-800" />
+                    className="w-full h-8 px-2.5 rounded-md border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-slate-800" />
                   <input value={newChapterTitle} onChange={e => setNewChapterTitle(e.target.value)} placeholder="Optional title e.g. Obligations"
-                    className="w-full h-8 px-2.5 rounded-md border border-slate-200 text-[12px] focus:outline-none focus:border-slate-800" />
+                    className="w-full h-8 px-2.5 rounded-md border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-slate-800" />
                   <div className="flex gap-2">
                     <button onClick={() => {
                       if (!newChapterName.trim()) { toast.error('Chapter name is required'); return }
@@ -475,11 +475,11 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                         }
                       })
                     }} disabled={creatingChapter}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11.5px] font-semibold bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-colors disabled:opacity-60">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-semibold bg-[#1A3E5C] text-white rounded-md hover:bg-[#15324a] transition-colors disabled:opacity-60">
                       {creatingChapter ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Add
                     </button>
                     <button onClick={() => { setShowNewChapter(false); setNewChapterName(''); setNewChapterTitle('') }}
-                      className="px-3 py-1.5 text-[11.5px] text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50">Cancel</button>
+                      className="px-3 py-1.5 text-[13.5px] text-slate-500 border border-[#64748B]/20 rounded-md hover:bg-slate-50">Cancel</button>
                   </div>
                 </div>
               )}
@@ -489,11 +489,11 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
 
         {/* Section — dropdown with create new, loads when chapter is selected */}
         <div>
-          <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+          <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
             Section <span className="text-slate-400 font-normal normal-case">(optional)</span>
           </label>
           {!mapping.chapterId ? (
-            <div className="h-9 px-3 rounded-lg border border-slate-200 flex items-center text-slate-400 bg-slate-100 text-[12px]">
+            <div className="h-9 px-3 rounded-lg border border-[#64748B]/20 flex items-center text-slate-400 bg-slate-100 text-[14px]">
               Select chapter first
             </div>
           ) : (
@@ -504,7 +504,7 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                   if (e.target.value === '__new__') setShowNewSection(true)
                   else { onChange({ sectionId: e.target.value }); setShowNewSection(false) }
                 }}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-colors">
+                className="w-full h-9 px-3 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white transition-colors">
                 <option value="">No section</option>
                 {(sections as any[]).map((s: any) => (
                   <option key={s.id} value={s.id}>{s.name}{s.title ? ` — ${s.title}` : ''}</option>
@@ -512,11 +512,11 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                 <option value="__new__">+ Add new section...</option>
               </select>
               {showNewSection && (
-                <div className="mt-2 p-3 bg-white rounded-lg border border-slate-200 shadow-sm space-y-2">
+                <div className="mt-2 p-3 bg-white rounded-lg border border-[#64748B]/20 shadow-sm space-y-2">
                   <input value={newSectionName} onChange={e => setNewSectionName(e.target.value)} placeholder="Section name e.g. Section 6 *"
-                    className="w-full h-8 px-2.5 rounded-md border border-slate-200 text-[12px] focus:outline-none focus:border-slate-800" />
+                    className="w-full h-8 px-2.5 rounded-md border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-slate-800" />
                   <input value={newSectionTitle} onChange={e => setNewSectionTitle(e.target.value)} placeholder="Optional title e.g. Consent"
-                    className="w-full h-8 px-2.5 rounded-md border border-slate-200 text-[12px] focus:outline-none focus:border-slate-800" />
+                    className="w-full h-8 px-2.5 rounded-md border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-slate-800" />
                   <div className="flex gap-2">
                     <button onClick={() => {
                       if (!newSectionName.trim()) { toast.error('Section name is required'); return }
@@ -528,11 +528,11 @@ function RegulationMappingRow({ regulation, mapping, onChange }: {
                         }
                       })
                     }} disabled={creatingSection}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11.5px] font-semibold bg-slate-900 text-white rounded-md hover:bg-slate-800 disabled:opacity-60">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-semibold bg-[#1A3E5C] text-white rounded-md hover:bg-[#15324a] disabled:opacity-60">
                       {creatingSection ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Add
                     </button>
                     <button onClick={() => { setShowNewSection(false); setNewSectionName(''); setNewSectionTitle('') }}
-                      className="px-3 py-1.5 text-[11.5px] text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50">Cancel</button>
+                      className="px-3 py-1.5 text-[13.5px] text-slate-500 border border-[#64748B]/20 rounded-md hover:bg-slate-50">Cancel</button>
                   </div>
                 </div>
               )}
@@ -622,43 +622,43 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
     <div className="fixed inset-0 bg-black/40 flex items-start justify-end z-[60]" onClick={onClose}>
       <div className="w-[860px] h-full bg-white border-l border-slate-100 overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <p className="text-[15px] font-bold text-slate-900">Create Control</p>
+          <p className="text-[17px] font-bold text-slate-900">Create Control</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-700" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
               Control Title <span className="text-slate-300">*</span>
             </label>
             <input value={form.title} onChange={e => up('title', e.target.value)}
               placeholder="e.g., Implement valid consent mechanism"
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+              className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
               Description <span className="text-slate-300">*</span>
             </label>
             <textarea rows={3} value={form.desc} onChange={e => up('desc', e.target.value)}
               placeholder="Describe the control objective and requirements…"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none transition-colors" />
+              className="w-full px-3 py-2 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none transition-colors" />
           </div>
           <div>
-            <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-2">
+            <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-2">
               Regulation(s) <span className="text-slate-300">*</span>
             </label>
             <div className="flex gap-2 flex-wrap">
               {regulations.map((r: any) => (
                 <button key={r.id} onClick={() => toggleReg(r.id)}
-                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border-2 transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-[14px] font-semibold border-2 transition-all ${
                     form.mappings.some(m => m.regulationId === r.id)
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                      ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]'
+                      : 'border-[#64748B]/20 text-slate-600 hover:border-slate-400'
                   }`}>
                   {r.shortCode}
                 </button>
               ))}
             </div>
-            <p className="text-[10.5px] text-slate-400 mt-1">
+            <p className="text-[12.5px] text-slate-400 mt-1">
               Select all regulations this control applies to.
             </p>
           </div>
@@ -666,7 +666,7 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
           {/* Per-regulation chapter + section sub-forms */}
           {form.mappings.length > 0 ? (
             <div className="space-y-3">
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide">
                 Categorization per Regulation
               </label>
               {form.mappings.map(mapping => {
@@ -684,33 +684,33 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
             </div>
           ) : (
             <div className="p-6 border-2 border-dashed border-slate-100 rounded-xl text-center">
-              <p className="text-[12.5px] text-slate-400">Select at least one regulation above to categorize this control.</p>
+              <p className="text-[14.5px] text-slate-400">Select at least one regulation above to categorize this control.</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Applicable To <span className="text-slate-300">*</span>
               </label>
               <select value={form.applicableTo} onChange={e => up('applicableTo', e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white">
+                className="w-full h-10 px-3 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white">
                 <option value="DATA_FIDUCIARY">Data Fiduciary</option>
                 <option value="SIGNIFICANT_DF">Significant Data Fiduciary</option>
                 <option value="BOTH">Both</option>
               </select>
             </div>
             <div>
-              <label className="block text-[11.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              <label className="block text-[13.5px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                 Status
               </label>
               <div className="flex gap-2">
                 {['DRAFT', 'PUBLISHED'].map(s => (
                   <button key={s} onClick={() => up('status', s)}
-                    className={`flex-1 h-10 rounded-lg text-[12px] font-medium border transition-all ${
+                    className={`flex-1 h-10 rounded-lg text-[14px] font-medium border transition-all ${
                       form.status === s
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                        ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]'
+                        : 'border-[#64748B]/20 text-slate-600 hover:border-slate-400'
                     }`}>
                     {s.charAt(0) + s.slice(1).toLowerCase()}
                   </button>
@@ -723,36 +723,36 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
           <div className="pt-3 border-t border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[13px] font-bold text-slate-800">Pre-defined Actions</p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[15px] font-bold text-slate-800">Pre-defined Actions</p>
+                <p className="text-[13px] text-slate-400">
                   Auto-created when this control is included in an assessment. At least one required.
                 </p>
               </div>
               <button onClick={addAction}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-medium text-slate-700 border border-[#64748B]/20 rounded-lg hover:bg-slate-100 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Add Action
               </button>
             </div>
             <div className="space-y-3">
               {actions.map((action, idx) => (
-                <div key={action.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
+                <div key={action.id} className="p-4 border border-[#64748B]/20 rounded-xl bg-slate-50 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11.5px] font-semibold text-slate-700">Action {idx + 1}</p>
+                    <p className="text-[13.5px] font-semibold text-slate-700">Action {idx + 1}</p>
                     {actions.length > 1 && (
                       <button onClick={() => setActions(p => p.filter(a => a.id !== action.id))}
-                        className="text-[11px] text-slate-400 hover:text-slate-800 flex items-center gap-1">
+                        className="text-[13px] text-slate-400 hover:text-slate-800 flex items-center gap-1">
                         <Trash2 className="w-3 h-3" /> Remove
                       </button>
                     )}
                   </div>
                   <input value={action.title} onChange={e => upAction(action.id, 'title', e.target.value)}
                     placeholder="Action Title *"
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 bg-white transition-colors" />
+                    className="w-full h-9 px-3 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 bg-white transition-colors" />
                   <textarea rows={2} value={action.desc} onChange={e => upAction(action.id, 'desc', e.target.value)}
                     placeholder="Detailed steps for the IT Admin to complete this action"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[12px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none bg-white transition-colors" />
+                    className="w-full px-3 py-1.5 rounded-lg border border-[#64748B]/20 text-[14px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none bg-white transition-colors" />
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+                    <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
                       Expected Evidence Types <span className="text-slate-300">*</span>
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -763,9 +763,9 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
                               ? action.evidenceTypes.filter((e: string) => e !== t)
                               : [...action.evidenceTypes, t]
                           )}
-                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-medium border transition-all ${action.evidenceTypes.includes(t)
-                              ? 'bg-slate-900 text-white border-slate-900'
-                              : 'border-slate-200 text-slate-600 hover:border-slate-400 bg-white'
+                          className={`px-2 py-0.5 rounded-md text-[12.5px] font-medium border transition-all ${action.evidenceTypes.includes(t)
+                              ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]'
+                              : 'border-[#64748B]/20 text-slate-600 hover:border-slate-400 bg-white'
                             }`}>
                           {EVIDENCE_LABELS[t]}
                         </button>
@@ -774,27 +774,27 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
                         Suggested Due Days <span className="text-slate-300">*</span>
                       </label>
                       <div className="flex items-center gap-2">
                         <input type="number" value={action.dueDays}
                           onChange={e => upAction(action.id, 'dueDays', Number(e.target.value))}
                           min={1} max={365}
-                          className="w-20 h-9 px-3 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white" />
-                        <span className="text-[12px] text-slate-500">days from assignment</span>
+                          className="w-20 h-9 px-3 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-800 bg-white" />
+                        <span className="text-[14px] text-slate-500">days from assignment</span>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
                         Priority <span className="text-slate-300">*</span>
                       </label>
                       <div className="flex gap-2">
                         {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(p => (
                           <button key={p} onClick={() => upAction(action.id, 'priority', p)}
-                            className={`px-2 py-1 rounded-md text-[10.5px] font-medium border transition-all ${action.priority === p
-                                ? 'bg-slate-900 text-white border-slate-900'
-                                : 'border-slate-200 text-slate-600 hover:border-slate-400 bg-white'
+                            className={`px-2 py-1 rounded-md text-[12.5px] font-medium border transition-all ${action.priority === p
+                                ? 'bg-[#1A3E5C] text-white border-[#1A3E5C]'
+                                : 'border-[#64748B]/20 text-slate-600 hover:border-slate-400 bg-white'
                               }`}>
                             {p.charAt(0) + p.slice(1).toLowerCase()}
                           </button>
@@ -803,7 +803,7 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
                     </div>
                   </div>
                   {/* Product Picker */}
-                  <div className="pt-2 border-t border-slate-200">
+                  <div className="pt-2 border-t border-[#64748B]/20">
                     <ProductPicker
                       selected={action.productIds}
                       onChange={ids => upAction(action.id, 'productIds', ids)}
@@ -816,11 +816,11 @@ export function ControlForm({ onClose, regulations, preselectedRegId }: {
 
           <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
             <button onClick={onClose}
-              className="px-4 py-2 border border-slate-200 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+              className="px-4 py-2 border border-[#64748B]/20 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
               Cancel
             </button>
             <button onClick={handleSave} disabled={isPending}
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+              className="flex-1 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
               {isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Control →'}
             </button>
           </div>
@@ -875,17 +875,17 @@ function ControlDetailPanel({
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-[560px] bg-white border-l border-slate-100 shadow-[0_0_40px_rgba(0,0,0,0.12)] z-50 flex flex-col" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+      <div className="fixed top-0 right-0 h-full w-[560px] bg-white border-l border-[#64748B]/25 shadow-[0_0_50px_rgba(0,0,0,0.18)] z-50 flex flex-col" style={{ fontFamily: 'Inter, sans-serif' }}>
 
         {/* Header */}
-        <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-start gap-3 px-5 py-4 border-b border-[#64748B]/20 bg-[#1A3E5C]/[0.03] flex-shrink-0">
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-bold text-slate-900 leading-snug mb-2">{ctrl.title}</p>
+            <p className="text-[17px] font-bold text-slate-900 leading-snug mb-2">{ctrl.title}</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-bold ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+              <span className={`text-[12.5px] px-2 py-0.5 rounded-full font-bold ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                 {ctrl.status}
               </span>
-              <span className="text-[10.5px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">
+              <span className="text-[12.5px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">
                 {ctrl.applicableTo === 'DATA_FIDUCIARY' ? 'Data Fiduciary' : ctrl.applicableTo === 'SIGNIFICANT_DF' ? 'Significant DF' : 'Both'}
               </span>
             </div>
@@ -897,12 +897,12 @@ function ControlDetailPanel({
         {confirmDelete && (
           <div className="px-5 py-3 bg-red-50 border-b border-red-200 flex items-center gap-3">
             <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <p className="text-[12.5px] text-red-700 flex-1">Delete this control? This cannot be undone and will remove all regulation mappings.</p>
+            <p className="text-[14.5px] text-red-700 flex-1">Delete this control? This cannot be undone and will remove all regulation mappings.</p>
             <button onClick={handleDeleteControl} disabled={deleting}
-              className="px-3 py-1 bg-red-600 text-white text-[12px] font-semibold rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1">
+              className="px-3 py-1 bg-red-600 text-white text-[14px] font-semibold rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1">
               {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : null} Confirm Delete
             </button>
-            <button onClick={() => setConfirmDelete(false)} className="px-3 py-1 border border-red-200 text-red-600 text-[12px] rounded-lg hover:bg-red-100">Cancel</button>
+            <button onClick={() => setConfirmDelete(false)} className="px-3 py-1 border border-red-200 text-red-600 text-[14px] rounded-lg hover:bg-red-100">Cancel</button>
           </div>
         )}
 
@@ -910,15 +910,15 @@ function ControlDetailPanel({
         <div className="flex-1 overflow-y-auto">
 
           {/* Basic info */}
-          <div className="px-5 py-4 border-b border-slate-100 space-y-3">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Description</p>
-            <p className="text-[13px] text-slate-700 leading-relaxed">{ctrl.description}</p>
+          <div className="px-5 py-4 border-b border-[#64748B]/20 space-y-3">
+            <p className="text-[13px] font-bold text-[#64748B] uppercase tracking-widest">Description</p>
+            <p className="text-[15px] text-slate-700 leading-relaxed">{ctrl.description}</p>
             {ctrl.regulationMappings?.length > 0 && (
               <div>
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Mapped Regulations</p>
+                <p className="text-[13px] font-semibold text-[#64748B] uppercase tracking-wide mb-1.5">Mapped Regulations</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {ctrl.regulationMappings.map((m: any) => (
-                    <span key={m.regulation?.id ?? m.id} className="text-[11px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                    <span key={m.regulation?.id ?? m.id} className="text-[13px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
                       {m.regulation?.shortCode}
                       {m.chapter?.name && <span className="text-blue-400 font-normal"> · {m.chapter.name}</span>}
                     </span>
@@ -931,27 +931,27 @@ function ControlDetailPanel({
           {/* Actions — full manage */}
           <div className="px-5 py-4 space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              <p className="text-[13px] font-bold text-[#64748B] uppercase tracking-widest">
                 Predefined Actions <span className="ml-1 text-slate-300">({ctrl.predefinedActions?.length ?? 0})</span>
               </p>
             </div>
 
             {(ctrl.predefinedActions ?? []).length === 0 && (
-              <p className="text-[12.5px] text-slate-400">No actions defined.</p>
+              <p className="text-[14.5px] text-slate-400">No actions defined.</p>
             )}
 
             {(ctrl.predefinedActions ?? []).map((action: any, idx: number) => (
-              <div key={action.id} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div key={action.id} className="border border-[#64748B]/20 rounded-xl overflow-hidden">
 
                 {/* Action header */}
                 <div className="p-3.5 bg-slate-50 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[12.5px] font-semibold text-slate-800 leading-snug flex-1">
-                      <span className="text-slate-400 mr-1.5 font-normal text-[11px]">{idx + 1}.</span>
+                    <p className="text-[14.5px] font-semibold text-slate-800 leading-snug flex-1">
+                      <span className="text-slate-400 mr-1.5 font-normal text-[13px]">{idx + 1}.</span>
                       {action.title}
                     </p>
                     <div className="flex gap-1.5 flex-shrink-0">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${PRIORITY_COLORS[action.priority] ?? 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${PRIORITY_COLORS[action.priority] ?? 'bg-slate-100 text-slate-600'}`}>
                         {action.priority}
                       </span>
                       <button onClick={() => removeAction({ controlId: ctrl.id, actionId: action.id })}
@@ -961,23 +961,23 @@ function ControlDetailPanel({
                       </button>
                     </div>
                   </div>
-                  <p className="text-[12px] text-slate-600 leading-relaxed">{action.description}</p>
+                  <p className="text-[14px] text-slate-600 leading-relaxed">{action.description}</p>
                   <div className="flex items-center gap-3 flex-wrap">
                     {action.evidenceTypes?.map((t: string) => (
-                      <span key={t} className="text-[10px] font-semibold px-1.5 py-0.5 bg-white border border-slate-200 text-slate-600 rounded">
+                      <span key={t} className="text-[12px] font-semibold px-1.5 py-0.5 bg-white border border-[#64748B]/20 text-slate-600 rounded">
                         {EVIDENCE_LABELS[t] ?? t}
                       </span>
                     ))}
-                    <span className="text-[11px] text-slate-400">Due: {action.suggestedDueDays}d</span>
+                    <span className="text-[13px] text-slate-400">Due: {action.suggestedDueDays}d</span>
                   </div>
                 </div>
 
                 {/* Products section */}
-                <div className="p-3.5 border-t border-slate-100 space-y-2">
+                <div className="p-3.5 border-t border-[#64748B]/20 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Products</p>
+                    <p className="text-[13px] font-semibold text-[#64748B] uppercase tracking-wide">Products</p>
                     <button onClick={() => setManagingProducts(managingProducts === action.id ? null : action.id)}
-                      className="text-[11px] text-blue-600 hover:text-blue-700 font-medium">
+                      className="text-[13px] text-[#1A3E5C] hover:text-[#64748B] font-medium">
                       {managingProducts === action.id ? 'Done' : '+ Manage Products'}
                     </button>
                   </div>
@@ -986,18 +986,18 @@ function ControlDetailPanel({
                   {action.products?.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {action.products.map((ap: any) => (
-                        <span key={ap.product?.id ?? ap.productId} className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
+                        <span key={ap.product?.id ?? ap.productId} className="text-[13px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
                           {ap.product?.name ?? 'Product'}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[11.5px] text-slate-400">No products assigned</p>
+                    <p className="text-[13.5px] text-slate-400">No products assigned</p>
                   )}
 
                   {/* Product picker */}
                   {managingProducts === action.id && (
-                    <div className="mt-2 p-3 bg-white border border-slate-200 rounded-lg">
+                    <div className="mt-2 p-3 bg-white border border-[#64748B]/20 rounded-lg">
                       <ProductPicker
                         selected={(action.products ?? []).map((ap: any) => ap.productId ?? ap.product?.id)}
                         onChange={ids => setActionProducts({ controlId: ctrl.id, actionId: action.id, productIds: ids })}
@@ -1008,8 +1008,8 @@ function ControlDetailPanel({
 
                 {/* Master Evidence section per product */}
                 {action.products?.length > 0 && (
-                  <div className="p-3.5 border-t border-slate-100 space-y-3">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Master Evidence</p>
+                  <div className="p-3.5 border-t border-[#64748B]/20 space-y-3">
+                    <p className="text-[13px] font-semibold text-[#64748B] uppercase tracking-wide">Master Evidence</p>
 
                     {action.products.map((ap: any) => {
                       const productId   = ap.productId ?? ap.product?.id
@@ -1019,7 +1019,7 @@ function ControlDetailPanel({
 
                       return (
                         <div key={productId} className="space-y-2">
-                          <p className="text-[11.5px] font-semibold text-slate-700">{productName}</p>
+                          <p className="text-[13.5px] font-semibold text-slate-700">{productName}</p>
 
                           {evidences.length > 0 ? (
                             <div className="space-y-1">
@@ -1027,8 +1027,8 @@ function ControlDetailPanel({
                                 <div key={ev.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
                                   <FileText className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[12px] font-medium text-slate-800 truncate">{ev.title}</p>
-                                    {ev.fileName && <p className="text-[10.5px] text-slate-400">{ev.fileName}</p>}
+                                    <p className="text-[14px] font-medium text-slate-800 truncate">{ev.title}</p>
+                                    {ev.fileName && <p className="text-[12.5px] text-slate-400">{ev.fileName}</p>}
                                   </div>
                                   <button onClick={() => deleteEvidence({ controlId: ctrl.id, actionId: action.id, productId, evidenceId: ev.id })}
                                     disabled={deletingEv}
@@ -1039,29 +1039,29 @@ function ControlDetailPanel({
                               ))}
                             </div>
                           ) : (
-                            <p className="text-[11px] text-slate-400">No master evidence yet</p>
+                            <p className="text-[13px] text-slate-400">No master evidence yet</p>
                           )}
 
                           {isUploading ? (
                             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
                               <input value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Evidence title *"
-                                className="w-full h-8 px-2.5 rounded border border-slate-200 text-[12px] focus:outline-none focus:border-blue-500" />
+                                className="w-full h-8 px-2.5 rounded border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-[#1A3E5C]" />
                               <input value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder="Description (optional)"
-                                className="w-full h-8 px-2.5 rounded border border-slate-200 text-[12px] focus:outline-none focus:border-blue-500" />
+                                className="w-full h-8 px-2.5 rounded border border-[#64748B]/20 text-[14px] focus:outline-none focus:border-[#1A3E5C]" />
                               <input type="file" onChange={e => setEvFile(e.target.files?.[0] ?? null)}
-                                className="w-full text-[11.5px] text-slate-600" />
+                                className="w-full text-[13.5px] text-slate-600" />
                               <div className="flex gap-2">
                                 <button onClick={() => { setUploadingEv(null); setEvTitle(''); setEvDesc(''); setEvFile(null) }}
-                                  className="px-2.5 py-1 text-[11.5px] border border-slate-200 rounded text-slate-500 hover:bg-slate-50">Cancel</button>
+                                  className="px-2.5 py-1 text-[13.5px] border border-[#64748B]/20 rounded text-slate-500 hover:bg-slate-50">Cancel</button>
                                 <button onClick={() => handleUploadEvidence(action.id, productId)} disabled={creatingEv || !evTitle.trim()}
-                                  className="flex-1 py-1 text-[11.5px] bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1">
+                                  className="flex-1 py-1 text-[13.5px] bg-[#1A3E5C] text-white rounded hover:bg-[#15324a] disabled:opacity-50 flex items-center justify-center gap-1">
                                   {creatingEv ? <Loader2 className="w-3 h-3 animate-spin" /> : null} Save
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <button onClick={() => { setUploadingEv({ actionId: action.id, productId }); setEvTitle(''); setEvDesc(''); setEvFile(null) }}
-                              className="text-[11.5px] text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                              className="text-[13.5px] text-[#1A3E5C] hover:text-[#64748B] flex items-center gap-1">
                               <Plus className="w-3 h-3" /> Add Master Evidence
                             </button>
                           )}
@@ -1076,19 +1076,19 @@ function ControlDetailPanel({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-slate-100 flex gap-2 flex-shrink-0 bg-slate-50/60">
+        <div className="px-5 py-3.5 border-t border-[#64748B]/20 flex gap-2 flex-shrink-0 bg-slate-50/60">
           <button onClick={() => setConfirmDelete(true)} disabled={confirmDelete || deleting}
-            className="px-3 py-2 border border-red-200 text-[12.5px] text-red-500 rounded-lg hover:bg-red-50 transition-colors">
+            className="px-3 py-2 border border-red-200 text-[14.5px] text-red-500 rounded-lg hover:bg-red-50 transition-colors">
             Delete
           </button>
           {ctrl.status === 'DRAFT' && (
             <button onClick={() => publishControl(ctrl.id, { onSuccess: onClose })} disabled={publishing}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg transition-colors">
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors">
               {publishing ? <><Loader2 className="w-4 h-4 animate-spin" /> Publishing...</> : 'Publish Control'}
             </button>
           )}
           {ctrl.status === 'PUBLISHED' && (
-            <span className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[12px] text-green-600 font-semibold">
+            <span className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[14px] text-green-600 font-semibold">
               <Check className="w-4 h-4" /> Published
             </span>
           )}
@@ -1102,43 +1102,43 @@ function ControlDetailPanel({
 
 function ControlCard({ ctrl, onSelect, onPublish }: { ctrl: any, onSelect: () => void, onPublish: () => void }) {
   return (
-    <div className="bg-[#fcfdfd] border border-slate-200/80 rounded-xl p-4 flex flex-col hover:border-slate-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all group shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <div className="bg-white border border-[#64748B]/20 rounded-xl p-4 flex flex-col hover:border-[#64748B]/40 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition-all group shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between mb-2">
-        <span className="font-mono text-[10.5px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+        <span className="font-mono text-[12.5px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
           {ctrl.id.slice(0, 8)}
         </span>
-        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${ctrl.status === 'PUBLISHED'
+        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${ctrl.status === 'PUBLISHED'
             ? 'bg-green-50 text-green-700'
             : 'bg-amber-50 text-amber-700'
           }`}>{ctrl.status}</span>
       </div>
       
-      <h3 className="text-[13px] font-semibold text-slate-900 mb-3 line-clamp-2 leading-snug flex-1" title={ctrl.title}>
+      <h3 className="text-[15px] font-semibold text-slate-900 mb-3 line-clamp-2 leading-snug flex-1" title={ctrl.title}>
         {ctrl.title}
       </h3>
       
       <div className="flex flex-wrap gap-2 mb-4">
-        <span className="text-[10px] px-2 py-1 bg-slate-50 text-slate-600 rounded-lg font-medium border border-slate-100 flex items-center gap-1.5">
+        <span className="text-[12px] px-2 py-1 bg-slate-50 text-slate-600 rounded-lg font-medium border border-[#64748B]/20 flex items-center gap-1.5">
           <Shield className="w-3 h-3 text-slate-400" />
           {ctrl.applicableTo === 'DATA_FIDUCIARY' ? 'Data Fiduciary'
             : ctrl.applicableTo === 'SIGNIFICANT_DF' ? 'Significant DF' : 'Both'}
         </span>
-        <span className="text-[10px] px-2 py-1 bg-blue-50/50 text-blue-700 rounded-lg font-medium border border-blue-100/50 flex items-center gap-1.5">
+        <span className="text-[12px] px-2 py-1 bg-blue-50/50 text-blue-700 rounded-lg font-medium border border-blue-100/50 flex items-center gap-1.5">
           <Layers className="w-3 h-3 text-blue-400" />
           {ctrl._count?.predefinedActions ?? ctrl.predefinedActions?.length ?? 0} actions
         </span>
       </div>
       
-      <div className="flex items-center gap-2 pt-3 border-t border-slate-100 mt-auto">
+      <div className="flex items-center gap-2 pt-3 border-t border-[#64748B]/20 mt-auto">
         <button
           onClick={onSelect}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-semibold rounded-lg transition-colors border border-slate-200">
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[13px] font-semibold rounded-lg transition-colors border border-[#64748B]/20">
           <Eye className="w-3.5 h-3.5" /> View Details
         </button>
         {ctrl.status === 'DRAFT' && (
           <button
             onClick={onPublish}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold rounded-lg transition-colors">
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[13px] font-semibold rounded-lg transition-colors">
             Publish
           </button>
         )}
@@ -1254,8 +1254,8 @@ function RegDetailPage({ reg, onBack, allControls }: {
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 flex-shrink-0">
               <div>
-                <p className="text-[15px] font-bold text-slate-900">Add Existing Controls</p>
-                <p className="text-[11.5px] text-slate-400 mt-0.5">
+                <p className="text-[17px] font-bold text-slate-900">Add Existing Controls</p>
+                <p className="text-[13.5px] text-slate-400 mt-0.5">
                   Link controls from the library to <strong className="text-slate-700">{reg.shortCode}</strong>
                 </p>
               </div>
@@ -1269,7 +1269,7 @@ function RegDetailPage({ reg, onBack, allControls }: {
                 {(['family', 'all'] as const).map(m => (
                   <button key={m}
                     onClick={() => setAddExistingMode(m)}
-                    className={`px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors ${addExistingMode === m ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                    className={`px-3 py-1.5 text-[14px] font-medium rounded-lg transition-colors ${addExistingMode === m ? 'bg-[#1A3E5C] text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
                     {m === 'family' ? '🗂 Browse by Control Family' : '📋 All Controls'}
                   </button>
                 ))}
@@ -1281,7 +1281,7 @@ function RegDetailPage({ reg, onBack, allControls }: {
                     value={existingSearch}
                     onChange={e => setExistingSearch(e.target.value)}
                     placeholder="Search controls..."
-                    className="w-full pl-8 pr-3 h-8 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+                    className="w-full pl-8 pr-3 h-8 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
                 </div>
               )}
             </div>
@@ -1290,7 +1290,7 @@ function RegDetailPage({ reg, onBack, allControls }: {
               {addExistingMode === 'family' && (
                 <div className="p-3 space-y-1">
                   {(controlFamiliesData as any[])?.length === 0 && (
-                    <p className="text-center text-[12px] text-slate-400 py-8">No control families defined yet. Create them in Control Families.</p>
+                    <p className="text-center text-[14px] text-slate-400 py-8">No control families defined yet. Create them in Control Families.</p>
                   )}
                   {(controlFamiliesData as any[] ?? []).map((fam: any) => {
                     const famKey = `fam-${fam.id}`
@@ -1299,13 +1299,13 @@ function RegDetailPage({ reg, onBack, allControls }: {
                       .map((m: any) => m.control)
                       .filter((c: any) => !regControlIds.has(c.id))
                     return (
-                      <div key={fam.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                      <div key={fam.id} className="border border-[#64748B]/20 rounded-lg overflow-hidden">
                         <button onClick={() => toggleChapter(famKey)}
                           className="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-left">
                           {famOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-                          <span className="text-[18px]">{fam.icon ?? '🔒'}</span>
-                          <span className="text-[13px] font-bold text-slate-800 flex-1">{fam.name}</span>
-                          <span className="text-[10.5px] text-slate-400">{famControls.length} available</span>
+                          <span className="text-[22px]">{fam.icon ?? '🔒'}</span>
+                          <span className="text-[15px] font-bold text-slate-800 flex-1">{fam.name}</span>
+                          <span className="text-[12.5px] text-slate-400">{famControls.length} available</span>
                         </button>
                         {famOpen && famControls.map((ctrl: any) => {
                           const isSelected = selectedToAdd.includes(ctrl.id)
@@ -1313,16 +1313,16 @@ function RegDetailPage({ reg, onBack, allControls }: {
                             <div key={ctrl.id}
                               className="flex items-center gap-3 px-4 py-2.5 border-t border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
                               onClick={() => setSelectedToAdd(p => p.includes(ctrl.id) ? p.filter(id => id !== ctrl.id) : [...p, ctrl.id])}>
-                              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-slate-900 border-slate-900' : 'border-slate-300'}`}>
+                              <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-[#1A3E5C] border-[#1A3E5C]' : 'border-slate-300'}`}>
                                 {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                               </div>
-                              <p className="text-[12.5px] font-medium text-slate-800 flex-1">{ctrl.title}</p>
-                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>{ctrl.status}</span>
+                              <p className="text-[14.5px] font-medium text-slate-800 flex-1">{ctrl.title}</p>
+                              <span className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>{ctrl.status}</span>
                             </div>
                           )
                         })}
                         {famOpen && famControls.length === 0 && (
-                          <p className="px-4 py-3 text-[12px] text-slate-400">All controls from this family are already in this regulation.</p>
+                          <p className="px-4 py-3 text-[14px] text-slate-400">All controls from this family are already in this regulation.</p>
                         )}
                       </div>
                     )
@@ -1332,7 +1332,7 @@ function RegDetailPage({ reg, onBack, allControls }: {
               {/* ── All Controls flat list ── */}
               {addExistingMode === 'all' && (
                 availableToAdd.length === 0 ? (
-                  <div className="px-5 py-10 text-center text-[12.5px] text-slate-400">
+                  <div className="px-5 py-10 text-center text-[14.5px] text-slate-400">
                     {existingSearch ? 'No controls match your search.' : 'All controls are already linked to this regulation.'}
                   </div>
                 ) : availableToAdd.map((ctrl: any) => {
@@ -1343,19 +1343,19 @@ function RegDetailPage({ reg, onBack, allControls }: {
                       onClick={() => setSelectedToAdd(p =>
                         p.includes(ctrl.id) ? p.filter(id => id !== ctrl.id) : [...p, ctrl.id]
                       )}>
-                      <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-slate-900 border-slate-900' : 'border-slate-300'
+                      <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${isSelected ? 'bg-[#1A3E5C] border-[#1A3E5C]' : 'border-slate-300'
                         }`}>
                         {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-semibold text-slate-800 truncate">{ctrl.title}</p>
+                        <p className="text-[14.5px] font-semibold text-slate-800 truncate">{ctrl.title}</p>
                         <div className="flex gap-2 mt-0.5 flex-wrap">
                           {ctrl.regulationMappings?.map((m: any) => (
-                            <span key={m.regulation.id} className="text-[10px] font-semibold px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">
+                            <span key={m.regulation.id} className="text-[12px] font-semibold px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">
                               {m.regulation.shortCode}
                             </span>
                           ))}
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                          <span className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${ctrl.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
                             }`}>{ctrl.status}</span>
                         </div>
                       </div>
@@ -1365,19 +1365,19 @@ function RegDetailPage({ reg, onBack, allControls }: {
               )}
             </div>
             <div className="px-5 py-3.5 border-t border-slate-100 flex items-center gap-3 flex-shrink-0 bg-slate-50/50">
-              <span className="text-[12px] text-slate-400 flex-1">
+              <span className="text-[14px] text-slate-400 flex-1">
                 {selectedToAdd.length > 0
                   ? `${selectedToAdd.length} control${selectedToAdd.length > 1 ? 's' : ''} selected`
                   : 'Select controls to add'}
               </span>
               <button onClick={() => { setShowAddExisting(false); setSelectedToAdd([]) }}
-                className="px-4 py-2 border border-slate-200 text-[13px] text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                className="px-4 py-2 border border-[#64748B]/20 text-[15px] text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
                 Cancel
               </button>
               <button
                 onClick={handleAddExistingControls}
                 disabled={selectedToAdd.length === 0 || addingControls}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-2">
+                className="px-4 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-50 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center gap-2">
                 {addingControls
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding...</>
                   : `Add ${selectedToAdd.length > 0 ? selectedToAdd.length + ' ' : ''}Selected`}
@@ -1389,26 +1389,26 @@ function RegDetailPage({ reg, onBack, allControls }: {
 
       <div className="flex items-center gap-3">
         <button onClick={onBack}
-          className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+          className="flex items-center gap-1.5 text-[14px] text-slate-500 hover:text-slate-800 border border-[#64748B]/20 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> Regulations
         </button>
         <span className="text-slate-300">/</span>
-        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+        <span className="font-mono text-[13px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
           {reg.shortCode}
         </span>
-        <span className="text-[13px] font-semibold text-slate-800">{reg.name}</span>
-        <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-semibold ${reg.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+        <span className="text-[15px] font-semibold text-slate-800">{reg.name}</span>
+        <span className={`text-[12.5px] px-2 py-0.5 rounded-full font-semibold ${reg.status === 'ACTIVE' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
           }`}>{reg.status}</span>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
+      <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h2 className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+            <h2 className="text-[18px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>
               {reg.name}
             </h2>
-            <p className="text-[12px] text-slate-500 mt-0.5 mb-3">{reg.description}</p>
-            <div className="flex gap-6 text-[11.5px] text-slate-500 flex-wrap">
+            <p className="text-[14px] text-slate-500 mt-0.5 mb-3">{reg.description}</p>
+            <div className="flex gap-6 text-[13.5px] text-slate-500 flex-wrap">
               {[
                 ['Issuing Authority', reg.issuingAuthority],
                 ['Jurisdiction', reg.jurisdiction],
@@ -1423,14 +1423,14 @@ function RegDetailPage({ reg, onBack, allControls }: {
             </div>
           </div>
           <div className="flex gap-2 ml-4 flex-shrink-0">
-            <button onClick={() => setShowEditReg(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            <button onClick={() => setShowEditReg(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
               <Edit2 className="w-3.5 h-3.5" /> Edit
             </button>
             <button
               onClick={() => {
                 if (confirm('Archive this regulation?')) archiveReg(reg.id)
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
               <Archive className="w-3.5 h-3.5" /> Archive
             </button>
           </div>
@@ -1438,28 +1438,28 @@ function RegDetailPage({ reg, onBack, allControls }: {
       </div>
 
       {/* Chapters — mark a chapter mandatory to lock its controls from exclusion in tenant assessments */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="bg-white border border-[#64748B]/20 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-hidden">
         <button onClick={() => setShowChapters(v => !v)}
           className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-slate-50 transition-colors">
           {showChapters ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-          <span className="text-[13px] font-semibold text-slate-800 flex-1">Chapters</span>
-          <span className="text-[11.5px] text-slate-400">{regChapters.length} chapter{regChapters.length !== 1 ? 's' : ''}</span>
+          <span className="text-[15px] font-semibold text-slate-800 flex-1">Chapters</span>
+          <span className="text-[13.5px] text-slate-400">{regChapters.length} chapter{regChapters.length !== 1 ? 's' : ''}</span>
         </button>
         {showChapters && (
           <div className="border-t border-slate-100 divide-y divide-slate-50">
             {regChapters.length === 0 ? (
-              <p className="text-[12px] text-slate-400 italic px-4 py-4">No chapters defined for this regulation yet.</p>
+              <p className="text-[14px] text-slate-400 italic px-4 py-4">No chapters defined for this regulation yet.</p>
             ) : (
               [...regChapters].sort((a: any, b: any) => a.orderIndex - b.orderIndex).map((ch: any) => (
                 <div key={ch.id} className="flex items-center gap-3 px-4 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-slate-800">
+                    <p className="text-[14.5px] font-semibold text-slate-800">
                       {ch.name}{ch.title && <span className="text-slate-400 font-normal"> — {ch.title}</span>}
                     </p>
-                    <p className="text-[11px] text-slate-400">{ch._count?.controlMappings ?? 0} control{(ch._count?.controlMappings ?? 0) !== 1 ? 's' : ''}</p>
+                    <p className="text-[13px] text-slate-400">{ch._count?.controlMappings ?? 0} control{(ch._count?.controlMappings ?? 0) !== 1 ? 's' : ''}</p>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer flex-shrink-0" title="Controls under a mandatory chapter cannot be excluded when a tenant creates an assessment">
-                    <span className={`flex items-center gap-1 text-[11.5px] font-medium ${ch.isMandatory ? 'text-amber-700' : 'text-slate-400'}`}>
+                    <span className={`flex items-center gap-1 text-[13.5px] font-medium ${ch.isMandatory ? 'text-amber-700' : 'text-slate-400'}`}>
                       <Lock className="w-3 h-3" /> Mandatory
                     </span>
                     <div onClick={() => updateChapterMut.mutate({ regulationId: reg.id, chapterId: ch.id, data: { isMandatory: !ch.isMandatory } })}
@@ -1475,36 +1475,36 @@ function RegDetailPage({ reg, onBack, allControls }: {
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-[13px] font-semibold text-slate-800">
+        <p className="text-[15px] font-semibold text-slate-800">
           Controls{' '}
-          <span className="text-slate-400 font-normal text-[12px]">({regControls.length} controls)</span>
+          <span className="text-slate-400 font-normal text-[14px]">({regControls.length} controls)</span>
         </p>
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddExisting(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
             + Add Existing Control
           </button>
           <button onClick={() => setShowControlForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] font-medium bg-[#1A3E5C] hover:bg-[#15324a] text-white rounded-lg transition-colors">
             <Plus className="w-3.5 h-3.5" /> Create New Control
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex-wrap">
+      <div className="flex items-center gap-2 bg-white border border-[#64748B]/20 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search controls…"
-            className="w-full pl-8 pr-3 h-8 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+            className="w-full pl-8 pr-3 h-8 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
         </div>
         <select value={filterChapter} onChange={e => { setFilterChapter(e.target.value); setFilterSection('All'); }}
-          className="h-8 px-2 rounded-lg border border-slate-200 text-[12px] text-slate-700 focus:outline-none bg-white min-w-[140px]">
+          className="h-8 px-2 rounded-lg border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none bg-white min-w-[140px]">
           <option value="All">All Chapters</option>
           {chapters.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={filterSection} onChange={e => setFilterSection(e.target.value)}
-          className="h-8 px-2 rounded-lg border border-slate-200 text-[12px] text-slate-700 focus:outline-none bg-white min-w-[140px]"
+          className="h-8 px-2 rounded-lg border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none bg-white min-w-[140px]"
           disabled={filterChapter === 'All' && chapters.length > 0}>
           <option value="All">All Sections</option>
           {[...new Set(regControls.filter((c: any) => filterChapter === 'All' || getChapterName(c) === filterChapter).map(getSectionName).filter(Boolean))].map(s => (
@@ -1512,7 +1512,7 @@ function RegDetailPage({ reg, onBack, allControls }: {
           ))}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="h-8 px-2 rounded-lg border border-slate-200 text-[12px] text-slate-700 focus:outline-none bg-white min-w-[110px]">
+          className="h-8 px-2 rounded-lg border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none bg-white min-w-[110px]">
           {['All', 'Published', 'Draft'].map(o => <option key={o}>{o}</option>)}
         </select>
       </div>
@@ -1531,23 +1531,23 @@ function RegDetailPage({ reg, onBack, allControls }: {
           })
 
           return (
-            <div key={chapter} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+            <div key={chapter} className="bg-white border border-[#64748B]/20 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
               <button onClick={() => toggleChapter(chapter)}
                 className="w-full flex items-center gap-3 px-5 py-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left border-b border-slate-100/50">
                 {isOpen
                   ? <ChevronDown className="w-4 h-4 text-slate-500" />
                   : <ChevronRight className="w-4 h-4 text-slate-500" />}
-                <span className="text-[14px] font-bold text-slate-800 flex-1">{chapter}</span>
-                <span className="text-[11.5px] font-semibold text-slate-500 px-2 py-0.5 rounded-lg bg-slate-200/50">{chControls.length} controls</span>
+                <span className="text-[16px] font-bold text-slate-800 flex-1">{chapter}</span>
+                <span className="text-[13.5px] font-semibold text-slate-500 px-2 py-0.5 rounded-lg bg-slate-200/50">{chControls.length} controls</span>
               </button>
               {isOpen && (
                 <div className="p-5 space-y-8 bg-slate-50/30">
                   {Array.from(sectionsMap.entries()).map(([secName, secControls]) => (
                     <div key={secName}>
-                      <div className="flex items-center gap-2.5 mb-4">
-                        <div className="h-4 w-1 bg-slate-800 rounded-full"></div>
-                        <h4 className="text-[13.5px] font-bold text-slate-700 flex-1">{secName}</h4>
-                        <span className="text-[11px] font-medium text-slate-400">{secControls.length} controls</span>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#64748B]/15">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#64748B] flex-shrink-0"></span>
+                        <h4 className="text-[15.5px] font-bold text-slate-700 flex-1">{secName}</h4>
+                        <span className="text-[13px] font-medium text-slate-400">{secControls.length} controls</span>
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                         {secControls.map((ctrl: any) => (
@@ -1565,10 +1565,10 @@ function RegDetailPage({ reg, onBack, allControls }: {
         })}
 
         {uncategorized.length > 0 && (
-          <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+          <div className="bg-white border border-[#64748B]/20 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-3 px-5 py-4 bg-slate-50 border-b border-slate-100">
-              <span className="text-[14px] font-bold text-slate-800 flex-1">Uncategorized Controls</span>
-              <span className="text-[11.5px] font-semibold text-slate-500 px-2 py-0.5 rounded-lg bg-slate-200/50">{uncategorized.length} controls</span>
+              <span className="text-[16px] font-bold text-slate-800 flex-1">Uncategorized Controls</span>
+              <span className="text-[13.5px] font-semibold text-slate-500 px-2 py-0.5 rounded-lg bg-slate-200/50">{uncategorized.length} controls</span>
             </div>
             <div className="p-5 bg-slate-50/30">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
@@ -1583,10 +1583,10 @@ function RegDetailPage({ reg, onBack, allControls }: {
         )}
 
         {regControls.length === 0 && (
-          <div className="bg-white border border-slate-100 rounded-xl p-12 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-            <p className="text-[13px] text-slate-400">No controls yet.</p>
+          <div className="bg-white border border-[#64748B]/20 rounded-xl p-12 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+            <p className="text-[15px] text-slate-400">No controls yet.</p>
             <button onClick={() => setShowControlForm(true)}
-              className="mt-3 text-[12.5px] text-slate-600 font-medium underline hover:text-slate-900">
+              className="mt-3 text-[14.5px] text-slate-600 font-medium underline hover:text-slate-900">
               Create the first control
             </button>
           </div>
@@ -1666,7 +1666,7 @@ export function AdminControlsPage() {
   }
 
   return (
-    <div className="space-y-4" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="space-y-4" style={{ fontFamily: 'Inter, sans-serif' }}>
       {selectedControl && (
         <ControlDetailPanel
           control={selectedControl}
@@ -1683,32 +1683,32 @@ export function AdminControlsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[20px] font-bold text-slate-900 tracking-tight"
-            style={{ fontFamily: 'Sora, sans-serif' }}>
+          <h1 className="text-[24px] font-bold text-slate-900 tracking-tight"
+            style={{ fontFamily: 'Cinzel, serif' }}>
             Regulations & Controls
           </h1>
-          <p className="text-[12px] text-slate-400 mt-0.5">
+          <p className="text-[14px] text-slate-400 mt-0.5">
             {regulations.length} regulations · {controls.length} controls in library
           </p>
         </div>
         {mainTab === 'Regulations' ? (
           <button onClick={() => setShowRegForm(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-[13px] font-medium rounded-lg transition-all shadow-sm">
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.98] text-white text-[15px] font-medium rounded-lg transition-all shadow-sm">
             <Plus className="w-4 h-4" /> Create Regulation
           </button>
         ) : (
           <button onClick={() => setShowControlForm(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-[13px] font-medium rounded-lg transition-all shadow-sm">
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] active:scale-[0.98] text-white text-[15px] font-medium rounded-lg transition-all shadow-sm">
             <Plus className="w-4 h-4" /> Create Control
           </button>
         )}
       </div>
 
-      <div className="flex border-b border-slate-200 gap-0">
+      <div className="flex border-b border-[#64748B]/20 gap-0">
         {(['Regulations', 'Controls'] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)}
-            className={`px-5 py-2 text-[12.5px] font-medium border-b-2 transition-colors -mb-px ${mainTab === tab
-                ? 'border-slate-900 text-slate-900'
+            className={`px-5 py-2 text-[14.5px] font-medium border-b-2 transition-colors -mb-px ${mainTab === tab
+                ? 'border-[#1A3E5C] text-slate-900'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}>
             {tab}
@@ -1722,17 +1722,17 @@ export function AdminControlsPage() {
           {regsLoading ? (
             <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-[13px]">Loading regulations...</span>
+              <span className="text-[15px]">Loading regulations...</span>
             </div>
           ) : regulations.length === 0 ? (
-            <div className="bg-white border border-slate-100 rounded-xl p-16 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+            <div className="bg-white border border-[#64748B]/20 rounded-xl p-16 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
               <Shield className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-              <p className="text-[14px] font-semibold text-slate-700">No regulations yet</p>
-              <p className="text-[12px] text-slate-400 mt-1 mb-4">
+              <p className="text-[16px] font-semibold text-slate-700">No regulations yet</p>
+              <p className="text-[14px] text-slate-400 mt-1 mb-4">
                 Create your first regulation to start building the control library
               </p>
               <button onClick={() => setShowRegForm(true)}
-                className="px-4 py-2 bg-slate-900 text-white text-[13px] font-medium rounded-lg hover:bg-slate-800 transition-colors">
+                className="px-4 py-2 bg-[#1A3E5C] text-white text-[15px] font-medium rounded-lg hover:bg-[#15324a] transition-colors">
                 Create First Regulation
               </button>
             </div>
@@ -1745,7 +1745,7 @@ export function AdminControlsPage() {
                 )
                 return (
                   <div key={r.id}
-                    className="bg-white border border-slate-100 rounded-xl p-4 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all cursor-pointer group shadow-[0_1px_6px_rgba(0,0,0,0.04)]"
+                    className="bg-white border border-[#64748B]/20 rounded-xl p-4 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all cursor-pointer group shadow-[0_1px_6px_rgba(0,0,0,0.04)]"
                     onClick={() => setSelectedRegId(r.id)}>
                     <div className="flex items-start gap-3 mb-3">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -1753,20 +1753,20 @@ export function AdminControlsPage() {
                         <Shield style={{ width: 18, height: 18, color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13.5px] font-bold text-slate-900 leading-tight">
+                        <p className="text-[15.5px] font-bold text-slate-900 leading-tight">
                           {r.name}
                         </p>
-                        <p className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-2">
+                        <p className="text-[12.5px] text-slate-400 mt-0.5 line-clamp-2">
                           {r.description?.slice(0, 80)}…
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-2">
+                    <div className="flex items-center gap-3 text-[13px] text-slate-500 mb-2">
                       <span className="font-semibold text-slate-700">{regControls.length} Controls</span>
                       <span>·</span>
                       <span>{r.jurisdiction}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10.5px] mb-3">
+                    <div className="flex items-center gap-2 text-[12.5px] mb-3">
                       <span className="text-slate-500">{r.issuingAuthority}</span>
                       <span className="ml-auto flex items-center gap-1 font-semibold" style={{ color }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
@@ -1777,10 +1777,10 @@ export function AdminControlsPage() {
                       onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => { setMainTab('Controls'); setFilterReg(r.shortCode) }}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[13px] font-medium border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
                         <Eye className="w-3 h-3" /> View Controls
                       </button>
-                      <button onClick={() => { setSelectedRegId(r.id) }} className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Open to edit">
+                      <button onClick={() => { setSelectedRegId(r.id) }} className="flex items-center gap-1 px-2 py-1.5 text-[13px] text-slate-500 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors" title="Open to edit">
                         <Edit2 className="w-3 h-3" />
                       </button>
                     </div>
@@ -1795,17 +1795,17 @@ export function AdminControlsPage() {
       {/* Controls Tab */}
       {mainTab === 'Controls' && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-2 bg-white border border-[#64748B]/20 rounded-xl p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search controls…"
-                className="w-full pl-8 pr-3 h-8 rounded-lg border border-slate-200 text-[12.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
+                className="w-full pl-8 pr-3 h-8 rounded-lg border border-[#64748B]/20 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-colors" />
             </div>
             <div className="flex gap-2">
               <button onClick={() => setFilterReg('All')}
-                className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-all ${filterReg === 'All'
-                    ? 'bg-slate-900 text-white'
-                    : 'border border-slate-200 text-slate-600 hover:border-slate-400'
+                className={`px-3 py-1 rounded-full text-[13.5px] font-medium transition-all ${filterReg === 'All'
+                    ? 'bg-[#1A3E5C] text-white'
+                    : 'border border-[#64748B]/20 text-slate-600 hover:border-slate-400'
                   }`}>
                 All
               </button>
@@ -1814,9 +1814,9 @@ export function AdminControlsPage() {
                 return (
                   <button key={r.id}
                     onClick={() => setFilterReg(filterReg === r.shortCode ? 'All' : r.shortCode)}
-                    className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-all ${filterReg === r.shortCode
+                    className={`px-3 py-1 rounded-full text-[13.5px] font-medium transition-all ${filterReg === r.shortCode
                         ? 'text-white'
-                        : 'border border-slate-200 text-slate-600 hover:border-slate-400'
+                        : 'border border-[#64748B]/20 text-slate-600 hover:border-slate-400'
                       }`}
                     style={filterReg === r.shortCode ? { background: color } : {}}>
                     {r.shortCode}
@@ -1824,7 +1824,7 @@ export function AdminControlsPage() {
                 )
               })}
             </div>
-            <span className="ml-auto text-[11px] text-slate-400 font-medium">
+            <span className="ml-auto text-[13px] text-slate-400 font-medium">
               {filteredControls.length} controls
             </span>
           </div>
@@ -1832,28 +1832,28 @@ export function AdminControlsPage() {
           {controlsLoading ? (
             <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-[13px]">Loading controls...</span>
+              <span className="text-[15px]">Loading controls...</span>
             </div>
           ) : groupedByReg.length === 0 ? (
-            <div className="bg-white border border-slate-100 rounded-xl p-12 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-              <p className="text-[13px] text-slate-400">No controls found.</p>
+            <div className="bg-white border border-[#64748B]/20 rounded-xl p-12 text-center shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+              <p className="text-[15px] text-slate-400">No controls found.</p>
             </div>
           ) : (
             groupedByReg.map(({ reg, chapters }) => {
               const color = getRegColor(reg.shortCode)
               return (
-                <div key={reg.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+                <div key={reg.id} className="bg-white border border-[#64748B]/20 rounded-xl overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
                   <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                     <div className="w-5 h-5 rounded flex items-center justify-center"
                       style={{ background: `${color}14` }}>
                       <Shield style={{ width: 12, height: 12, color }} />
                     </div>
-                    <span className="text-[12.5px] font-bold text-slate-800">{reg.name}</span>
-                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    <span className="text-[14.5px] font-bold text-slate-800">{reg.name}</span>
+                    <span className="font-mono text-[12px] font-bold px-1.5 py-0.5 rounded"
                       style={{ background: `${color}14`, color }}>
                       {reg.shortCode}
                     </span>
-                    <span className="ml-auto text-[11px] text-slate-400">
+                    <span className="ml-auto text-[13px] text-slate-400">
                       {chapters.reduce((s, ch) => s + ch.controls.length, 0)} controls
                     </span>
                   </div>
@@ -1867,8 +1867,8 @@ export function AdminControlsPage() {
                           {isOpen
                             ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                             : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-                          <span className="text-[12px] font-semibold text-slate-700 flex-1">{chapter}</span>
-                          <span className="text-[11px] text-slate-400">{chControls.length} controls</span>
+                          <span className="text-[14px] font-semibold text-slate-700 flex-1">{chapter}</span>
+                          <span className="text-[13px] text-slate-400">{chControls.length} controls</span>
                         </button>
                         {isOpen && (() => {
                           const sectionsMap = new Map<string, any[]>()
@@ -1888,24 +1888,24 @@ export function AdminControlsPage() {
                                   {secIsOpen
                                     ? <ChevronDown className="w-3 h-3 text-slate-400" />
                                     : <ChevronRight className="w-3 h-3 text-slate-400" />}
-                                  <span className="text-[11.5px] font-medium text-slate-600 flex-1">{secName}</span>
-                                  <span className="text-[10px] text-slate-400">{secControls.length}</span>
+                                  <span className="text-[13.5px] font-medium text-slate-600 flex-1">{secName}</span>
+                                  <span className="text-[12px] text-slate-400">{secControls.length}</span>
                                 </button>
                                 {secIsOpen && secControls.map((ctrl: any) => (
                                   <div key={ctrl.id}
                                     className="flex items-center gap-4 pl-14 pr-6 py-2 border-t border-slate-50 hover:bg-white transition-colors bg-white/50">
-                                    <span className="font-mono text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded flex-shrink-0">
+                                    <span className="font-mono text-[12px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded flex-shrink-0">
                                       {ctrl.id.slice(0, 8)}
                                     </span>
-                                    <p className="flex-1 text-[12px] font-medium text-slate-800">{ctrl.title}</p>
-                                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-semibold">
+                                    <p className="flex-1 text-[14px] font-medium text-slate-800">{ctrl.title}</p>
+                                    <span className="text-[12px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-semibold">
                                       {ctrl.applicableTo === 'DATA_FIDUCIARY' ? 'DF'
                                         : ctrl.applicableTo === 'SIGNIFICANT_DF' ? 'SDF' : 'Both'}
                                     </span>
-                                    <span className="text-[10.5px] text-slate-400">
+                                    <span className="text-[12.5px] text-slate-400">
                                       {ctrl._count?.predefinedActions ?? ctrl.predefinedActions?.length ?? 0} actions
                                     </span>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ctrl.status === 'PUBLISHED'
+                                    <span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${ctrl.status === 'PUBLISHED'
                                         ? 'bg-green-50 text-green-700'
                                         : 'bg-amber-50 text-amber-700'
                                       }`}>{ctrl.status}</span>

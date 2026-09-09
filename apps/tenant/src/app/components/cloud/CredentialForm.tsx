@@ -40,7 +40,7 @@ function SecretInput({ value, onChange, placeholder }: { value: string; onChange
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full h-9 pl-3 pr-9 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="w-full h-9 pl-3 pr-9 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[15px] font-mono focus:outline-none focus:border-[#1A3E5C] focus:ring-1 focus:ring-[#1A3E5C]"
       />
       <button
         type="button"
@@ -85,8 +85,8 @@ export function CredentialForm({ schema, values, onChange }: {
               key={alt.title ?? i}
               type="button"
               onClick={() => { setActiveIdx(i); onChange({}); }}
-              className={`flex-1 px-3 py-1.5 rounded-md text-[12.5px] font-semibold transition-colors ${
-                i === activeIdx ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 px-3 py-1.5 rounded-md text-[14.5px] font-semibold transition-colors ${
+                i === activeIdx ? 'bg-white text-[#1A3E5C] shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {alt.title ?? `Option ${i + 1}`}
@@ -105,12 +105,12 @@ export function CredentialForm({ schema, values, onChange }: {
 
           if (field.type === 'boolean') {
             return (
-              <label key={name} className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+              <label key={name} className="flex items-center gap-2 text-[15px] text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={Boolean(value)}
                   onChange={e => setField(name, e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-slate-300 text-[#1A3E5C] focus:ring-[#1A3E5C]"
                 />
                 {fieldLabel(name)}
               </label>
@@ -120,7 +120,7 @@ export function CredentialForm({ schema, values, onChange }: {
           if (field.type === 'object' || field.type === 'array') {
             return (
               <div key={name}>
-                <label className="block text-[12px] font-medium text-slate-600 mb-1">
+                <label className="block text-[14px] font-medium text-slate-600 mb-1">
                   {fieldLabel(name)}{isRequired && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <textarea
@@ -128,16 +128,16 @@ export function CredentialForm({ schema, values, onChange }: {
                   onChange={e => setField(name, e.target.value)}
                   placeholder={field.type === 'object' ? 'Paste JSON content...' : 'One value per line...'}
                   rows={4}
-                  className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[12px] font-mono focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[14px] font-mono focus:outline-none focus:border-[#1A3E5C] resize-none"
                 />
-                {field.description && <p className="text-[11px] text-slate-400 mt-1">{field.description}</p>}
+                {field.description && <p className="text-[13px] text-slate-400 mt-1">{field.description}</p>}
               </div>
             );
           }
 
           return (
             <div key={name}>
-              <label className="block text-[12px] font-medium text-slate-600 mb-1">
+              <label className="block text-[14px] font-medium text-slate-600 mb-1">
                 {fieldLabel(name)}{isRequired && <span className="text-red-500 ml-0.5">*</span>}
               </label>
               {isSecret ? (
@@ -152,11 +152,11 @@ export function CredentialForm({ schema, values, onChange }: {
                   value={(value as string) ?? ''}
                   onChange={e => setField(name, field.type === 'integer' ? Number(e.target.value) : e.target.value)}
                   placeholder={field.description}
-                  className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[15px] focus:outline-none focus:border-[#1A3E5C] focus:ring-1 focus:ring-[#1A3E5C]"
                 />
               )}
               {field.description && !isSecret && (
-                <p className="text-[11px] text-slate-400 mt-1">{field.description}</p>
+                <p className="text-[13px] text-slate-400 mt-1">{field.description}</p>
               )}
             </div>
           );

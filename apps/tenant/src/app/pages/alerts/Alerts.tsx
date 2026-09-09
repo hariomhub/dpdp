@@ -18,7 +18,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 const PRIORITY_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   Critical: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
   High:     { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
-  Medium:   { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+  Medium:   { bg: 'bg-[#1A3E5C]/8', text: 'text-[#1A3E5C]', dot: 'bg-[#D4AF37]' },
   Low:      { bg: 'bg-slate-50', text: 'text-slate-600', dot: 'bg-slate-400' },
 };
 
@@ -59,7 +59,7 @@ export function AlertsPage() {
               key={n.id}
               onClick={() => { setNotifs(p => p.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif)); navigate(n.link); }}
               className={`flex gap-3 p-3.5 rounded-lg border cursor-pointer transition-colors
-                ${n.unread ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                ${n.unread ? 'bg-[#1A3E5C]/8 border-[#D4AF37]/40 hover:bg-[#1A3E5C]/8' : 'bg-white border-[#D4AF37]/35 hover:bg-slate-50'}`}
             >
               {/* Icon */}
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${pColor.bg}`}>
@@ -70,16 +70,16 @@ export function AlertsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="text-[12.5px] font-semibold text-slate-800">{n.title}</p>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${pColor.bg} ${pColor.text}`}>{n.priority}</span>
+                    <p className="text-[14.5px] font-semibold text-slate-800">{n.title}</p>
+                    <span className={`text-[12px] px-1.5 py-0.5 rounded font-semibold ${pColor.bg} ${pColor.text}`}>{n.priority}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-slate-400">{n.time}</span>
-                    {n.unread && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                    <span className="text-[12px] text-slate-400">{n.time}</span>
+                    {n.unread && <span className="w-2 h-2 rounded-full bg-[#D4AF37] flex-shrink-0" />}
                   </div>
                 </div>
-                <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">{n.body}</p>
-                <button className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 mt-1.5 font-medium">
+                <p className="text-[14px] text-slate-500 mt-0.5 leading-relaxed">{n.body}</p>
+                <button className="flex items-center gap-1 text-[13px] text-[#1A3E5C] hover:text-[#D4AF37] mt-1.5 font-medium">
                   Go to record <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -90,8 +90,8 @@ export function AlertsPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16">
             <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-[14px] font-medium text-slate-700">All caught up!</p>
-            <p className="text-[13px] text-slate-400">No notifications in this category.</p>
+            <p className="text-[16px] font-medium text-slate-700">All caught up!</p>
+            <p className="text-[15px] text-slate-400">No notifications in this category.</p>
           </div>
         )}
       </div>

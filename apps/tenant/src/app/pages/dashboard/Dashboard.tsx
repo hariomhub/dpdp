@@ -30,7 +30,7 @@ function MetricCard({ label, value, sub, color, trend, extraClass = '' }: {
   label: string; value: string | number; sub?: string; color: string; trend?: string; extraClass?: string;
 }) {
   return (
-    <div className={`bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden ${extraClass}`}>
+    <div className={`bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden ${extraClass}`}>
       <div className="h-0.5 w-full" style={{ background: color }} />
       <div className="p-4">
         <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
@@ -51,7 +51,7 @@ function DonutChart({ data, label, total }: { data: { name: string; value: numbe
   const navigate = useNavigate();
   const pct = Math.round((data[0].value / total) * 100);
   return (
-    <div className="flex-1 bg-white border border-[#D4AF37]/35 rounded-lg p-4 cursor-pointer hover:shadow-sm transition-shadow" onClick={() => navigate('/org/assessments')}>
+    <div className="flex-1 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4 cursor-pointer hover:shadow-sm transition-shadow" onClick={() => navigate('/org/assessments')}>
       <p className="text-[15px] font-semibold text-slate-800 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>{label}</p>
       <div className="flex items-center gap-4">
         <div className="relative" style={{ width: 80, height: 80 }}>
@@ -132,7 +132,7 @@ function UpcomingDeadlines({ items = [] }: { items?: DashboardStats['upcomingDea
         const urgent = d.daysLeft >= 0 && d.daysLeft < 7;
         const warn = d.daysLeft >= 7 && d.daysLeft <= 14;
         return (
-          <div key={i} className="flex items-center gap-3 p-2.5 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+          <div key={i} className="flex items-center gap-3 p-2.5 border border-[#D4AF37]/20 rounded-lg hover:bg-slate-50 transition-colors">
             <div className="flex-1 min-w-0">
               <p className="text-[14.5px] font-semibold text-slate-800 truncate">{d.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -174,12 +174,46 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
         <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
         <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
         <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
-        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
           <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(risk).color }} />
           <div className="p-4">
             <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p>
             <RiskGauge score={risk} size="md" />
           </div>
+        </div>
+      </div>
+
+      {/* Row 1b: Additional risk signals */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-3.5">
+          <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Overdue by Priority</p>
+          {(c?.overdueTasks ?? 0) === 0 ? (
+            <p className="text-[13.5px] text-slate-400">No overdue tasks</p>
+          ) : (
+            <div className="space-y-1">
+              {stats?.overdueByPriority && (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).filter(p => stats.overdueByPriority[p] > 0).map(p => (
+                <div key={p} className="flex items-center justify-between text-[13px]">
+                  <span style={{ color: p === 'CRITICAL' ? '#EF4444' : p === 'HIGH' ? '#F97316' : p === 'MEDIUM' ? '#EAB308' : '#22C55E' }} className="font-medium">{p.charAt(0) + p.slice(1).toLowerCase()}</span>
+                  <span className="font-semibold text-slate-700">{stats.overdueByPriority[p]}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-3.5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/org/assets')}>
+          <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Cross-Border PII Transfers</p>
+          <p className="text-[26px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{c?.crossBorderPiiTransfers ?? 0}</p>
+          <p className="text-[12.5px] text-slate-400 mt-0.5">PII records transferred outside India</p>
+        </div>
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-3.5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/org/assets')}>
+          <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Suppliers Without DPA</p>
+          <p className={`text-[26px] font-bold ${(c?.suppliersWithoutDpa ?? 0) > 0 ? 'text-red-600' : 'text-slate-900'}`} style={{ fontFamily: 'Cinzel, serif' }}>{c?.suppliersWithoutDpa ?? 0}</p>
+          <p className="text-[12.5px] text-slate-400 mt-0.5">of {c?.suppliers ?? 0} total suppliers</p>
+        </div>
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-3.5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/org/assets')}>
+          <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Assets Without PII Review</p>
+          <p className="text-[26px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{ah?.noPiiRecords ?? 0}</p>
+          <p className="text-[12.5px] text-slate-400 mt-0.5">of {ah?.total ?? 0} registered assets</p>
         </div>
       </div>
 
@@ -205,8 +239,8 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 3: Dept Compliance + Risk Gauge */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Department Compliance Overview</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Department Compliance Overview</p>
           {depts.length > 0 ? (
             <div className="space-y-2">
               {depts.sort((a, b) => a.compliant - b.compliant).map(d => (
@@ -226,8 +260,8 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
             <p className="text-[14px] text-slate-400 italic">No assessment data yet.</p>
           )}
         </div>
-        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-2">Risk Score</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>Risk Score</p>
           <div className="flex flex-col items-center py-2">
             <RiskGauge score={risk} size="lg" />
             <p className="text-[13px] text-slate-400 mt-2">Overall Risk: {RISK_LEVEL(risk).label}</p>
@@ -244,8 +278,8 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 4: Asset Health + Activity */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-2">Asset Health Summary</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>Asset Health Summary</p>
           <p className="text-[36px] font-bold text-slate-900 mb-2" style={{ fontFamily: 'Cinzel, serif' }}>{ah?.total ?? 0}</p>
           {(ah?.total ?? 0) > 0 && (
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex mb-3">
@@ -266,14 +300,14 @@ function CEODashboard({ stats }: { stats?: DashboardStats }) {
             </div>
           )}
         </div>
-        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Recent Activity</p>
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Recent Activity</p>
           <ActivityFeed items={stats?.recentActivity} />
         </div>
       </div>
       {/* Row 5: Deadlines */}
-      <div className="bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-        <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+        <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Upcoming Deadlines</p>
         <UpcomingDeadlines items={stats?.upcomingDeadlines} />
       </div>
     </div>
@@ -285,29 +319,39 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
   const navigate = useNavigate();
   const c = stats?.counts;
   const score = stats?.complianceScore ?? null;
+  const nonCompliantAssets = stats?.assetHealth?.nonCompliant ?? 0;
+  const hasAttentionItems = (c?.rejectedTasks ?? 0) > 0 || (c?.unassignedTasks ?? 0) > 0 || nonCompliantAssets > 0;
   return (
     <div className="space-y-5">
       {/* Attention Banner */}
-      <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <p className="text-[15px] font-semibold text-amber-800">⚠ Requires Your Attention</p>
+      {hasAttentionItems && (
+        <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-[15px] font-semibold text-amber-800">⚠ Requires Your Attention</p>
+          </div>
+          <div className="space-y-1.5">
+            {(c?.rejectedTasks ?? 0) > 0 && (
+              <div className="flex items-center justify-between text-[14px] text-amber-700">
+                <span>{c!.rejectedTasks} task{c!.rejectedTasks !== 1 ? 's' : ''} rejected — awaiting decision</span>
+                <button onClick={() => navigate('/org/compliance-tasks')} className="font-medium hover:text-amber-900">Review Now →</button>
+              </div>
+            )}
+            {(c?.unassignedTasks ?? 0) > 0 && (
+              <div className="flex items-center justify-between text-[14px] text-amber-700">
+                <span>{c!.unassignedTasks} task{c!.unassignedTasks !== 1 ? 's are' : ' is'} unassigned</span>
+                <button onClick={() => navigate('/org/compliance-tasks')} className="font-medium hover:text-amber-900">Assign Now →</button>
+              </div>
+            )}
+            {nonCompliantAssets > 0 && (
+              <div className="flex items-center justify-between text-[14px] text-amber-700">
+                <span>{nonCompliantAssets} asset{nonCompliantAssets !== 1 ? 's have' : ' has'} non-compliant controls</span>
+                <button onClick={() => navigate('/org/assets')} className="font-medium hover:text-amber-900">Review →</button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[14px] text-amber-700">
-            <span>1 task rejected — awaiting your decision</span>
-            <button onClick={() => navigate('/org/compliance-tasks')} className="font-medium hover:text-amber-900">Review Now →</button>
-          </div>
-          <div className="flex items-center justify-between text-[14px] text-amber-700">
-            <span>3 controls have no assigned action</span>
-            <button onClick={() => navigate('/org/controls')} className="font-medium hover:text-amber-900">View Gaps →</button>
-          </div>
-          <div className="flex items-center justify-between text-[14px] text-amber-700">
-            <span>2 assets have non-compliant controls</span>
-            <button onClick={() => navigate('/org/assets')} className="font-medium hover:text-amber-900">Review →</button>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Same KPI row as CEO */}
       <div className="grid grid-cols-5 gap-3">
@@ -315,7 +359,7 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
         <MetricCard label="Active Assessments" value={c?.activeAssessments ?? 0} sub={`${c?.activeAssessments ?? 0} active`} color="#3B82F6" />
         <MetricCard label="Open Compliance Tasks" value={c?.openTasks ?? 0} sub={`${c?.pendingTasks ?? 0} pending · ${c?.inProgressTasks ?? 0} in progress`} color="#F97316" />
         <MetricCard label="Overdue Actions" value={c?.overdueTasks ?? 0} sub="Require immediate attention" color="#EF4444" />
-        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
           <div className="h-0.5 w-full" style={{ background: RISK_LEVEL(stats?.riskScore ?? 0).color }} />
           <div className="p-4"><p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Risk Score</p><RiskGauge score={stats?.riskScore ?? 0} size="md" /></div>
         </div>
@@ -326,12 +370,12 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
         <p className="text-[16px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>My Action Queue</p>
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'Rejected Tasks', value: 1, color: '#EF4444', sub: 'Awaiting your decision', cta: 'Review →' },
-            { label: 'Unassigned Tasks', value: 2, color: '#F59E0B', sub: 'No IT Admin assigned', cta: 'Assign →' },
-            { label: 'Under Review', value: 4, color: '#3B82F6', sub: 'With Internal Auditor', cta: '' },
-            { label: 'Pending Final Sign-Off', value: 1, color: '#8B5CF6', sub: 'With External Auditor', cta: '' },
+            { label: 'Rejected Tasks', value: c?.rejectedTasks ?? 0, color: '#EF4444', sub: 'Awaiting your decision', cta: 'Review →' },
+            { label: 'Unassigned Tasks', value: c?.unassignedTasks ?? 0, color: '#F59E0B', sub: 'No IT Admin assigned', cta: 'Assign →' },
+            { label: 'Under Review', value: c?.pendingReview ?? 0, color: '#3B82F6', sub: 'With Internal Auditor', cta: '' },
+            { label: 'Pending Final Sign-Off', value: c?.finalReview ?? 0, color: '#8B5CF6', sub: 'With External Auditor', cta: '' },
           ].map(c => (
-            <div key={c.label} className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+            <div key={c.label} className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
               <div className="h-0.5 w-full" style={{ background: c.color }} />
               <div className="p-3.5">
                 <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{c.label}</p>
@@ -347,37 +391,39 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
       {/* Assessment Progress */}
       <div>
         <p className="text-[16px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Active Assessment Progress</p>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { name: 'Q1 2025 DPDP Assessment', regs: ['DPDP'], assets: ['Customer DB', 'AWS Infra', '+1 more'], pct: 67, compliant: 28, total: 42, daysLeft: 4 },
-            { name: 'AWS Infrastructure Audit', regs: ['DPDP'], assets: ['AWS Infra', 'Customer DB'], pct: 70, compliant: 14, total: 20, daysLeft: 19 },
-          ].map(a => (
-            <div key={a.name} className="bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-[15px] font-bold text-slate-800">{a.name}</p>
-                  <div className="flex gap-1.5 mt-1">
-                    {a.regs.map(r => <span key={r} className="text-[12px] px-1.5 py-0.5 bg-[#1A3E5C]/8 text-[#1A3E5C] rounded font-semibold">{r}</span>)}
-                    {a.assets.map(as => <span key={as} className="text-[12px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{as}</span>)}
+        {(stats?.assessmentProgress ?? []).length === 0 ? (
+          <p className="text-[14px] text-slate-400 italic p-4 bg-slate-50 rounded-lg">No active assessments right now.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {stats!.assessmentProgress.map(a => (
+              <div key={a.id} className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-[15px] font-bold text-slate-800">{a.name}</p>
+                    <div className="flex gap-1.5 mt-1 flex-wrap">
+                      {a.assets.map(as => <span key={as} className="text-[12px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{as}</span>)}
+                    </div>
                   </div>
+                  <span className={`text-[12.5px] font-bold px-2 py-0.5 rounded flex-shrink-0 ${a.daysLeft < 7 ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {a.daysLeft < 0 ? `${Math.abs(a.daysLeft)}d overdue` : `${a.daysLeft}d left`}
+                  </span>
                 </div>
-                <span className={`text-[12.5px] font-bold px-2 py-0.5 rounded ${a.daysLeft < 7 ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{a.daysLeft}d left</span>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1.5">
+                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${a.pct}%` }} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[13px] text-slate-500">{a.compliant}/{a.total} controls compliant</p>
+                  <button className="text-[13px] text-[#1A3E5C] font-medium hover:text-[#D4AF37]" onClick={() => navigate(`/org/assessments/${a.id}`)}>View →</button>
+                </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-1.5">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: `${a.pct}%` }} />
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] text-slate-500">{a.compliant}/{a.total} controls compliant</p>
-                <button className="text-[13px] text-[#1A3E5C] font-medium hover:text-[#D4AF37]" onClick={() => navigate('/org/assessments')}>View →</button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Gaps + Activity */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <p className="text-[15px] font-semibold text-slate-800">Controls With No Action Assigned</p>
             <span className="text-[13px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">{c?.unassignedTasks ?? 0} gaps</span>
@@ -388,8 +434,8 @@ function CODashboard({ stats }: { stats?: DashboardStats }) {
             <div className="py-4 px-4"><p className="text-[14px] text-slate-500">View compliance tasks to assign team members to open controls.</p><button onClick={() => navigate('/org/compliance-tasks')} className="mt-2 text-[14px] text-[#1A3E5C] font-medium">Go to Tasks →</button></div>
           )}
         </div>
-        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Deadlines</p>
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Upcoming Deadlines</p>
           <UpcomingDeadlines items={stats?.upcomingDeadlines} />
         </div>
       </div>
@@ -435,7 +481,7 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
       )}
 
       {/* Row 2: Task List */}
-      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
           <p className="text-[15px] font-semibold text-slate-800">My Compliance Tasks</p>
           <div className="flex gap-1">
@@ -476,28 +522,33 @@ function ITAdminDashboard({ stats }: { stats?: DashboardStats }) {
 
       {/* Row 3 */}
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Upcoming Due Dates — Next 7 Days</p>
-          {[{ day: 'Tomorrow', tasks: ['Fix consent withdrawal mechanism'] }, { day: 'May 3', tasks: ['Update privacy notice on website'] }].map(d => (
-            <div key={d.day} className="mb-3">
-              <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wide mb-1">{d.day}</p>
-              {d.tasks.map(t => <p key={t} className="text-[14px] text-slate-700 pl-2 border-l-2 border-[#1A3E5C]/30">{t}</p>)}
-            </div>
-          ))}
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Upcoming Due Dates — Next 7 Days</p>
+          {(() => {
+            const upcoming = tasks.filter(t => t.daysLeft >= 0 && t.daysLeft <= 7).sort((a, b) => a.daysLeft - b.daysLeft);
+            if (upcoming.length === 0) return <p className="text-[14px] text-slate-400 italic">Nothing due in the next 7 days.</p>;
+            const dayLabel = (d: number) => d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `In ${d} days`;
+            const groups = new Map<number, typeof upcoming>();
+            upcoming.forEach(t => groups.set(t.daysLeft, [...(groups.get(t.daysLeft) ?? []), t]));
+            return [...groups.entries()].map(([days, items]) => (
+              <div key={days} className="mb-3">
+                <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wide mb-1">{dayLabel(days)}</p>
+                {items.map(t => <p key={t.id} className="text-[14px] text-slate-700 pl-2 border-l-2 border-[#1A3E5C]/30">{t.title}</p>)}
+              </div>
+            ));
+          })()}
         </div>
-        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Evidence Submission Status</p>
-          {[
-            { title: 'Data Retention Policy v2.1', asset: 'Customer Database', date: 'Mar 12', status: 'Approved' },
-            { title: 'AWS DPA Agreement 2025', asset: 'AWS Infra', date: 'Mar 5', status: 'Approved' },
-            { title: 'Parental Consent Demo Video', asset: 'Customer Database', date: 'Feb 25', status: 'Rejected' },
-          ].map((ev, i) => (
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Evidence Submission Status</p>
+          {(stats?.myRecentEvidence ?? []).length === 0 ? (
+            <p className="text-[14px] text-slate-400 italic">No evidence submitted yet.</p>
+          ) : stats!.myRecentEvidence.map((ev, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
               <div className="flex-1">
                 <p className="text-[14px] font-medium text-slate-800 truncate">{ev.title}</p>
                 <p className="text-[12.5px] text-slate-400">{ev.asset} · {ev.date}</p>
               </div>
-              <span className={`text-[12px] px-2 py-0.5 rounded font-semibold flex-shrink-0 ${ev.status === 'Approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{ev.status}</span>
+              <span className={`text-[12px] px-2 py-0.5 rounded font-semibold flex-shrink-0 ${ev.status === 'Approved' ? 'bg-green-50 text-green-700' : ev.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{ev.status}</span>
             </div>
           ))}
         </div>
@@ -516,12 +567,12 @@ function IADashboard({ stats }: { stats?: DashboardStats }) {
     <div className="space-y-5">
       <div className="grid grid-cols-4 gap-3">
         <MetricCard label="Pending Review" value={c?.pendingReview ?? 0} color="#3B82F6" sub="Evidence awaiting your review" />
-        <MetricCard label="Reviewed Today" value={0} color="#22C55E" sub="Processed today" />
-        <MetricCard label="Approved Total" value={0} color="#10B981" sub="This assessment cycle" />
-        <MetricCard label="Rejected Total" value={0} color="#EF4444" sub="Sent back for rework" />
+        <MetricCard label="Reviewed Today" value={c?.myReviewedToday ?? 0} color="#22C55E" sub="Processed today" />
+        <MetricCard label="Approved Total" value={c?.myApprovedTotal ?? 0} color="#10B981" sub="All-time, by you" />
+        <MetricCard label="Rejected Total" value={c?.myRejectedTotal ?? 0} color="#EF4444" sub="Sent back for rework" />
       </div>
 
-      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-[15px] font-semibold text-slate-800">Evidence Awaiting Your Review</p>
           <p className="text-[13px] text-slate-400">Oldest first — review in order of submission</p>
@@ -554,31 +605,27 @@ function IADashboard({ stats }: { stats?: DashboardStats }) {
       </div>
 
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Controls Reviewed This Cycle</p>
-          {[
-            { name: 'Q1 2025 DPDP Assessment', regs: ['DPDP'], reviewed: 28, total: 42 },
-            { name: 'AWS Infrastructure Audit', regs: ['DPDP'], reviewed: 12, total: 20 },
-          ].map(a => (
-            <div key={a.name} className="mb-4">
+        <div className="col-span-3 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Active Assessment Progress</p>
+          {(stats?.assessmentProgress ?? []).length === 0 ? (
+            <p className="text-[14px] text-slate-400 italic">No active assessments right now.</p>
+          ) : stats!.assessmentProgress.map(a => (
+            <div key={a.id} className="mb-4">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[14px] font-semibold text-slate-800">{a.name}</p>
-                <span className="text-[13px] text-slate-400">{a.reviewed}/{a.total} controls</span>
+                <span className="text-[13px] text-slate-400">{a.compliant}/{a.total} controls</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: `${(a.reviewed / a.total) * 100}%` }} />
+                <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: `${a.pct}%` }} />
               </div>
             </div>
           ))}
         </div>
-        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg p-4">
-          <p className="text-[15px] font-semibold text-slate-800 mb-3">Recently Processed</p>
-          {[
-            { title: 'Data Retention Policy', asset: 'Customer DB', decision: 'Approved', time: '2 hrs ago' },
-            { title: 'AWS DPA Agreement', asset: 'AWS Infra', decision: 'Approved', time: '1 day ago' },
-            { title: 'Parental Consent Demo', asset: 'Customer DB', decision: 'Rejected', time: '3 days ago' },
-            { title: 'Cookie Banner Update', asset: 'Consent Banner', decision: 'Approved', time: '5 days ago' },
-          ].map((item, i) => (
+        <div className="col-span-2 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] p-4">
+          <p className="text-[15px] font-semibold text-slate-800 mb-3" style={{ fontFamily: 'Cinzel, serif' }}>Recently Processed</p>
+          {(stats?.myRecentlyReviewed ?? []).length === 0 ? (
+            <p className="text-[14px] text-slate-400 italic">You haven't reviewed anything yet.</p>
+          ) : stats!.myRecentlyReviewed.map((item, i) => (
             <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-50 last:border-0">
               {item.decision === 'Approved' ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" /> : <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />}
               <div className="flex-1 min-w-0">
@@ -604,14 +651,14 @@ function EADashboard({ stats }: { stats?: DashboardStats }) {
     <div className="space-y-5">
       <div className="grid grid-cols-3 gap-3">
         <MetricCard label="Pending Sign-Off" value={c?.finalReview ?? 0} sub="Internally approved, awaiting final sign-off" color="#F59E0B" />
-        <MetricCard label="Signed Off This Cycle" value={0} sub="Final approvals given" color="#22C55E" />
-        <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+        <MetricCard label="Signed Off (30d)" value={c?.signedOffLast30Days ?? 0} sub="Tenant-wide, last 30 days" color="#22C55E" />
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
           <div className="h-0.5 bg-green-500 w-full" />
           <div className="p-4"><p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Overall Compliance Score</p><RiskGauge score={stats?.complianceScore ?? 0} size="md" /></div>
         </div>
       </div>
 
-      <div className="bg-white border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-[15px] font-semibold text-slate-800">Items Ready for Final Sign-Off</p>
         </div>
@@ -636,6 +683,24 @@ function EADashboard({ stats }: { stats?: DashboardStats }) {
         </div>
       </div>
 
+      {(stats?.recentSignOffs ?? []).length > 0 && (
+        <div className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-[15px] font-semibold text-slate-800">Recent Sign-Offs</p>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {stats!.recentSignOffs.map((item, i) => (
+              <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-medium text-slate-800 truncate">{item.title}</p>
+                  <p className="text-[12.5px] text-slate-400">{item.asset} · {item.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Read-only compliance overview */}
       <div className="flex items-start gap-2 px-3 py-2 bg-slate-100 border border-[#D4AF37]/35 rounded-lg">
@@ -732,11 +797,16 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="pl-3 border-l-[3px] border-[#D4AF37]">
-        <h1 className="text-[28px] font-bold text-[#1A3E5C] tracking-tight" style={{ fontFamily: 'Cinzel, serif' }}>{TITLES[role]}</h1>
-        <p className="text-[14px] text-slate-400 mt-1">
-          {stats?.orgName || orgName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
+      <div className="flex items-center gap-3 pb-4 border-b border-[#D4AF37]/30">
+        <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
+        </div>
+        <div>
+          <h1 className="text-[28px] font-bold text-[#1A3E5C] tracking-tight" style={{ fontFamily: 'Cinzel, serif' }}>{TITLES[role]}</h1>
+          <p className="text-[14px] text-slate-400 mt-1">
+            {stats?.orgName || orgName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
       </div>
       {isLoading ? <DashSkeleton /> : (
         <>

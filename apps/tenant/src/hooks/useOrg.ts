@@ -13,19 +13,25 @@ export interface PiiRecordSummary {
 }
 
 export interface AssetSummary {
-  id: string; name: string; assetType: string; criticality: string
-  status: string; compliance: string
+  id: string; assetCode: string; name: string; assetType: string; description: string | null
+  criticality: string; status: string; compliance: string
+  hostingLocation: string; internetFacing: boolean; vendorName: string | null
+  ownerId: string | null; ownerName: string | null
+  compliantControls: number; totalControls: number; openTasks: number
+  createdAt: string; updatedAt: string
   piiRecords: PiiRecordSummary[]
 }
 
 export interface SupplierAssetSummary {
-  id: string; name: string; assetType: string; criticality: string
+  id: string; name: string; assetType: string; description: string | null
+  criticality: string; hostingLocation: string | null; internetFacing: boolean
   piiRecords: PiiRecordSummary[]
 }
 
 export interface SupplierSummary {
-  id: string; name: string; supplierType: string; contactEmail: string
-  countryOfOperation: string; dpaSigned: boolean; criticality: string; status: string
+  id: string; name: string; supplierType: string; contactName: string | null; contactEmail: string
+  countryOfOperation: string; dpaSigned: boolean; dpaReference: string | null
+  criticality: string; status: string
   supplierAssets: SupplierAssetSummary[]
 }
 
@@ -94,8 +100,8 @@ export function useCreateAsset() {
   return useMutation({
     mutationFn: ({ deptId, ...data }: {
       deptId: string; name: string; assetType: string; description?: string
-      hostingLocation: string; criticality: string; internetFacing: boolean; status: string
-    }) => apiClient.post(`/org/departments/${deptId}/assets`, data),
+      hostingLocation: string; vendorName?: string; criticality: string; internetFacing: boolean; status: string
+    }) => apiClient.post<{ success: boolean; data: AssetSummary }>(`/org/departments/${deptId}/assets`, data).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.org.departments })
       toast.success('Asset added')
@@ -135,7 +141,7 @@ export function useCreatePiiRecord() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ assetId, ...data }: { assetId: string; [k: string]: unknown }) =>
-      apiClient.post(`/org/assets/${assetId}/pii-records`, data),
+      apiClient.post<{ success: boolean; data: PiiRecordSummary }>(`/org/assets/${assetId}/pii-records`, data).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.org.departments })
       toast.success('PII record added')

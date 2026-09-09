@@ -31,7 +31,7 @@ export function PoliciesPage() {
       <div className="flex items-center gap-3 mb-3">
         <SearchInput placeholder="Search policies..." value={search} onChange={setSearch} />
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="h-8 px-2.5 rounded-md bg-white border border-slate-300 text-slate-700 text-[12px] focus:outline-none focus:border-blue-500">
+          className="h-8 px-2.5 rounded-md bg-white border border-slate-300 text-slate-700 text-[14px] focus:outline-none focus:border-[#1A3E5C]">
           <option value="All">All Statuses</option>
           <option>Active</option>
           <option>Draft</option>
@@ -43,25 +43,25 @@ export function PoliciesPage() {
         {filtered.map(policy => (
           <div key={policy.id}
             className={`bg-white border rounded-lg p-4 hover:shadow-sm cursor-pointer transition-all relative overflow-hidden
-              ${policy.status === 'Retired' ? 'border-slate-200 opacity-60' : 'border-slate-200 hover:border-slate-300'}`}
+              ${policy.status === 'Retired' ? 'border-[#D4AF37]/35 opacity-60' : 'border-[#D4AF37]/35 hover:border-slate-300'}`}
             onClick={() => navigate(`/org/policies/${policy.id}`)}>
 
             {/* Retired stamp */}
             {policy.status === 'Retired' && (
               <div className="absolute top-3 right-12 rotate-[-15deg] border-2 border-slate-300 px-2 py-0.5 rounded">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Retired</span>
+                <span className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">Retired</span>
               </div>
             )}
 
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="text-[13px] font-semibold text-slate-900">{policy.name}</h3>
+                  <h3 className="text-[15px] font-semibold text-slate-900">{policy.name}</h3>
                   <StatusChip status={policy.status} />
-                  <span className="font-mono text-[11px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded">{policy.version}</span>
+                  <span className="font-mono text-[13px] px-1.5 py-0.5 bg-slate-100 border border-[#D4AF37]/35 text-slate-500 rounded">{policy.version}</span>
                 </div>
-                <p className="text-[12px] text-slate-500 line-clamp-1 mb-2">{policy.description}</p>
-                <div className="flex items-center gap-4 text-[11px] text-slate-400 flex-wrap">
+                <p className="text-[14px] text-slate-500 line-clamp-1 mb-2">{policy.description}</p>
+                <div className="flex items-center gap-4 text-[13px] text-slate-400 flex-wrap">
                   <span>Owner: <span className="text-slate-600">{policy.owner}</span></span>
                   {policy.effectiveDate && <span>Effective: {policy.effectiveDate}</span>}
                   <span>{policy.linkedControls} controls linked</span>

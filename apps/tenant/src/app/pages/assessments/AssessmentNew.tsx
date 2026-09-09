@@ -9,6 +9,7 @@ import {
   useCreateAssessment, useDeptItAdmins,
 } from '../../../hooks/useAssessments';
 import { useListDepartments } from '../../../hooks/useOrg';
+import { useListControls } from '../../../hooks/useControls';
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 function StepIndicator({ steps, current }: { steps: string[]; current: number }) {
@@ -17,14 +18,14 @@ function StepIndicator({ steps, current }: { steps: string[]; current: number })
       {steps.map((s, i) => (
         <React.Fragment key={s}>
           <div className="flex flex-col items-center gap-1">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold border-2 transition-all ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-bold border-2 transition-all ${
               current > i + 1 ? 'bg-green-500 border-green-500 text-white'
               : current === i + 1 ? 'bg-slate-900 border-slate-900 text-white'
               : 'bg-white border-slate-300 text-slate-400'
             }`}>
               {current > i + 1 ? <Check className="w-4 h-4" /> : i + 1}
             </div>
-            <span className={`text-[10.5px] font-medium whitespace-nowrap ${current === i + 1 ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
+            <span className={`text-[12.5px] font-medium whitespace-nowrap ${current === i + 1 ? 'text-slate-900' : 'text-slate-400'}`}>{s}</span>
           </div>
           {i < steps.length - 1 && (
             <div className={`h-px flex-1 mx-2 mb-4 transition-all ${current > i + 1 ? 'bg-green-400' : 'bg-slate-200'}`} />
@@ -37,15 +38,6 @@ function StepIndicator({ steps, current }: { steps: string[]; current: number })
 
 const STEPS = ['Details', 'Assets', 'Regulation', 'Assign Tasks', 'Review'];
 
-// Placeholder preview only — real tenant-authored custom controls aren't built yet.
-// Kept entirely separate from `allControls`/`activeControls` so these ids never reach
-// the create-assessment payload or the task-list preview.
-const DUMMY_CUSTOM_CONTROLS = [
-  { id: 'custom-dummy-1', title: 'Internal Data Handling SOP Review' },
-  { id: 'custom-dummy-2', title: 'Vendor Security Questionnaire Process' },
-  { id: 'custom-dummy-3', title: 'Employee Data Access Recertification' },
-];
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function AssessmentNewPage() {
   const navigate = useNavigate();
@@ -54,6 +46,7 @@ export function AssessmentNewPage() {
   const { data: regulations = [], isLoading: loadingRegs } = useAvailableRegulations();
   const { data: allAssets   = [], isLoading: loadingAssets } = useAvailableAssets();
   const { data: depts       = [], isLoading: loadingDepts  } = useListDepartments();
+  const { data: allControlsCatalog = [] } = useListControls();
   const createMutation = useCreateAssessment();
 
   // ── Wizard state ──────────────────────────────────────────────────────────────
@@ -85,12 +78,14 @@ export function AssessmentNewPage() {
   // ── Derived ────────────────────────────────────────────────────────────────────
   const selectedDeptName = (depts as any[]).find((d: any) => d.id === form.deptId)?.name ?? '';
   const selectedReg      = (regulations as any[]).find((r: any) => r.id === selectedRegId);
-  const allControls      = selectedReg
+  const regulationControls = selectedReg
     ? selectedReg.chapters?.flatMap((ch: any) => ch.controls ?? []) ?? []
     : [];
-  const activeControls   = allControls.filter((c: any) => !excludedControls.has(c.id));
-  const excludedRealCount = allControls.filter((c: any) => excludedControls.has(c.id)).length;
-  const activeCustomControls = DUMMY_CUSTOM_CONTROLS.filter(c => !excludedControls.has(c.id));
+  const customControlsList = allControlsCatalog.filter(c => c.isCustom);
+  const allControls       = [...regulationControls, ...customControlsList];
+  const activeControls    = allControls.filter((c: any) => !excludedControls.has(c.id));
+  const excludedRealCount = regulationControls.filter((c: any) => excludedControls.has(c.id)).length;
+  const activeCustomControls = customControlsList.filter(c => !excludedControls.has(c.id));
   const selectedAssetList = ownDeptAssets.filter((a: any) => selectedAssets.has(a.id));
 
   // Task list preview: activeControls × selectedAssets
@@ -141,8 +136,6 @@ export function AssessmentNewPage() {
       endDate:      form.endDate,
       regulationId: selectedRegId,
       assetIds:     Array.from(selectedAssets),
-      // Only real catalog control ids ever reach the API — dummy custom-control ids
-      // (from the placeholder Custom Controls tab) live in the same Set but are never real rows.
       exclusions:   Array.from(excludedControls)
         .filter(id => allControls.some((c: any) => c.id === id))
         .map(id => ({ controlId: id, reason: exclusionReasons[id] || 'Excluded by CO' })),
@@ -157,20 +150,20 @@ export function AssessmentNewPage() {
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
         <Check className="w-8 h-8 text-green-600" />
       </div>
-      <h2 className="text-[20px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+      <h2 className="text-[24px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>
         Assessment Created!
       </h2>
-      <p className="text-[13px] text-slate-500 text-center max-w-md">
+      <p className="text-[15px] text-slate-500 text-center max-w-md">
         {taskList.length} compliance tasks have been created and assigned.
         IT Admins have been notified.
       </p>
       <div className="flex gap-3">
         <button onClick={() => navigate('/org/tasks')}
-          className="px-6 py-2.5 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800">
+          className="px-6 py-2.5 bg-slate-900 text-white text-[15px] font-semibold rounded-lg hover:bg-slate-800">
           View Tasks →
         </button>
         <button onClick={() => navigate('/org/assessments')}
-          className="px-6 py-2.5 border border-slate-300 text-slate-600 text-[13px] font-medium rounded-lg hover:bg-slate-50">
+          className="px-6 py-2.5 border border-slate-300 text-slate-600 text-[15px] font-medium rounded-lg hover:bg-slate-50">
           All Assessments
         </button>
       </div>
@@ -186,58 +179,60 @@ export function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-5xl mx-auto space-y-5">
       <div>
         <button onClick={() => navigate('/org/assessments')}
-          className="text-[12.5px] text-slate-400 hover:text-blue-600 flex items-center gap-1 mb-3">
+          className="text-[14.5px] text-slate-400 hover:text-[#D4AF37] flex items-center gap-1 mb-3">
           ← Back to Assessments
         </button>
-        <h1 className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+        <h1 className="text-[26px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>
           New Assessment
         </h1>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className="bg-white border border-[#D4AF37]/35 rounded-xl shadow-sm shadow-slate-900/[0.04] p-6">
         <StepIndicator steps={STEPS} current={step} />
 
         {/* ─── Step 1: Assessment Details ─── */}
         {step === 1 && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-[12px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Assessment Name *</label>
-              <input value={form.name} onChange={e => up('name', e.target.value)}
-                placeholder="e.g., Q1 2026 DPDP Compliance Assessment"
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[14px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Assessment Name *</label>
+                <input value={form.name} onChange={e => up('name', e.target.value)}
+                  placeholder="e.g., Q1 2026 DPDP Compliance Assessment"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Department *</label>
+                {loadingDepts ? <div className="h-10 bg-slate-100 rounded-lg animate-pulse" /> : (
+                  <select value={form.deptId} onChange={e => { up('deptId', e.target.value); setSelectedAssets(new Set()); }}
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700 bg-white">
+                    <option value="">Select department…</option>
+                    {(depts as any[]).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                )}
+              </div>
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Description</label>
+              <label className="block text-[14px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Description</label>
               <textarea value={form.desc} onChange={e => up('desc', e.target.value)} rows={2}
                 placeholder="Optional description..."
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[13px] resize-none focus:outline-none focus:border-slate-700" />
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[15px] resize-none focus:outline-none focus:border-slate-700" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[12px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Start Date *</label>
+                <label className="block text-[14px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Start Date *</label>
                 <input type="date" value={form.startDate} onChange={e => up('startDate', e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">End Date *</label>
+                <label className="block text-[14px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">End Date *</label>
                 <input type="date" value={form.endDate} min={form.startDate} onChange={e => up('endDate', e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
               </div>
             </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Department *</label>
-              {loadingDepts ? <div className="h-10 bg-slate-100 rounded-lg animate-pulse" /> : (
-                <select value={form.deptId} onChange={e => { up('deptId', e.target.value); setSelectedAssets(new Set()); }}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700 bg-white">
-                  <option value="">Select department…</option>
-                  {(depts as any[]).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              )}
-              <p className="text-[11px] text-slate-400 mt-1">Assets and IT Admins will be loaded from this department.</p>
-            </div>
+            <p className="text-[13px] text-slate-400 -mt-2">Assets and IT Admins will be loaded from the selected department.</p>
           </div>
         )}
 
@@ -246,49 +241,50 @@ export function AssessmentNewPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[14px] font-bold text-slate-900">Select Assets</p>
-                <p className="text-[12px] text-slate-400">Assets in <strong>{selectedDeptName}</strong> · {selectedAssets.size} selected</p>
+                <p className="text-[16px] font-bold text-slate-900">Select Assets</p>
+                <p className="text-[14px] text-slate-400">Assets in <strong>{selectedDeptName}</strong> · {selectedAssets.size} selected</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setSelectedAssets(new Set(ownDeptAssets.map((a: any) => a.id)))}
-                  className="text-[11.5px] text-blue-600 hover:text-blue-700 font-medium">Select all</button>
+                  className="text-[13.5px] text-[#1A3E5C] hover:text-[#D4AF37] font-medium">Select all</button>
                 <button onClick={() => setSelectedAssets(new Set())}
-                  className="text-[11.5px] text-slate-400 hover:text-slate-600">Clear</button>
+                  className="text-[13.5px] text-slate-400 hover:text-slate-600">Clear</button>
               </div>
             </div>
 
             {loadingAssets ? (
               <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 bg-slate-100 rounded-lg animate-pulse" />)}</div>
             ) : ownDeptAssets.length === 0 && supplierDeptAssets.length === 0 ? (
-              <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-xl">
+              <div className="py-12 text-center border-2 border-dashed border-[#D4AF37]/35 rounded-xl">
                 <Database className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-[13px] text-slate-500">No assets found in {selectedDeptName}.</p>
-                <p className="text-[11.5px] text-slate-400 mt-1">Add assets to this department in Org Settings first.</p>
+                <p className="text-[15px] text-slate-500">No assets found in {selectedDeptName}.</p>
+                <p className="text-[13.5px] text-slate-400 mt-1">Add assets to this department in Org Settings first.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Own assets — selectable */}
                 {ownDeptAssets.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[11.5px] font-semibold text-slate-500 uppercase tracking-wide">Org Assets</p>
+                    <p className="text-[13.5px] font-semibold text-slate-500 uppercase tracking-wide">Org Assets</p>
+                    <div className="grid grid-cols-2 gap-2">
                     {ownDeptAssets.map((asset: any) => {
                       const isSelected = selectedAssets.has(asset.id);
                       return (
                         <div key={asset.id} onClick={() => toggleAsset(asset.id)}
                           className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                            isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'
+                            isSelected ? 'border-[#1A3E5C] bg-[#1A3E5C]/8' : 'border-[#D4AF37]/35 hover:border-slate-300 bg-white'
                           }`}>
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                            isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-300'
+                            isSelected ? 'bg-[#D4AF37] border-[#1A3E5C]' : 'border-slate-300'
                           }`}>
                             {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
-                          <Database className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                          <Database className="w-4 h-4 text-[#1A3E5C]/50 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-[13px] font-semibold text-slate-800">{asset.name}</p>
-                            <p className="text-[11px] text-slate-400">{asset.assetType?.replace(/_/g, ' ')}</p>
+                            <p className="text-[15px] font-semibold text-slate-800">{asset.name}</p>
+                            <p className="text-[13px] text-slate-400">{asset.assetType?.replace(/_/g, ' ')}</p>
                           </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${
                             asset.criticality === 'CRITICAL' ? 'bg-red-50 text-red-600' :
                             asset.criticality === 'HIGH' ? 'bg-orange-50 text-orange-600' :
                             'bg-slate-100 text-slate-500'
@@ -296,6 +292,7 @@ export function AssessmentNewPage() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 )}
 
@@ -303,29 +300,31 @@ export function AssessmentNewPage() {
                 {supplierDeptAssets.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <p className="text-[11.5px] font-semibold text-slate-500 uppercase tracking-wide">Vendor / Supplier Assets</p>
-                      <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded font-medium">Reference only · Tasks not created</span>
+                      <p className="text-[13.5px] font-semibold text-slate-500 uppercase tracking-wide">Vendor / Supplier Assets</p>
+                      <span className="text-[12px] bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded font-medium">Reference only · Tasks not created</span>
                     </div>
+                    <div className="grid grid-cols-2 gap-2">
                     {supplierDeptAssets.map((asset: any) => (
                       <div key={asset.id}
-                        className="flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-slate-200 bg-slate-50 opacity-70 cursor-not-allowed">
-                        <div className="w-5 h-5 rounded border-2 border-slate-200 flex-shrink-0" />
+                        className="flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-[#D4AF37]/35 bg-slate-50 opacity-70 cursor-not-allowed">
+                        <div className="w-5 h-5 rounded border-2 border-[#D4AF37]/35 flex-shrink-0" />
                         <Database className="w-4 h-4 text-slate-300 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-[13px] font-semibold text-slate-600">{asset.name}</p>
-                          <p className="text-[11px] text-slate-400">{asset.supplierName} · {asset.assetType?.replace(/_/g, ' ')}</p>
+                          <p className="text-[15px] font-semibold text-slate-600">{asset.name}</p>
+                          <p className="text-[13px] text-slate-400">{asset.supplierName} · {asset.assetType?.replace(/_/g, ' ')}</p>
                         </div>
-                        <span className="text-[10px] text-slate-400 italic">vendor asset</span>
+                        <span className="text-[12px] text-slate-400 italic">vendor asset</span>
                       </div>
                     ))}
+                    </div>
                   </div>
                 )}
 
                 {ownDeptAssets.length === 0 && (
-                  <div className="py-8 text-center border-2 border-dashed border-slate-200 rounded-xl">
+                  <div className="py-8 text-center border-2 border-dashed border-[#D4AF37]/35 rounded-xl">
                     <Database className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="text-[13px] text-slate-500">No own assets in {selectedDeptName}.</p>
-                    <p className="text-[11.5px] text-slate-400 mt-1">Add assets to this department in Org Settings to create compliance tasks.</p>
+                    <p className="text-[15px] text-slate-500">No own assets in {selectedDeptName}.</p>
+                    <p className="text-[13.5px] text-slate-400 mt-1">Add assets to this department in Org Settings to create compliance tasks.</p>
                   </div>
                 )}
               </div>
@@ -337,8 +336,8 @@ export function AssessmentNewPage() {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <p className="text-[14px] font-bold text-slate-900 mb-1">Select Regulation</p>
-              <p className="text-[12px] text-slate-400 mb-3">Controls from this regulation will be assessed against your selected assets.</p>
+              <p className="text-[16px] font-bold text-slate-900 mb-1">Select Regulation</p>
+              <p className="text-[14px] text-slate-400 mb-3">Controls from this regulation will be assessed against your selected assets.</p>
               {loadingRegs ? (
                 <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-16 bg-slate-100 rounded-lg animate-pulse" />)}</div>
               ) : (
@@ -346,20 +345,20 @@ export function AssessmentNewPage() {
                   {(regulations as any[]).map((reg: any) => (
                     <div key={reg.id} onClick={() => setSelectedRegId(reg.id)}
                       className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        selectedRegId === reg.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+                        selectedRegId === reg.id ? 'border-[#1A3E5C] bg-[#1A3E5C]/8' : 'border-[#D4AF37]/35 hover:border-slate-300'
                       }`}>
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedRegId === reg.id ? 'bg-blue-500 border-blue-500' : 'border-slate-300'
+                        selectedRegId === reg.id ? 'bg-[#D4AF37] border-[#1A3E5C]' : 'border-slate-300'
                       }`}>
                         {selectedRegId === reg.id && <div className="w-2 h-2 bg-white rounded-full" />}
                       </div>
-                      <Shield className="w-4 h-4 text-blue-400" />
+                      <Shield className="w-4 h-4 text-[#1A3E5C]/50" />
                       <div className="flex-1">
-                        <p className="text-[13px] font-bold text-slate-800">{reg.name}</p>
-                        <p className="text-[11px] text-slate-400">{reg.shortCode} · {reg.jurisdiction}</p>
+                        <p className="text-[15px] font-bold text-slate-800">{reg.name}</p>
+                        <p className="text-[13px] text-slate-400">{reg.shortCode} · {reg.jurisdiction}</p>
                       </div>
                       {selectedRegId === reg.id && (
-                        <span className="text-[10.5px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                        <span className="text-[12.5px] bg-[#1A3E5C]/12 text-[#1A3E5C] px-2 py-0.5 rounded font-semibold">
                           {allControls.length} controls
                         </span>
                       )}
@@ -372,16 +371,16 @@ export function AssessmentNewPage() {
             {selectedReg && (
               <div>
                 {/* Tabs: catalog (regulation-mandated) controls vs the org's own custom controls */}
-                <div className="flex items-center gap-1 border-b border-slate-200 mb-2">
+                <div className="flex items-center gap-1 border-b border-[#D4AF37]/35 mb-2">
                   {[
-                    { key: 'regulation' as const, label: 'Regulation Controls', count: allControls.length },
-                    { key: 'custom' as const, label: 'Custom Controls', count: DUMMY_CUSTOM_CONTROLS.length },
+                    { key: 'regulation' as const, label: 'Regulation Controls', count: regulationControls.length },
+                    { key: 'custom' as const, label: 'Custom Controls', count: customControlsList.length },
                   ].map(tab => (
                     <button key={tab.key} onClick={() => setControlsTab(tab.key)}
-                      className={`px-3 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors ${
-                        controlsTab === tab.key ? 'border-blue-500 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+                      className={`px-3 py-2 text-[14.5px] font-semibold border-b-2 -mb-px transition-colors ${
+                        controlsTab === tab.key ? 'border-[#1A3E5C] text-[#1A3E5C]' : 'border-transparent text-slate-500 hover:text-slate-800'
                       }`}>
-                      {tab.label} <span className="ml-1 text-[10.5px] text-slate-400">({tab.count})</span>
+                      {tab.label} <span className="ml-1 text-[12.5px] text-slate-400">({tab.count})</span>
                     </button>
                   ))}
                 </div>
@@ -389,26 +388,26 @@ export function AssessmentNewPage() {
                 {controlsTab === 'regulation' ? (
                   <>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11.5px] text-slate-400">Controls defined via the regulation's control library — mandatory chapters cannot be excluded.</p>
-                      <p className="text-[11.5px] text-slate-400 flex-shrink-0 ml-2">
+                      <p className="text-[13.5px] text-slate-400">Controls defined via the regulation's control library — mandatory chapters cannot be excluded.</p>
+                      <p className="text-[13.5px] text-slate-400 flex-shrink-0 ml-2">
                         {activeControls.length} active · {excludedRealCount} excluded
                       </p>
                     </div>
                     <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                       {selectedReg.chapters?.map((chapter: any) => (
-                        <div key={chapter.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div key={chapter.id} className="border border-[#D4AF37]/35 rounded-lg overflow-hidden">
                           <button onClick={() => setExpandedChapters(p => {
                             const n = new Set(p); n.has(chapter.id) ? n.delete(chapter.id) : n.add(chapter.id); return n;
                           })} className="w-full flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-left">
                             <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedChapters.has(chapter.id) ? 'rotate-90' : ''}`} />
-                            <span className="text-[12.5px] font-bold text-slate-700">{chapter.name}</span>
-                            {chapter.title && <span className="text-[11.5px] text-slate-400">— {chapter.title}</span>}
+                            <span className="text-[14.5px] font-bold text-slate-700">{chapter.name}</span>
+                            {chapter.title && <span className="text-[13.5px] text-slate-400">— {chapter.title}</span>}
                             {chapter.isMandatory && (
-                              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                              <span className="flex items-center gap-1 text-[12px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                                 <Lock className="w-2.5 h-2.5" /> Mandatory
                               </span>
                             )}
-                            <span className="text-[10px] text-slate-400 ml-auto">{chapter.controls?.length ?? 0} controls</span>
+                            <span className="text-[12px] text-slate-400 ml-auto">{chapter.controls?.length ?? 0} controls</span>
                           </button>
                           {expandedChapters.has(chapter.id) && chapter.controls?.map((ctrl: any) => {
                             const isExcluded = excludedControls.has(ctrl.id);
@@ -430,14 +429,14 @@ export function AssessmentNewPage() {
                                           return n;
                                         });
                                       }}
-                                      className="accent-blue-600 w-3.5 h-3.5 flex-shrink-0" />
+                                      className="accent-[#1A3E5C] w-3.5 h-3.5 flex-shrink-0" />
                                   )}
-                                  <p className={`text-[12px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                                  <p className={`text-[14px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
                                     {ctrl.title}
                                   </p>
                                   {isLocked && (
                                     <span title={`Mandatory under "${chapter.title ?? chapter.name}" — cannot be excluded`}
-                                      className="text-[10px] text-amber-600 flex-shrink-0">Locked</span>
+                                      className="text-[12px] text-amber-600 flex-shrink-0">Locked</span>
                                   )}
                                 </div>
                                 {isExcluded && !isLocked && (
@@ -445,7 +444,7 @@ export function AssessmentNewPage() {
                                     <input value={exclusionReasons[ctrl.id] ?? ''}
                                       onChange={e => setExclusionReasons(p => ({ ...p, [ctrl.id]: e.target.value }))}
                                       placeholder="Reason for exclusion..."
-                                      className="w-full h-7 px-2 rounded border border-slate-200 text-[11.5px] text-slate-600 focus:outline-none focus:border-slate-400" />
+                                      className="w-full h-7 px-2 rounded border border-[#D4AF37]/35 text-[13.5px] text-slate-600 focus:outline-none focus:border-slate-400" />
                                   </div>
                                 )}
                               </div>
@@ -458,13 +457,16 @@ export function AssessmentNewPage() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11.5px] text-slate-400">Controls your organization defines itself — always optional.</p>
-                      <p className="text-[11.5px] text-slate-400 flex-shrink-0 ml-2">
-                        {activeCustomControls.length} active · {DUMMY_CUSTOM_CONTROLS.length - activeCustomControls.length} excluded
+                      <p className="text-[13.5px] text-slate-400">Controls your organization defines itself — always optional.</p>
+                      <p className="text-[13.5px] text-slate-400 flex-shrink-0 ml-2">
+                        {activeCustomControls.length} active · {customControlsList.length - activeCustomControls.length} excluded
                       </p>
                     </div>
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      {DUMMY_CUSTOM_CONTROLS.map((ctrl, i) => {
+                    <div className="border border-[#D4AF37]/35 rounded-lg overflow-hidden">
+                      {customControlsList.length === 0 && (
+                        <p className="text-[13.5px] text-slate-400 px-3 py-4 text-center">No custom controls defined yet. Create one from the Controls Library.</p>
+                      )}
+                      {customControlsList.map((ctrl, i) => {
                         const isExcluded = excludedControls.has(ctrl.id);
                         return (
                           <div key={ctrl.id} className={i > 0 ? 'border-t border-slate-100' : ''}>
@@ -477,8 +479,8 @@ export function AssessmentNewPage() {
                                     return n;
                                   });
                                 }}
-                                className="accent-blue-600 w-3.5 h-3.5 flex-shrink-0" />
-                              <p className={`text-[12px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                                className="accent-[#1A3E5C] w-3.5 h-3.5 flex-shrink-0" />
+                              <p className={`text-[14px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
                                 {ctrl.title}
                               </p>
                             </div>
@@ -497,8 +499,8 @@ export function AssessmentNewPage() {
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <p className="text-[14px] font-bold text-slate-900">Assign Tasks</p>
-              <p className="text-[12px] text-slate-400 mt-0.5">
+              <p className="text-[16px] font-bold text-slate-900">Assign Tasks</p>
+              <p className="text-[14px] text-slate-400 mt-0.5">
                 {taskList.length} tasks will be created ({activeControls.length} controls × {selectedAssetList.length} assets).
                 Assign each to a specific IT Admin or leave as "Auto" to use department delegation.
               </p>
@@ -508,8 +510,8 @@ export function AssessmentNewPage() {
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[12.5px] font-semibold text-amber-800">No IT Admins in {selectedDeptName}</p>
-                  <p className="text-[12px] text-amber-700 mt-0.5">
+                  <p className="text-[14.5px] font-semibold text-amber-800">No IT Admins in {selectedDeptName}</p>
+                  <p className="text-[14px] text-amber-700 mt-0.5">
                     All tasks will be created as PENDING (unassigned). You can assign them manually from the Tasks page.
                   </p>
                 </div>
@@ -517,28 +519,28 @@ export function AssessmentNewPage() {
             ) : (
               <>
                 {/* Bulk assign */}
-                <div className="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-3 p-3.5 bg-slate-50 border border-[#D4AF37]/35 rounded-xl">
                   <Users className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                  <p className="text-[12.5px] font-semibold text-slate-700 flex-shrink-0">Bulk assign all:</p>
+                  <p className="text-[14.5px] font-semibold text-slate-700 flex-shrink-0">Bulk assign all:</p>
                   <select value={bulkAssignee}
                     onChange={e => setBulkAssignee(e.target.value)}
-                    className="flex-1 h-8 px-2 rounded-lg border border-slate-300 text-[12.5px] focus:outline-none focus:border-slate-700 bg-white">
+                    className="flex-1 h-8 px-2 rounded-lg border border-slate-300 text-[14.5px] focus:outline-none focus:border-slate-700 bg-white">
                     <option value="">Select IT Admin…</option>
                     {(itAdmins as any[]).map((u: any) => (
                       <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
                   <button onClick={applyBulkAssign} disabled={!bulkAssignee}
-                    className="px-3 py-1.5 bg-slate-900 text-white text-[12px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-40 flex items-center gap-1.5">
+                    className="px-3 py-1.5 bg-slate-900 text-white text-[14px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-40 flex items-center gap-1.5">
                     <Shuffle className="w-3.5 h-3.5" /> Apply to All
                   </button>
                 </div>
 
                 {/* Per-task assignment table */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-[1fr_1fr_180px] bg-slate-50 border-b border-slate-200">
+                <div className="border border-[#D4AF37]/35 rounded-xl overflow-hidden">
+                  <div className="grid grid-cols-[1fr_1fr_180px] bg-slate-50 border-b border-[#D4AF37]/35">
                     {['Control', 'Asset', 'Assign To'].map(h => (
-                      <div key={h} className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wide">{h}</div>
+                      <div key={h} className="px-3 py-2 text-[13px] font-bold text-slate-500 uppercase tracking-wide">{h}</div>
                     ))}
                   </div>
                   <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
@@ -547,17 +549,17 @@ export function AssessmentNewPage() {
                       return (
                         <div key={task.key} className="grid grid-cols-[1fr_1fr_180px] items-center hover:bg-slate-50">
                           <div className="px-3 py-2.5">
-                            <p className="text-[12px] font-medium text-slate-800 line-clamp-1">{task.controlTitle}</p>
+                            <p className="text-[14px] font-medium text-slate-800 line-clamp-1">{task.controlTitle}</p>
                           </div>
                           <div className="px-3 py-2.5 flex items-center gap-1.5">
-                            <Database className="w-3 h-3 text-blue-400 flex-shrink-0" />
-                            <p className="text-[12px] text-slate-600 truncate">{task.assetName}</p>
+                            <Database className="w-3 h-3 text-[#1A3E5C]/50 flex-shrink-0" />
+                            <p className="text-[14px] text-slate-600 truncate">{task.assetName}</p>
                           </div>
                           <div className="px-3 py-2">
                             <select
                               value={current === '__auto__' ? '__auto__' : (current ?? '')}
                               onChange={e => setAssignee(task.key, e.target.value)}
-                              className="w-full h-7 px-2 rounded-md border border-slate-200 text-[11.5px] focus:outline-none focus:border-blue-400 bg-white">
+                              className="w-full h-7 px-2 rounded-md border border-[#D4AF37]/35 text-[13.5px] focus:outline-none focus:border-[#1A3E5C]/40 bg-white">
                               <option value="__auto__">⚡ Auto-delegate</option>
                               <option value="">— Unassigned</option>
                               {(itAdmins as any[]).map((u: any) => (
@@ -571,8 +573,8 @@ export function AssessmentNewPage() {
                   </div>
                 </div>
 
-                <p className="text-[11.5px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-blue-500">⚡</span>
+                <p className="text-[13.5px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#1A3E5C]">⚡</span>
                   Auto-delegate uses the department's primary IT Admin. You can reassign tasks later from the Tasks page.
                 </p>
               </>
@@ -583,7 +585,7 @@ export function AssessmentNewPage() {
         {/* ─── Step 5: Review ─── */}
         {step === 5 && (
           <div className="space-y-4">
-            <p className="text-[14px] font-bold text-slate-900">Review & Create</p>
+            <p className="text-[16px] font-bold text-slate-900">Review & Create</p>
 
             {[
               { label: 'Assessment Name', value: form.name },
@@ -595,21 +597,21 @@ export function AssessmentNewPage() {
               { label: 'Tasks to Create', value: `${taskList.length} tasks` },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-                <span className="text-[12.5px] text-slate-500">{label}</span>
-                <span className="text-[13px] font-semibold text-slate-800">{value}</span>
+                <span className="text-[14.5px] text-slate-500">{label}</span>
+                <span className="text-[15px] font-semibold text-slate-800">{value}</span>
               </div>
             ))}
 
             {/* Assignment summary */}
             {(itAdmins as any[]).length > 0 && (
-              <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
-                <p className="text-[12px] font-semibold text-blue-800 mb-2">Task Assignment Summary</p>
+              <div className="p-3.5 bg-[#1A3E5C]/8 border border-[#D4AF37]/40 rounded-xl">
+                <p className="text-[14px] font-semibold text-[#15324a] mb-2">Task Assignment Summary</p>
                 {(() => {
                   const manual   = taskList.filter((t: any) => t.key in taskAssignments && taskAssignments[t.key] !== null);
                   const unassign = taskList.filter((t: any) => t.key in taskAssignments && taskAssignments[t.key] === null);
                   const auto     = taskList.filter((t: any) => !(t.key in taskAssignments));
                   return (
-                    <div className="space-y-1 text-[12px] text-blue-700">
+                    <div className="space-y-1 text-[14px] text-[#1A3E5C]">
                       {manual.length   > 0 && <p>✅ {manual.length} manually assigned</p>}
                       {auto.length     > 0 && <p>⚡ {auto.length} will use auto-delegation</p>}
                       {unassign.length > 0 && <p>⏳ {unassign.length} left unassigned (PENDING)</p>}
@@ -621,7 +623,7 @@ export function AssessmentNewPage() {
 
             <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-[12px] text-amber-700">
+              <p className="text-[14px] text-amber-700">
                 Once created, the assessment and its tasks cannot be deleted. Make sure everything looks correct.
               </p>
             </div>
@@ -632,7 +634,7 @@ export function AssessmentNewPage() {
         <div className="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
           {step > 1 ? (
             <button onClick={() => setStep(s => s - 1)}
-              className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50">
+              className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">
               ← Back
             </button>
           ) : <div />}
@@ -640,13 +642,13 @@ export function AssessmentNewPage() {
           {step < 5 ? (
             <button onClick={() => setStep(s => s + 1)}
               disabled={!canProceed[step as keyof typeof canProceed]}
-              className="px-5 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-40 flex items-center gap-2">
+              className="px-5 py-2 bg-slate-900 text-white text-[15px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-40 flex items-center gap-2">
               Next <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
             <button onClick={handleCreate}
               disabled={createMutation.isPending}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[13px] font-semibold rounded-lg flex items-center gap-2">
+              className="px-6 py-2 bg-[#1A3E5C] hover:bg-[#15324a] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg flex items-center gap-2">
               {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Create Assessment
             </button>

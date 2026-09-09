@@ -112,8 +112,8 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[480px] max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <p className="text-[15px] font-bold text-slate-900">Add Evidence</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4AF37]/35">
+          <p className="text-[17px] font-bold text-slate-900">Add Evidence</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
 
@@ -121,19 +121,19 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
           {/* Applies to */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[12.5px] font-semibold text-slate-600">Applies to</p>
+              <p className="text-[14.5px] font-semibold text-slate-600">Applies to</p>
               {actions.length > 1 && (
-                <button onClick={toggleAll} className="text-[12px] text-blue-600 hover:underline">
+                <button onClick={toggleAll} className="text-[14px] text-[#1A3E5C] hover:underline">
                   {selectedActionIds.size === actions.length ? 'Clear all' : 'Select all'}
                 </button>
               )}
             </div>
-            <div className="space-y-1 max-h-32 overflow-y-auto border border-slate-100 rounded-lg p-2">
+            <div className="space-y-1 max-h-32 overflow-y-auto border border-[#D4AF37]/20 rounded-lg p-2">
               {actions.map(a => (
                 <label key={a.id} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer">
                   <input type="checkbox" checked={selectedActionIds.has(a.id)} onChange={() => toggleAction(a.id)}
                     className="accent-slate-800" />
-                  <span className="text-[13px] text-slate-700 truncate">{a.title}</span>
+                  <span className="text-[15px] text-slate-700 truncate">{a.title}</span>
                 </label>
               ))}
             </div>
@@ -142,41 +142,41 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
           {/* Product picker — only products common to every selected action */}
           {selectedActionsList.length > 0 && (
             <div>
-              <p className="text-[12.5px] font-semibold text-slate-600 mb-1.5">
+              <p className="text-[14.5px] font-semibold text-slate-600 mb-1.5">
                 Which tool did you use for {selectedActionsList.length > 1 ? 'these actions' : 'this'}?
               </p>
               {commonProducts.length === 0 && selectedActionsList.length > 1 && (
-                <p className="text-[12px] text-slate-400 italic mb-1">No tool is common to all the selected actions — use "Other" below, or tag each action separately for a product-specific match.</p>
+                <p className="text-[14px] text-slate-400 italic mb-1">No tool is common to all the selected actions — use "Other" below, or tag each action separately for a product-specific match.</p>
               )}
               <div className="space-y-1">
                 {commonProducts.map(p => (
                   <label key={p.id} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer">
                     <input type="radio" name="product" checked={selectedProductId === p.id}
                       onChange={() => setSelectedProductId(p.id)} className="accent-slate-800" />
-                    <span className="text-[13px] text-slate-700">{p.name}{p.vendor ? ` (${p.vendor})` : ''}</span>
+                    <span className="text-[15px] text-slate-700">{p.name}{p.vendor ? ` (${p.vendor})` : ''}</span>
                   </label>
                 ))}
                 <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer">
                   <input type="radio" name="product" checked={selectedProductId === ''}
                     onChange={() => setSelectedProductId('')} className="accent-slate-800" />
-                  <span className="text-[13px] text-slate-700">Other tool / manual process</span>
+                  <span className="text-[15px] text-slate-700">Other tool / manual process</span>
                 </label>
               </div>
               {selectedProductId === '' && (
                 <input value={otherLabel} onChange={e => setOtherLabel(e.target.value)}
                   placeholder="Name the tool or process you used"
-                  className="mt-1.5 w-full px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                  className="mt-1.5 w-full px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40" />
               )}
               {masterEvidenceRefs.map(({ action, me }) => (
-                <div key={action.id} className="mt-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                <div key={action.id} className="mt-2 p-2.5 bg-[#1A3E5C]/8 border border-[#D4AF37]/30 rounded-lg">
                   {selectedActionsList.length > 1 && (
-                    <p className="text-[11.5px] font-semibold text-blue-800 mb-0.5">For "{action.title}"</p>
+                    <p className="text-[13.5px] font-semibold text-[#15324a] mb-0.5">For "{action.title}"</p>
                   )}
-                  <p className="text-[12.5px] font-semibold text-blue-700">Reference: {me.title}</p>
-                  {me.description && <p className="text-[12px] text-blue-600 mt-0.5">{me.description}</p>}
+                  <p className="text-[14.5px] font-semibold text-[#1A3E5C]">Reference: {me.title}</p>
+                  {me.description && <p className="text-[14px] text-[#1A3E5C] mt-0.5">{me.description}</p>}
                   {me.fileUrl && (
                     <a href={me.fileUrl} target="_blank" rel="noreferrer"
-                      className="text-[12px] text-blue-500 underline mt-0.5 inline-block">View sample</a>
+                      className="text-[14px] text-[#1A3E5C] underline mt-0.5 inline-block">View sample</a>
                   )}
                 </div>
               ))}
@@ -186,14 +186,14 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
           {/* Title / Type */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[12px] text-slate-500">Title</label>
+              <label className="text-[14px] text-slate-500">Title</label>
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. MFA policy screenshot"
-                className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40" />
             </div>
             <div>
-              <label className="text-[12px] text-slate-500">Type</label>
+              <label className="text-[14px] text-slate-500">Type</label>
               <select value={type} onChange={e => { setType(e.target.value); setFiles([]); }}
-                className="w-full mt-0.5 px-2 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400">
+                className="w-full mt-0.5 px-2 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40">
                 {EVIDENCE_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
               </select>
             </div>
@@ -202,23 +202,23 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
           {/* Content input by type */}
           {type === 'LINK' ? (
             <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://…"
-              className="w-full px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+              className="w-full px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg focus:outline-none focus:border-[#1A3E5C]/40" />
           ) : type === 'TEXT_NOTE' ? (
             <textarea rows={3} value={textContent} onChange={e => setTextContent(e.target.value)}
               placeholder="Describe what was done…"
-              className="w-full px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+              className="w-full px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg resize-none focus:outline-none focus:border-[#1A3E5C]/40" />
           ) : (
             <div className="space-y-1.5">
-              <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400">
+              <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#1A3E5C]/40">
                 <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="text-[13px] text-slate-500">Choose one or more files to upload</span>
+                <span className="text-[15px] text-slate-500">Choose one or more files to upload</span>
                 <input type="file" multiple className="hidden"
                   onChange={e => setFiles(prev => [...prev, ...Array.from(e.target.files ?? [])])} />
               </label>
               {files.length > 0 && (
                 <div className="space-y-1">
                   {files.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between px-2.5 py-1 bg-slate-50 rounded text-[12.5px] text-slate-600">
+                    <div key={i} className="flex items-center justify-between px-2.5 py-1 bg-slate-50 rounded text-[14.5px] text-slate-600">
                       <span className="truncate">{f.name}</span>
                       <button onClick={() => removeFile(i)} className="text-slate-400 hover:text-red-500 ml-2 flex-shrink-0">
                         <X className="w-3.5 h-3.5" />
@@ -231,16 +231,16 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
           )}
 
           <div>
-            <label className="text-[12px] text-slate-500">Description (optional)</label>
+            <label className="text-[14px] text-slate-500">Description (optional)</label>
             <textarea rows={2} value={description} onChange={e => setDescription(e.target.value)}
-              className="w-full mt-0.5 px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" />
+              className="w-full mt-0.5 px-3 py-1.5 text-[15px] border border-[#D4AF37]/35 rounded-lg resize-none focus:outline-none focus:border-[#1A3E5C]/40" />
           </div>
         </div>
 
-        <div className="flex gap-3 px-5 py-4 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[14px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+        <div className="flex gap-3 px-5 py-4 border-t border-[#D4AF37]/35">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[16px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
           <button onClick={handleSubmit} disabled={!canSubmit || uploading}
-            className="flex-1 py-2 bg-slate-900 text-white text-[14px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 py-2 bg-slate-900 text-white text-[16px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             {files.length > 1 ? `Upload ${files.length} Files` : 'Upload Evidence'}
           </button>

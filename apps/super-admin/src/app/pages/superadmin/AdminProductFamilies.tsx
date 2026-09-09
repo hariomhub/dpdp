@@ -26,35 +26,35 @@ function FamilyModal({ initial, onClose }: {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[420px]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <p className="text-[15px] font-bold text-slate-900">{isEdit ? 'Edit' : 'Create'} Product Family</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#64748B]/20">
+          <p className="text-[17px] font-bold text-slate-900">{isEdit ? 'Edit' : 'Create'} Product Family</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Family Name *</label>
+            <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Family Name *</label>
             <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
               placeholder="e.g., Identity & Access Management"
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
           </div>
           <div>
-            <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Category</label>
+            <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Category</label>
             <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700 bg-white">
+              className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700 bg-white">
               <option value="">Select category…</option>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Description</label>
+            <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Description</label>
             <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              rows={2} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[12.5px] focus:outline-none focus:border-slate-700 resize-none" />
+              rows={2} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] focus:outline-none focus:border-slate-700 resize-none" />
           </div>
         </div>
-        <div className="flex gap-3 px-5 py-4 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+        <div className="flex gap-3 px-5 py-4 border-t border-[#64748B]/20">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim() || createMut.isPending || updateMut.isPending}
-            className="flex-1 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 py-2 bg-[#1A3E5C] text-white text-[15px] font-semibold rounded-lg hover:bg-[#15324a] disabled:opacity-50 flex items-center justify-center gap-2">
             {(createMut.isPending || updateMut.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isEdit ? 'Save' : 'Create'} →
           </button>
@@ -92,57 +92,57 @@ function ProductModal({ initial, familyId, onClose }: {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-[480px]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <p className="text-[15px] font-bold text-slate-900">{isEdit ? 'Edit' : 'Add'} Product</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#64748B]/20">
+          <p className="text-[17px] font-bold text-slate-900">{isEdit ? 'Edit' : 'Add'} Product</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Product Name *</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Product Name *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                 placeholder="e.g., Microsoft Azure AD"
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
             </div>
             <div>
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Vendor</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Vendor</label>
               <input value={form.vendor} onChange={e => setForm(p => ({ ...p, vendor: e.target.value }))}
                 placeholder="e.g., Microsoft"
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
             </div>
             <div>
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Category</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Category</label>
               <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none bg-white focus:border-slate-700">
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none bg-white focus:border-slate-700">
                 <option value="">Select…</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Website</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Website</label>
               <input value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))}
                 placeholder="https://..."
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none focus:border-slate-700" />
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none focus:border-slate-700" />
             </div>
             <div className="col-span-2">
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Product Family</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Product Family</label>
               <select value={form.productFamilyId} onChange={e => setForm(p => ({ ...p, productFamilyId: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[13px] focus:outline-none bg-white focus:border-slate-700">
+                className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[15px] focus:outline-none bg-white focus:border-slate-700">
                 <option value="">Standalone (no family)</option>
                 {(families as any[]).map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-[11.5px] font-medium text-slate-600 mb-1">Description</label>
+              <label className="block text-[13.5px] font-medium text-slate-600 mb-1">Description</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                rows={2} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[12.5px] focus:outline-none focus:border-slate-700 resize-none" />
+                rows={2} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] focus:outline-none focus:border-slate-700 resize-none" />
             </div>
           </div>
         </div>
-        <div className="flex gap-3 px-5 py-4 border-t border-slate-200">
-          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[13px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+        <div className="flex gap-3 px-5 py-4 border-t border-[#64748B]/20">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim() || createMut.isPending || updateMut.isPending}
-            className="flex-1 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 py-2 bg-[#1A3E5C] text-white text-[15px] font-semibold rounded-lg hover:bg-[#15324a] disabled:opacity-50 flex items-center justify-center gap-2">
             {(createMut.isPending || updateMut.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isEdit ? 'Save' : 'Add Product'} →
           </button>
@@ -166,41 +166,41 @@ export function AdminProductFamilies() {
   if (isLoading) return <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       {showNewFamily && <FamilyModal onClose={() => setShowNewFamily(false)} />}
       {editFamily   && <FamilyModal initial={editFamily} onClose={() => setEditFamily(null)} />}
       {productModal && <ProductModal {...productModal} onClose={() => setProductModal(null)} />}
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>Product Families</h1>
-          <p className="text-[12.5px] text-slate-500 mt-1">Manage tools and software that implement compliance control actions.</p>
+          <h1 className="text-[26px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Product Families</h1>
+          <p className="text-[14.5px] text-slate-500 mt-1">Manage tools and software that implement compliance control actions.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setProductModal({})}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 text-[13px] font-medium rounded-lg hover:bg-slate-50">
+            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 text-[15px] font-medium rounded-lg hover:bg-slate-50">
             <Plus className="w-4 h-4" /> Add Standalone Product
           </button>
           <button onClick={() => setShowNewFamily(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg">
+            className="flex items-center gap-2 px-4 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg">
             <Plus className="w-4 h-4" /> New Family
           </button>
         </div>
       </div>
 
       {(families as any[]).length === 0 ? (
-        <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-xl">
+        <div className="py-20 text-center border-2 border-dashed border-[#64748B]/20 rounded-xl">
           <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-[14px] font-semibold text-slate-500">No product families yet</p>
-          <p className="text-[12px] text-slate-400 mt-1">Group compliance tools by category (e.g., IAM Tools, Data Protection).</p>
-          <button onClick={() => setShowNewFamily(true)} className="mt-4 px-4 py-2 bg-slate-900 text-white text-[13px] font-semibold rounded-lg">
+          <p className="text-[16px] font-semibold text-slate-500">No product families yet</p>
+          <p className="text-[14px] text-slate-400 mt-1">Group compliance tools by category (e.g., IAM Tools, Data Protection).</p>
+          <button onClick={() => setShowNewFamily(true)} className="mt-4 px-4 py-2 bg-[#1A3E5C] text-white text-[15px] font-semibold rounded-lg">
             Create First Family
           </button>
         </div>
       ) : (
         <div className="space-y-3">
           {(families as any[]).map((family: any) => (
-            <div key={family.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div key={family.id} className="bg-white border border-[#64748B]/20 rounded-xl overflow-hidden">
               <div className="flex items-center gap-4 px-5 py-4">
                 <button onClick={() => toggle(family.id)}>
                   {expanded.has(family.id) ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
@@ -210,17 +210,17 @@ export function AdminProductFamilies() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-bold text-slate-900">{family.name}</p>
+                    <p className="text-[16px] font-bold text-slate-900">{family.name}</p>
                     {family.category && (
-                      <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-semibold">{family.category}</span>
+                      <span className="text-[12px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-semibold">{family.category}</span>
                     )}
-                    <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{family._count.products} products</span>
+                    <span className="text-[12px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">{family._count.products} products</span>
                   </div>
-                  {family.description && <p className="text-[12px] text-slate-400 mt-0.5">{family.description}</p>}
+                  {family.description && <p className="text-[14px] text-slate-400 mt-0.5">{family.description}</p>}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setProductModal({ familyId: family.id })}
-                    className="px-3 py-1.5 text-[12px] border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 flex items-center gap-1.5">
+                    className="px-3 py-1.5 text-[14px] border border-[#64748B]/20 rounded-lg hover:bg-slate-50 text-slate-600 flex items-center gap-1.5">
                     <Plus className="w-3.5 h-3.5" /> Add Product
                   </button>
                   <button onClick={() => setEditFamily(family)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
@@ -236,18 +236,18 @@ export function AdminProductFamilies() {
               {expanded.has(family.id) && (
                 <div className="border-t border-slate-100 p-3 grid grid-cols-2 gap-2">
                   {family.products.length === 0 ? (
-                    <div className="col-span-2 py-4 text-center text-[12px] text-slate-400">
+                    <div className="col-span-2 py-4 text-center text-[14px] text-slate-400">
                       No products yet.{' '}
                       <button onClick={() => setProductModal({ familyId: family.id })} className="text-blue-600 hover:underline">Add product →</button>
                     </div>
                   ) : family.products.map((p: any) => (
                     <div key={p.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 text-[14px]">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 text-[16px]">
                         {p.vendor?.[0] ?? '📦'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-[12.5px] font-semibold text-slate-800 truncate">{p.name}</p>
+                          <p className="text-[14.5px] font-semibold text-slate-800 truncate">{p.name}</p>
                           {p.website && (
                             <a href={p.website} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
                               className="text-slate-300 hover:text-blue-500 flex-shrink-0">
@@ -255,9 +255,9 @@ export function AdminProductFamilies() {
                             </a>
                           )}
                         </div>
-                        {p.vendor && <p className="text-[11px] text-slate-400">{p.vendor}</p>}
+                        {p.vendor && <p className="text-[13px] text-slate-400">{p.vendor}</p>}
                         {p._count?.actions > 0 && (
-                          <p className="text-[10px] text-blue-600 mt-0.5">{p._count.actions} action(s) use this</p>
+                          <p className="text-[12px] text-blue-600 mt-0.5">{p._count.actions} action(s) use this</p>
                         )}
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

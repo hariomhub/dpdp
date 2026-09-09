@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useApp, ROLE_LABELS, ROLE_COLORS, ROLE_INITIALS, TenantRole } from '../../context/AppContext';
 import { NOTIFICATIONS } from '../../data/mockData';
+import { LogoIcon } from '../shared/DesignSystem';
 
 // ─── Nav Structure ────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -65,18 +66,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center h-14 px-3 border-b border-white/20 flex-shrink-0">
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div className="w-7 h-7 rounded bg-[#D4AF37] flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="w-4 h-4 text-[#1A3E5C]" />
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+                <LogoIcon className="w-6 h-6" />
               </div>
               <div className="min-w-0">
-                <span className="text-[16px] font-bold text-white tracking-wide block" style={{ fontFamily: 'Cinzel, serif' }}>DPDP CMS</span>
+                <span className="text-[16px] font-bold text-white tracking-wide block" style={{ fontFamily: 'Cinzel, serif' }}>NiyamSaathi</span>
                 <span className="text-[12px] text-white/72 truncate block">{orgName}</span>
               </div>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="w-7 h-7 rounded bg-[#D4AF37] flex items-center justify-center mx-auto">
-              <ShieldCheck className="w-4 h-4 text-[#1A3E5C]" />
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mx-auto">
+              <LogoIcon className="w-6 h-6" />
             </div>
           )}
           <button
@@ -218,7 +219,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               )}
             </button>
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] shadow-xl z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100">
                   <span className="text-[15px] font-semibold text-slate-800">Notifications</span>
                   <button className="text-[13px] text-[#1A3E5C] hover:text-[#D4AF37]">Mark all read</button>

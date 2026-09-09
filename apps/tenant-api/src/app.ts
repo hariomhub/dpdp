@@ -13,6 +13,8 @@ import orgRoutes from './modules/org/org.routes'
 import auditRoutes from './modules/audit/audit.routes'
 import usersRoutes from './modules/users/users.routes'
 import assessmentsRoutes from './modules/assessments/assessments.routes'
+import controlsRoutes from './modules/controls/controls.routes'
+import riskRoutes from './modules/risk/risk.routes'
 import tasksRoutes from './modules/tasks/tasks.routes'
 import lmsRoutes from './modules/lms/lms.routes'
 import cloudConnectionsRoutes from './modules/cloud-connections/cloud-connections.routes'
@@ -58,6 +60,8 @@ app.use('/api/v1/dashboard', dashboardRoutes)
 app.use('/api/v1/org', orgRoutes)
 app.use('/api/v1/audit-log', auditRoutes)
 app.use('/api/v1/assessments', assessmentsRoutes)
+app.use('/api/v1/controls', controlsRoutes)
+app.use('/api/v1/risk', riskRoutes)
 app.use('/api/v1/users', usersRoutes)
 app.use('/api/v1/tasks', tasksRoutes)
 app.use('/api/v1/lms', lmsRoutes)

@@ -13,8 +13,8 @@ export function CloudModal({ title, subtitle, onClose, children, width = 'max-w-
       <div className={`w-full ${width} bg-white rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]`}>
         <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
-            <h3 className="text-[15px] font-bold text-slate-900">{title}</h3>
-            {subtitle && <p className="text-[12px] text-slate-500 mt-0.5">{subtitle}</p>}
+            <h3 className="text-[17px] font-bold text-slate-900">{title}</h3>
+            {subtitle && <p className="text-[14px] text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors flex-shrink-0 ml-3">
             <X className="w-5 h-5" />

@@ -63,12 +63,15 @@ export const auditService = {
     action?: string
     from?: string
     to?: string
+    targetId?: string
   }) {
     const page  = Math.max(1, params.page ?? 1)
     const limit = Math.min(100, Math.max(1, params.limit ?? 25))
     const skip  = (page - 1) * limit
 
     const where: Record<string, unknown> = { tenantId }
+
+    if (params.targetId) where.targetId = params.targetId
 
     if (params.module && params.module !== 'All') {
       // Filter by module using targetType mapping

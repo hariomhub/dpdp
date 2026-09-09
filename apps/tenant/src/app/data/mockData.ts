@@ -1,4 +1,4 @@
-// ─── Mock Data for DPDP CMS ─────────────────────────────────────────────────
+// ─── Mock Data for NiyamSaathi ─────────────────────────────────────────────────
 
 export const ASSETS = [
   {
@@ -162,7 +162,7 @@ export const USERS = [
 export const LMS_COURSES = [
   { id: 'CRS-001', title: 'DPDP Act 2023 — Foundations', category: 'DPDP Compliance', difficulty: 'Beginner', duration: '45 min', thumbnail: '', progress: 100, status: 'Completed', lessons: 8, enrolled: 34, description: 'A comprehensive introduction to India\'s Digital Personal Data Protection Act 2023 — key definitions, obligations, rights, and penalties.' },
   { id: 'CRS-002', title: 'Understanding Data Fiduciary Obligations', category: 'DPDP Compliance', difficulty: 'Intermediate', duration: '60 min', thumbnail: '', progress: 65, status: 'In Progress', lessons: 10, enrolled: 28, description: 'Deep dive into the obligations of Data Fiduciaries under Chapter 2 of the DPDP Act.' },
-  { id: 'CRS-003', title: 'Evidence Collection Best Practices', category: 'Portal Usage', difficulty: 'Beginner', duration: '30 min', thumbnail: '', progress: 0, status: 'Not Started', lessons: 6, enrolled: 22, description: 'How to collect, document, and submit compliance evidence effectively using the DPDP CMS portal.' },
+  { id: 'CRS-003', title: 'Evidence Collection Best Practices', category: 'Portal Usage', difficulty: 'Beginner', duration: '30 min', thumbnail: '', progress: 0, status: 'Not Started', lessons: 6, enrolled: 22, description: 'How to collect, document, and submit compliance evidence effectively using the NiyamSaathi portal.' },
   { id: 'CRS-004', title: 'Conducting Internal Audits', category: 'Role-Specific', difficulty: 'Advanced', duration: '90 min', thumbnail: '', progress: 0, status: 'Not Started', lessons: 12, enrolled: 15, description: 'A structured guide for Internal Auditors on reviewing evidence, assessing controls, and documenting audit findings.' },
   { id: 'CRS-005', title: 'Data Rights Management', category: 'DPDP Compliance', difficulty: 'Intermediate', duration: '50 min', thumbnail: '', progress: 30, status: 'In Progress', lessons: 9, enrolled: 19, description: 'Implementing Data Principal rights — access, correction, erasure, and grievance redressal under the DPDP Act.' },
 ];

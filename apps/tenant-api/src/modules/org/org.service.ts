@@ -76,7 +76,18 @@ export const orgService = {
         },
       },
     })
-    return depts
+
+    // ownerId is a soft reference (no Prisma relation) — resolve names in one batch query
+    const ownerIds = [...new Set(depts.flatMap(d => d.assets.map(a => a.ownerId).filter(Boolean)))] as string[]
+    const owners = ownerIds.length > 0
+      ? await db.user.findMany({ where: { id: { in: ownerIds } }, select: { id: true, name: true } })
+      : []
+    const ownerMap = new Map(owners.map(o => [o.id, o.name]))
+
+    return depts.map(d => ({
+      ...d,
+      assets: d.assets.map(a => ({ ...a, ownerName: a.ownerId ? ownerMap.get(a.ownerId) ?? null : null })),
+    }))
   },
 
   async createDepartment(tenantId: string, userId: string, data: {

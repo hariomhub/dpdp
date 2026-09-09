@@ -12,6 +12,7 @@ export const auditController = {
         action: req.query.action as string | undefined,
         from:   req.query.from   as string | undefined,
         to:     req.query.to     as string | undefined,
+        targetId: req.query.targetId as string | undefined,
       })
       res.json({ success: true, data })
     } catch (err) {

@@ -1,9 +1,50 @@
 import React from 'react';
 import { TenantRole, ROLE_COLORS, ROLE_LABELS } from '../../context/AppContext';
 
+// ─── Brand Logo ───────────────────────────────────────────────────────────────
+// Source file: apps/tenant/public/aashray_logo.png — one flat 500x500 image
+// with the shield mark stacked above the "AASHRAY INFOTECH" wordmark. There's
+// no separate icon-only asset, so LogoIcon crops to the shield by overscaling
+// the image and shifting it, measured pixel-for-pixel against the source: the
+// shield's opaque pixels span x 120-380 / y 56-308 of 500. The crop window is
+// x 85-415 / y 0-330 (151.5% scale, offset 0%/-25.8%) — generous padding on
+// every side (the shield never touches the frame edge) while the bottom edge
+// still lands exactly at y=330, before the wordmark starts. No image edit.
+const LOGO_SRC = '/aashray_logo.png';
+
+export function LogoIcon({ className = '' }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden flex-shrink-0 ${className}`}>
+      <img
+        src={LOGO_SRC}
+        alt="Aashray Infotech"
+        className="absolute max-w-none max-h-none"
+        style={{ width: '151.5%', height: '151.5%', top: '0%', left: '-25.8%', objectFit: 'contain' }}
+      />
+    </div>
+  );
+}
+
+// Full mark (shield + wordmark), for brand-forward placements like the login screen.
+export function LogoFull({ className = '', style = {} }: { className?: string; style?: React.CSSProperties }) {
+  return <img src={LOGO_SRC} alt="Aashray Infotech" className={className} style={{ objectFit: 'contain', ...style }} />;
+}
+
+// ─── Brand Spinner ────────────────────────────────────────────────────────────
+// A logo-based loading indicator for async buttons (login, save, submit).
+export function BrandSpinner({ size = 20, ring = 'light' }: { size?: number; ring?: 'light' | 'dark' }) {
+  const ringClass = ring === 'light' ? 'border-white/25 border-t-white' : 'border-[#1A3E5C]/20 border-t-[#1A3E5C]';
+  return (
+    <span className="relative inline-flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
+      <span className={`absolute inset-0 rounded-full border-2 ${ringClass} animate-spin`} />
+      <LogoIcon className="w-[62%] h-[62%] rounded-full animate-pulse" />
+    </span>
+  );
+}
+
 // ─── Status Chip ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
-  'Compliant':            { bg: 'bg-green-50',   text: 'text-green-700',  dot: 'bg-green-500' },
+  'Compliant':            { bg: 'bg-green-50',   text: 'text-green-700',  dot: 'bg-green-500' }, // NOTE: status colors are semantic (workflow stage), intentionally left off-brand
   'Fully Compliant':      { bg: 'bg-green-50',   text: 'text-green-700',  dot: 'bg-green-500' },
   'In Progress':          { bg: 'bg-blue-50',    text: 'text-blue-700',   dot: 'bg-blue-500'  },
   'Evidence Submitted':   { bg: 'bg-sky-50',     text: 'text-sky-700',    dot: 'bg-sky-500'   },
@@ -29,7 +70,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> =
 export function StatusChip({ status }: { status: string }) {
   const config = STATUS_CONFIG[status] || { bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold ${config.bg} ${config.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-semibold ${config.bg} ${config.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dot}`} />
       {status}
     </span>
@@ -47,7 +88,7 @@ const PRIORITY_CONFIG: Record<string, { bg: string; text: string }> = {
 export function PriorityChip({ priority }: { priority: string }) {
   const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG['Low'];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${config.bg} ${config.text}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[13px] font-semibold ${config.bg} ${config.text}`}>
       {priority}
     </span>
   );
@@ -58,7 +99,7 @@ export function RoleBadge({ role }: { role: TenantRole | string }) {
   const color = ROLE_COLORS[role as TenantRole] || '#8A9BB8';
   const label = ROLE_LABELS[role as TenantRole] || role;
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium"
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-medium"
       style={{ background: `${color}18`, border: `1px solid ${color}66`, color }}>
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
       {label}
@@ -78,7 +119,7 @@ const ASSET_TYPE_CONFIG: Record<string, { bg: string; text: string }> = {
 export function AssetTypeChip({ type }: { type: string }) {
   const config = ASSET_TYPE_CONFIG[type] || { bg: 'bg-slate-100', text: 'text-slate-600' };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${config.bg} ${config.text}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[13px] font-medium ${config.bg} ${config.text}`}>
       {type}
     </span>
   );
@@ -94,17 +135,17 @@ interface MetricCardProps {
   onClick?: () => void;
 }
 
-export function MetricCard({ label, value, sub, accentColor = '#3B82F6', children, onClick }: MetricCardProps) {
+export function MetricCard({ label, value, sub, accentColor = '#1A3E5C', children, onClick }: MetricCardProps) {
   return (
     <div
-      className="bg-white border border-slate-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+      className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
     >
       <div className="h-0.5 w-full" style={{ background: accentColor }} />
       <div className="p-4">
-        <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-1">{label}</p>
-        <p className="text-[28px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>{value}</p>
-        {sub && <p className="text-[11px] text-slate-400">{sub}</p>}
+        <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">{label}</p>
+        <p className="text-[34px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>{value}</p>
+        {sub && <p className="text-[13px] text-slate-400">{sub}</p>}
         {children}
       </div>
     </div>
@@ -126,10 +167,15 @@ export function ProgressBar({ compliant, inProgress, total }: { compliant: numbe
 // ─── Section Header ──────────────────────────────────────────────────────────
 export function PageHeader({ title, sub, actions }: { title: string; sub?: string; actions?: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between mb-4">
-      <div>
-        <h1 className="text-[20px] font-bold text-slate-900" style={{ fontFamily: 'Sora, sans-serif' }}>{title}</h1>
-        {sub && <p className="text-[13px] text-slate-500 mt-0.5">{sub}</p>}
+    <div className="flex items-start justify-between mb-5 pb-4 border-b border-[#D4AF37]/30">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
+        </div>
+        <div>
+          <h1 className="text-[26px] font-bold text-[#1A3E5C] tracking-tight" style={{ fontFamily: 'Cinzel, serif' }}>{title}</h1>
+          {sub && <p className="text-[15px] text-slate-500 mt-1">{sub}</p>}
+        </div>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -150,15 +196,15 @@ interface BtnProps {
 export function Btn({ children, variant = 'primary', size = 'md', onClick, className = '', icon, disabled }: BtnProps) {
   const base = 'inline-flex items-center gap-2 rounded-md font-medium transition-all cursor-pointer disabled:opacity-50';
   const variants = {
-    primary:   'bg-blue-600 text-white hover:bg-blue-700',
-    secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
+    primary:   'bg-[#1A3E5C] text-white hover:bg-[#15324a]',
+    secondary: 'bg-white text-slate-700 border border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06]',
     danger:    'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100',
-    ghost:     'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100',
+    ghost:     'bg-transparent text-slate-500 hover:text-[#1A3E5C] hover:bg-slate-100',
   };
   const sizes = {
-    sm: 'text-[12px] px-3 h-7',
-    md: 'text-[13px] px-3.5 h-8',
-    lg: 'text-[14px] px-4 h-9',
+    sm: 'text-[13px] px-3 h-8',
+    md: 'text-[14px] px-3.5 h-9',
+    lg: 'text-[15px] px-4 h-10',
   };
   return (
     <button className={`${base} ${variants[variant]} ${sizes[size]} ${className}`} onClick={onClick} disabled={disabled}>
@@ -175,14 +221,14 @@ export function InputField({ label, placeholder, type = 'text', value, onChange,
 }) {
   return (
     <div className={className}>
-      {label && <label className="block text-[12px] font-medium text-slate-600 mb-1">{label}</label>}
+      {label && <label className="block text-[13px] font-medium text-slate-600 mb-1.5">{label}</label>}
       <input
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={e => onChange?.(e.target.value)}
         disabled={disabled}
-        className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-50"
+        className="w-full h-10 px-3 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[14.5px] focus:outline-none focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 disabled:opacity-50 disabled:bg-slate-50"
       />
     </div>
   );
@@ -195,11 +241,11 @@ export function SelectField({ label, options, value, onChange, className = '' }:
 }) {
   return (
     <div className={className}>
-      {label && <label className="block text-[12px] font-medium text-slate-600 mb-1">{label}</label>}
+      {label && <label className="block text-[13px] font-medium text-slate-600 mb-1.5">{label}</label>}
       <select
         value={value}
         onChange={e => onChange?.(e.target.value)}
-        className="w-full h-9 px-3 rounded-md bg-white border border-slate-300 text-slate-900 text-[13px] focus:outline-none focus:border-blue-500"
+        className="w-full h-10 px-3 rounded-md bg-white border border-slate-300 text-slate-900 text-[14.5px] focus:outline-none focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -214,13 +260,13 @@ export function TextareaField({ label, placeholder, value, onChange, rows = 3, c
 }) {
   return (
     <div className={className}>
-      {label && <label className="block text-[12px] font-medium text-slate-600 mb-1">{label}</label>}
+      {label && <label className="block text-[13px] font-medium text-slate-600 mb-1.5">{label}</label>}
       <textarea
         placeholder={placeholder}
         value={value}
         onChange={e => onChange?.(e.target.value)}
         rows={rows}
-        className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 resize-none"
+        className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-[14.5px] focus:outline-none focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 resize-none"
       />
     </div>
   );
@@ -230,7 +276,7 @@ export function TextareaField({ label, placeholder, value, onChange, rows = 3, c
 export function Card({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
     <div
-      className={`bg-white border border-slate-200 rounded-lg p-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
+      className={`bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] shadow-sm shadow-slate-900/[0.03] p-4 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-[#D4AF37]/55 transition-all' : ''} ${className}`}
       onClick={onClick}
     >
       {children}
@@ -246,9 +292,9 @@ export function DataTable({ headers, children, empty }: {
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
+          <tr className="bg-[#1A3E5C]/[0.04] border-b border-[#D4AF37]/35">
             {headers.map(h => (
-              <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-widest">{h}</th>
+              <th key={h} className="px-4 py-3 text-left text-[13px] font-semibold text-[#1A3E5C] uppercase tracking-widest">{h}</th>
             ))}
           </tr>
         </thead>
@@ -258,7 +304,7 @@ export function DataTable({ headers, children, empty }: {
       </table>
       {empty && (
         <div className="text-center py-12">
-          <p className="text-[14px] text-slate-400">No data found</p>
+          <p className="text-[16px] text-slate-400">No data found</p>
         </div>
       )}
     </div>
@@ -268,7 +314,7 @@ export function DataTable({ headers, children, empty }: {
 export function TR({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
     <tr
-      className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+      className="border-b border-slate-100 hover:bg-[#1A3E5C]/[0.03] transition-colors cursor-pointer"
       onClick={onClick}
     >
       {children}
@@ -278,14 +324,14 @@ export function TR({ children, onClick }: { children: React.ReactNode; onClick?:
 
 export function TD({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <td className={`px-4 py-3 text-[13px] text-slate-700 ${className}`}>{children}</td>
+    <td className={`px-4 py-3.5 text-[15px] text-slate-700 ${className}`}>{children}</td>
   );
 }
 
 // ─── Mono Badge ──────────────────────────────────────────────────────────────
 export function MonoBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-mono text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+    <span className="font-mono text-[13px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
       {children}
     </span>
   );
@@ -297,9 +343,9 @@ export function EmptyState({ icon, title, description, action }: {
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-slate-300 mb-3">{icon}</div>
-      <h3 className="text-[15px] font-semibold text-slate-800 mb-1">{title}</h3>
-      <p className="text-[13px] text-slate-400 max-w-xs mb-3">{description}</p>
+      <div className="text-[#D4AF37]/60 mb-3">{icon}</div>
+      <h3 className="text-[17px] font-semibold text-slate-800 mb-1" style={{ fontFamily: 'Cinzel, serif' }}>{title}</h3>
+      <p className="text-[15px] text-slate-400 max-w-xs mb-3">{description}</p>
       {action}
     </div>
   );
@@ -307,7 +353,7 @@ export function EmptyState({ icon, title, description, action }: {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 export function Avatar({ initials, color, size = 'sm' }: { initials: string; color: string; size?: 'xs' | 'sm' | 'md' }) {
-  const sizes = { xs: 'w-6 h-6 text-[10px]', sm: 'w-8 h-8 text-[12px]', md: 'w-10 h-10 text-[14px]' };
+  const sizes = { xs: 'w-7 h-7 text-[12px]', sm: 'w-9 h-9 text-[14px]', md: 'w-11 h-11 text-[16px]' };
   return (
     <span className={`inline-flex items-center justify-center rounded-full font-semibold flex-shrink-0 ${sizes[size]}`}
       style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}>
@@ -318,7 +364,7 @@ export function Avatar({ initials, color, size = 'sm' }: { initials: string; col
 
 // ─── Section Divider ─────────────────────────────────────────────────────────
 export function Divider() {
-  return <div className="h-px bg-slate-200 my-3" />;
+  return <div className="h-px bg-[#D4AF37]/25 my-3" />;
 }
 
 // ─── Tab Nav ─────────────────────────────────────────────────────────────────
@@ -326,15 +372,15 @@ export function TabNav({ tabs, active, onChange }: {
   tabs: string[]; active: string; onChange: (t: string) => void;
 }) {
   return (
-    <div className="flex border-b border-slate-200 mb-4 overflow-x-auto">
+    <div className="flex border-b border-[#D4AF37]/25 mb-4 overflow-x-auto">
       {tabs.map(t => (
         <button
           key={t}
           onClick={() => onChange(t)}
-          className={`px-4 py-2 text-[13px] font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
+          className={`px-4 py-2.5 text-[14.5px] font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
             ${active === t
-              ? 'text-blue-600 border-blue-600'
-              : 'text-slate-500 border-transparent hover:text-slate-800 hover:border-slate-300'
+              ? 'text-[#1A3E5C] border-[#D4AF37]'
+              : 'text-slate-500 border-transparent hover:text-[#1A3E5C] hover:border-slate-300'
             }`}
         >
           {t}
@@ -358,7 +404,7 @@ export function SearchInput({ placeholder = 'Search...', value, onChange }: {
         placeholder={placeholder}
         value={value}
         onChange={e => onChange?.(e.target.value)}
-        className="pl-8 pr-3 h-8 rounded-md bg-white border border-slate-300 text-slate-800 placeholder-slate-400 text-[13px] focus:outline-none focus:border-blue-500 w-56"
+        className="pl-8 pr-3 h-9 rounded-md bg-white border border-slate-300 text-slate-800 placeholder-slate-400 text-[14.5px] focus:outline-none focus:border-[#1A3E5C] focus:ring-2 focus:ring-[#1A3E5C]/10 w-56"
       />
     </div>
   );
@@ -370,13 +416,13 @@ export function InfoBanner({ children, variant = 'info' }: {
   variant?: 'info' | 'warning' | 'error' | 'success';
 }) {
   const configs = {
-    info:    'bg-blue-50 border-blue-200 text-blue-700',
+    info:    'bg-[#1A3E5C]/[0.06] border-[#1A3E5C]/25 text-[#1A3E5C]',
     warning: 'bg-amber-50 border-amber-200 text-amber-700',
     error:   'bg-red-50 border-red-200 text-red-700',
     success: 'bg-green-50 border-green-200 text-green-700',
   };
   return (
-    <div className={`border px-4 py-2.5 rounded-lg text-[13px] ${configs[variant]}`}>
+    <div className={`border px-4 py-3 rounded-lg text-[14.5px] ${configs[variant]}`}>
       {children}
     </div>
   );

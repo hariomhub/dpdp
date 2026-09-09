@@ -22,12 +22,24 @@ export interface DashboardStats {
     inProgressTasks:   number
     rejectedTasks:     number
     unassignedTasks:   number
+    crossBorderPiiTransfers: number
+    suppliersWithoutDpa:     number
+    myReviewedToday:   number
+    myApprovedTotal:   number
+    myRejectedTotal:   number
+    signedOffLast30Days: number
   }
 
   complianceScore:   number | null
   riskScore:         number
   totalControls:     number
   compliantControls: number
+
+  overdueByPriority: { CRITICAL: number; HIGH: number; MEDIUM: number; LOW: number }
+
+  myRecentlyReviewed: Array<{ title: string; asset: string; decision: 'Approved' | 'Rejected'; time: string }>
+  recentSignOffs:     Array<{ title: string; asset: string; time: string }>
+  myRecentEvidence:   Array<{ title: string; asset: string; type: string; date: string; status: 'Approved' | 'Rejected' | 'Pending Review' }>
 
   deptCompliance: Array<{
     name: string
