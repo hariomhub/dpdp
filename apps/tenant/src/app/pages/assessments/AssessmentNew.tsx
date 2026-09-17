@@ -88,6 +88,19 @@ export function AssessmentNewPage() {
   const activeCustomControls = customControlsList.filter(c => !excludedControls.has(c.id));
   const selectedAssetList = ownDeptAssets.filter((a: any) => selectedAssets.has(a.id));
 
+  // A custom control mapped into a mandatory chapter of the SELECTED regulation is just as
+  // non-excludable as a regulation-catalog control in that chapter — the backend enforces this
+  // regardless of which tab the control is shown under, so the UI must reflect it consistently.
+  const mandatoryChapterIds = new Set(
+    (selectedReg?.chapters ?? []).filter((ch: any) => ch.isMandatory).map((ch: any) => ch.id)
+  );
+  const isCustomControlLocked = (ctrl: any) =>
+    !!ctrl.regulationMappings?.some((m: any) => m.regulationId === selectedRegId && m.chapterId && mandatoryChapterIds.has(m.chapterId));
+  const lockedRegulationControlIds = new Set(
+    (selectedReg?.chapters ?? []).filter((ch: any) => ch.isMandatory).flatMap((ch: any) => (ch.controls ?? []).map((c: any) => c.id))
+  );
+  const lockedCustomControlIds = new Set(customControlsList.filter(isCustomControlLocked).map((c: any) => c.id));
+
   // Task list preview: activeControls × selectedAssets
   const taskList = useMemo(() => {
     return activeControls.flatMap((ctrl: any) =>
@@ -119,6 +132,36 @@ export function AssessmentNewPage() {
   const setAssignee = (key: string, val: string) =>
     setTaskAssignments(prev => ({ ...prev, [key]: val === '__auto__' ? undefined as any : (val || null) }));
 
+  // Switching regulations changes both the chapter set (mandatory chapters differ per
+  // regulation) and, for reused controls, which chapter a given control even falls under —
+  // an exclusion picked under the old regulation can be meaningless or (worse) point at a now-
+  // mandatory control under the new one, which the backend hard-rejects at creation time.
+  // Regulation-catalog exclusions are reset outright; custom-control exclusions carry over
+  // unless the control is now mapped into a mandatory chapter of the newly selected regulation.
+  const handleSelectRegulation = (regId: string) => {
+    if (regId === selectedRegId) return;
+    const newReg = (regulations as any[]).find((r: any) => r.id === regId);
+    const newMandatoryChapterIds = new Set(
+      (newReg?.chapters ?? []).filter((ch: any) => ch.isMandatory).map((ch: any) => ch.id)
+    );
+    const customIds = new Set(customControlsList.map((c: any) => c.id));
+    const newlyLockedCustomIds = new Set(
+      customControlsList
+        .filter((ctrl: any) => ctrl.regulationMappings?.some((m: any) =>
+          m.regulationId === regId && m.chapterId && newMandatoryChapterIds.has(m.chapterId)))
+        .map((ctrl: any) => ctrl.id)
+    );
+    const keep = (id: string) => customIds.has(id) && !newlyLockedCustomIds.has(id);
+    setExcludedControls(prev => new Set(Array.from(prev).filter(keep)));
+    setExclusionReasons(prev => {
+      const next: Record<string, string> = {};
+      Object.keys(prev).forEach(id => { if (keep(id)) next[id] = prev[id]; });
+      return next;
+    });
+    setExpandedChapters(new Set());
+    setSelectedRegId(regId);
+  };
+
   // ── Submit ─────────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!form.name || !form.startDate || !form.endDate || !form.deptId || !selectedRegId || selectedAssets.size === 0) return;
@@ -138,6 +181,7 @@ export function AssessmentNewPage() {
       assetIds:     Array.from(selectedAssets),
       exclusions:   Array.from(excludedControls)
         .filter(id => allControls.some((c: any) => c.id === id))
+        .filter(id => !lockedRegulationControlIds.has(id) && !lockedCustomControlIds.has(id))
         .map(id => ({ controlId: id, reason: exclusionReasons[id] || 'Excluded by CO' })),
       taskAssignments: assignments.length > 0 ? assignments : undefined,
     });
@@ -343,7 +387,7 @@ export function AssessmentNewPage() {
               ) : (
                 <div className="space-y-2">
                   {(regulations as any[]).map((reg: any) => (
-                    <div key={reg.id} onClick={() => setSelectedRegId(reg.id)}
+                    <div key={reg.id} onClick={() => handleSelectRegulation(reg.id)}
                       className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         selectedRegId === reg.id ? 'border-[#1A3E5C] bg-[#1A3E5C]/8' : 'border-[#D4AF37]/35 hover:border-slate-300'
                       }`}>
@@ -457,7 +501,7 @@ export function AssessmentNewPage() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[13.5px] text-slate-400">Controls your organization defines itself — always optional.</p>
+                      <p className="text-[13.5px] text-slate-400">Controls your organization defines itself — optional, unless mapped to a mandatory chapter of the selected regulation.</p>
                       <p className="text-[13.5px] text-slate-400 flex-shrink-0 ml-2">
                         {activeCustomControls.length} active · {customControlsList.length - activeCustomControls.length} excluded
                       </p>
@@ -468,21 +512,33 @@ export function AssessmentNewPage() {
                       )}
                       {customControlsList.map((ctrl, i) => {
                         const isExcluded = excludedControls.has(ctrl.id);
+                        const isLocked = lockedCustomControlIds.has(ctrl.id);
                         return (
                           <div key={ctrl.id} className={i > 0 ? 'border-t border-slate-100' : ''}>
                             <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
-                              <input type="checkbox" checked={!isExcluded}
-                                onChange={e => {
-                                  setExcludedControls(p => {
-                                    const n = new Set(p);
-                                    e.target.checked ? n.delete(ctrl.id) : n.add(ctrl.id);
-                                    return n;
-                                  });
-                                }}
-                                className="accent-[#1A3E5C] w-3.5 h-3.5 flex-shrink-0" />
-                              <p className={`text-[14px] flex-1 ${isExcluded ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                              {isLocked ? (
+                                <span title="Mapped to a mandatory chapter of the selected regulation — cannot be excluded"
+                                  className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">
+                                  <Lock className="w-3 h-3 text-amber-500" />
+                                </span>
+                              ) : (
+                                <input type="checkbox" checked={!isExcluded}
+                                  onChange={e => {
+                                    setExcludedControls(p => {
+                                      const n = new Set(p);
+                                      e.target.checked ? n.delete(ctrl.id) : n.add(ctrl.id);
+                                      return n;
+                                    });
+                                  }}
+                                  className="accent-[#1A3E5C] w-3.5 h-3.5 flex-shrink-0" />
+                              )}
+                              <p className={`text-[14px] flex-1 ${isExcluded && !isLocked ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
                                 {ctrl.title}
                               </p>
+                              {isLocked && (
+                                <span title="Mapped to a mandatory chapter of the selected regulation — cannot be excluded"
+                                  className="text-[12px] text-amber-600 flex-shrink-0">Locked</span>
+                              )}
                             </div>
                           </div>
                         );

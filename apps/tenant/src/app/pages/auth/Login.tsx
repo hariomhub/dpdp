@@ -82,24 +82,82 @@ function LoginBackdrop() {
   );
 }
 
-// Full-screen animated state shown while credentials are verified — the logo
-// pulses at the center of expanding sonar-style rings until the request
-// settles (useLogin navigates away on success; onError clears isPending).
+// Full-screen animated state shown while credentials are verified — a bold
+// dual-ring security scan (two conic-gradient arcs orbiting in opposite
+// directions, plus a radiating sonar pulse) breathes around the logo until
+// the request settles (useLogin navigates away on success; onError clears
+// isPending).
 function VerifyingOverlay() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#16324a]">
-      <div className="relative flex items-center justify-center w-28 h-28 mb-6">
-        <span className="absolute inset-0 rounded-full border border-[#D4AF37]/50 animate-ping" style={{ animationDuration: '2.1s' }} />
-        <span className="absolute inset-2.5 rounded-full border border-[#D4AF37]/40 animate-ping" style={{ animationDuration: '2.1s', animationDelay: '0.35s' }} />
-        <span className="absolute inset-5 rounded-full border border-white/30 animate-ping" style={{ animationDuration: '2.1s', animationDelay: '0.7s' }} />
-        <div className="relative w-14 h-14 animate-pulse" style={{ filter: 'brightness(0) invert(1)' }}>
-          <LogoIcon className="w-14 h-14" />
+      <div className="flex flex-col items-center" style={{ animation: 'verifyEnter 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>
+        <div className="relative flex items-center justify-center w-40 h-40 mb-8">
+          <span
+            className="absolute inset-0 rounded-full blur-2xl"
+            style={{ background: 'radial-gradient(circle, rgba(212,175,55,0.5) 0%, transparent 70%)', animation: 'verifyHalo 2.6s ease-in-out infinite' }}
+          />
+          <span className="absolute inset-3 rounded-full border-2 border-[#D4AF37]/45" style={{ animation: 'verifySonar 2.4s ease-out infinite' }} />
+          <span className="absolute inset-0 rounded-full border border-white/10" />
+          <span
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: 'conic-gradient(from 0deg, transparent 0%, #D4AF37 18%, #F4E4B8 24%, transparent 40%)',
+              animation: 'verifyOrbit 1.9s linear infinite',
+              WebkitMaskImage: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
+              maskImage: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
+            }}
+          />
+          <span
+            className="absolute inset-7 rounded-full"
+            style={{
+              background: 'conic-gradient(from 180deg, transparent 0%, rgba(255,255,255,0.7) 14%, transparent 32%)',
+              animation: 'verifyOrbit 2.6s linear infinite reverse',
+              WebkitMaskImage: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))',
+              maskImage: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))',
+            }}
+          />
+          <div className="relative w-20 h-20" style={{ filter: 'brightness(0) invert(1)', animation: 'verifyBreathe 2.2s ease-in-out infinite' }}>
+            <LogoIcon className="w-20 h-20" />
+          </div>
+        </div>
+        <p className="text-white text-[17px] font-semibold tracking-wide" style={{ fontFamily: 'Cinzel, serif' }}>
+          Verifying your credentials
+        </p>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-white/55 text-[14.5px]">Securely signing you in</span>
+          <span className="inline-flex gap-0.5">
+            {[0, 1, 2].map(i => (
+              <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" style={{ animation: `verifyDot 1.3s ease-in-out infinite ${i * 0.18}s` }} />
+            ))}
+          </span>
         </div>
       </div>
-      <p className="text-white text-[15px] font-semibold tracking-wide" style={{ fontFamily: 'Cinzel, serif' }}>
-        Verifying your credentials…
-      </p>
-      <p className="text-white/50 text-[14px] mt-1.5">Securely signing you in</p>
+      <style>{`
+        @keyframes verifyEnter {
+          0%   { opacity: 0; transform: translateY(8px) scale(0.98); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes verifyHalo {
+          0%, 100% { opacity: 0.3; transform: scale(0.92); }
+          50%      { opacity: 0.6; transform: scale(1.08); }
+        }
+        @keyframes verifySonar {
+          0%   { transform: scale(0.85); opacity: 0.6; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+        @keyframes verifyOrbit {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes verifyBreathe {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.08); }
+        }
+        @keyframes verifyDot {
+          0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+          40%           { opacity: 1; transform: translateY(-2px); }
+        }
+      `}</style>
     </div>
   );
 }

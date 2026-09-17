@@ -225,7 +225,7 @@ export function OnboardingPage() {
           ))}
         </div>
 
-        <button onClick={() => navigate('/org/dashboard')} className="text-[14px] text-slate-400 hover:text-slate-700 transition-colors">
+        <button type="button" onClick={() => navigate('/org/dashboard')} className="text-[14px] text-slate-400 hover:text-slate-700 transition-colors">
           Save & Exit
         </button>
       </div>
@@ -242,7 +242,7 @@ export function OnboardingPage() {
         <form id="onboarding-form" onSubmit={(e) => { e.preventDefault(); goNext(); }} className="flex-1 flex flex-col overflow-hidden bg-slate-50">
           {step !== 2 ? (
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-4xl mx-auto px-8 py-8">
+              <div key={step} className="max-w-4xl mx-auto px-8 py-8" style={{ animation: 'onboardStepIn 0.35s cubic-bezier(0.16,1,0.3,1) both' }}>
 
             {/* ═══════════════ STEP 1: Organization Details ═══════════════════ */}
             {step === 0 && (
@@ -330,7 +330,7 @@ export function OnboardingPage() {
                       const Icon = card.icon;
                       const selected = classification === card.value;
                       return (
-                        <button key={card.value} onClick={() => setClassification(card.value)}
+                        <button key={card.value} type="button" onClick={() => setClassification(card.value)}
                           className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-4
                             ${selected ? 'border-[#1A3E5C] bg-[#1A3E5C]/8' : 'border-[#D4AF37]/35 bg-white hover:border-[#D4AF37]/40'}`}>
                           <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${selected ? 'bg-[#1A3E5C]' : 'bg-slate-100'}`}>
@@ -366,7 +366,7 @@ export function OnboardingPage() {
 
                   {/* Collapsible help */}
                   <div className="border border-[#D4AF37]/35 rounded-xl overflow-hidden">
-                    <button onClick={() => setHelpExpanded(v => !v)}
+                    <button type="button" onClick={() => setHelpExpanded(v => !v)}
                       className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
                       <span className="text-[15px] font-medium text-[#1A3E5C]">Help me understand the difference</span>
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${helpExpanded ? 'rotate-180' : ''}`} />
@@ -546,13 +546,13 @@ export function OnboardingPage() {
             </div>
           ) : (
             /* Step 2 — Organization Structure */
-            <>
+            <div className="flex-1 flex flex-col overflow-hidden" style={{ animation: 'onboardStepIn 0.35s cubic-bezier(0.16,1,0.3,1) both' }}>
               <div className="px-6 py-3.5 border-b border-slate-100 flex-shrink-0 bg-white">
                 <h2 className="text-[19px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Organization Structure</h2>
                 <p className="text-[14px] text-slate-500 mt-0.5">Map your departments, assets, suppliers, and the personal data that flows through them.</p>
               </div>
-              <div className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
-                <CloudConnectionsPanel />
+              <div className="px-6 py-3 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
+                <CloudConnectionsPanel compact />
               </div>
               <div className="flex-1 overflow-hidden">
                 <OrgStructureStep
@@ -571,10 +571,16 @@ export function OnboardingPage() {
                   {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>Continue to Review <ChevronRight className="w-4 h-4" /></>}
                 </button>
               </div>
-            </>
+            </div>
           )}
         </form>
       </div>
+      <style>{`
+        @keyframes onboardStepIn {
+          0%   { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -633,7 +639,7 @@ function ReviewCard({ title, children, onEdit, showEdit = true }: {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[15px] font-bold text-slate-800">{title}</h3>
         {showEdit && onEdit && (
-          <button onClick={onEdit} className="flex items-center gap-1.5 text-[14px] text-[#1A3E5C] font-medium hover:text-[#D4AF37] transition-colors">
+          <button type="button" onClick={onEdit} className="flex items-center gap-1.5 text-[14px] text-[#1A3E5C] font-medium hover:text-[#D4AF37] transition-colors">
             <Edit2 className="w-3.5 h-3.5" /> Edit
           </button>
         )}
@@ -690,6 +696,7 @@ function ProgressPanel({ step, setStep, departments }: {
           return (
             <div key={s.idx}>
               <button
+                type="button"
                 onClick={() => done && setStep(s.idx)}
                 disabled={!done}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors

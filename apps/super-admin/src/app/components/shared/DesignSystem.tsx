@@ -1,30 +1,25 @@
 import React from 'react';
 
 // ─── Brand Logo ───────────────────────────────────────────────────────────────
-// Source file: apps/super-admin/public/aashray_logo.png — identical asset to
-// the tenant app's copy, so the crop math (measured pixel-for-pixel against
-// the source in the tenant build) carries over exactly: the shield's opaque
-// pixels span x 120-380 / y 56-308 of the 500x500 canvas. The crop window is
-// x 85-415 / y 0-330 (151.5% scale, offset 0%/-25.8%) — generous padding on
-// every side, stopping exactly at the wordmark. No image edit needed.
-const LOGO_SRC = '/aashray_logo.png';
+// Source file: apps/super-admin/public/niyamsaathi_logo.png — identical asset
+// to the tenant app's copy: a flat 593x421 landscape lockup ("N...S" monogram
+// with a shield+clock emblem woven into the middle, "NIYAMSAATHI" wordmark
+// below), transparent background. There's no separate icon-only export, so
+// LogoIcon shows the full lockup letterboxed (object-fit: contain) inside
+// whatever square/rect box the caller sizes — no cropping.
+const LOGO_SRC = '/niyamsaathi_logo.png';
 
 export function LogoIcon({ className = '' }: { className?: string }) {
   return (
-    <div className={`relative overflow-hidden flex-shrink-0 ${className}`}>
-      <img
-        src={LOGO_SRC}
-        alt="Aashray Infotech"
-        className="absolute max-w-none max-h-none"
-        style={{ width: '151.5%', height: '151.5%', top: '0%', left: '-25.8%', objectFit: 'contain' }}
-      />
+    <div className={`relative flex items-center justify-center flex-shrink-0 ${className}`}>
+      <img src={LOGO_SRC} alt="NiyamSaathi" className="w-full h-full" style={{ objectFit: 'contain' }} />
     </div>
   );
 }
 
-// Full mark (shield + wordmark), for brand-forward placements like the login screen.
+// Full mark (monogram + emblem + wordmark), for brand-forward placements like the login screen.
 export function LogoFull({ className = '', style = {} }: { className?: string; style?: React.CSSProperties }) {
-  return <img src={LOGO_SRC} alt="Aashray Infotech" className={className} style={{ objectFit: 'contain', ...style }} />;
+  return <img src={LOGO_SRC} alt="NiyamSaathi" className={className} style={{ objectFit: 'contain', ...style }} />;
 }
 
 // ─── Brand Spinner ────────────────────────────────────────────────────────────

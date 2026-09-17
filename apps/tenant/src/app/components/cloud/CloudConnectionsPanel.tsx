@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Cloud, Plus, RotateCw, Trash2, ScanSearch, ChevronRight, Loader2,
+  Cloud, Plus, RotateCw, Trash2, ScanSearch, ChevronRight, ChevronDown, Loader2,
 } from 'lucide-react';
 import {
   useCloudConnections, useRetestCloudConnection, useDisconnectCloudConnection,
@@ -105,9 +105,80 @@ function ConnectionRow({ connection }: { connection: CloudConnection }) {
   );
 }
 
-export function CloudConnectionsPanel() {
+function ConnectionsBody({ isLoading, connections, onConnect }: {
+  isLoading: boolean; connections: CloudConnection[]; onConnect: () => void;
+}) {
+  if (isLoading) {
+    return <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>;
+  }
+  if (connections.length === 0) {
+    return (
+      <div className="py-8 text-center border border-dashed border-slate-300 rounded-lg">
+        <Cloud className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+        <p className="text-[14.5px] text-slate-500 font-medium">No cloud accounts connected</p>
+        <button
+          onClick={onConnect}
+          className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[14px] font-semibold rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Connect a Cloud Account
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {connections.map(c => <ConnectionRow key={c.id} connection={c} />)}
+    </div>
+  );
+}
+
+// `compact` renders a collapsed-by-default summary bar instead of the full
+// panel — used inside the onboarding Organization Structure step, where an
+// unbounded, always-expanded connections list would otherwise eat the
+// vertical space the org structure tree needs. Even expanded, the compact
+// body is height-capped with its own scroll so it can never grow past a
+// fixed footprint again. The full (non-compact) layout — used on the
+// dedicated Cloud Connections settings page — is unchanged.
+export function CloudConnectionsPanel({ compact = false }: { compact?: boolean }) {
   const { data: connections = [], isLoading } = useCloudConnections();
   const [connecting, setConnecting] = useState(false);
+  const [expanded, setExpanded] = useState(!compact);
+
+  if (compact) {
+    return (
+      <div className="bg-white border border-[#D4AF37]/35 rounded-xl shadow-sm shadow-slate-900/[0.04]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
+          >
+            <Cloud className="w-4 h-4 text-[#1A3E5C] flex-shrink-0" />
+            <span className="text-[14.5px] font-semibold text-slate-900 flex-shrink-0">Cloud Connections</span>
+            {!isLoading && (
+              <span className="text-[13px] text-slate-400 truncate">
+                {connections.length === 0 ? '— none connected yet, add assets manually below or connect one' : `— ${connections.length} connected`}
+              </span>
+            )}
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ml-auto ${expanded ? 'rotate-180' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setConnecting(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 border border-slate-300 text-slate-700 text-[13px] font-medium rounded-lg hover:bg-slate-50 transition-colors flex-shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" /> Connect
+          </button>
+        </div>
+        {expanded && (
+          <div className="px-4 pb-4 pt-1 border-t border-slate-100 max-h-48 overflow-y-auto">
+            <ConnectionsBody isLoading={isLoading} connections={connections} onConnect={() => setConnecting(true)} />
+          </div>
+        )}
+        {connecting && <ConnectCloudAccountModal onClose={() => setConnecting(false)} />}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-[#D4AF37]/35 rounded-xl shadow-sm shadow-slate-900/[0.04] p-5">
@@ -130,24 +201,7 @@ export function CloudConnectionsPanel() {
         )}
       </div>
 
-      {isLoading ? (
-        <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
-      ) : connections.length === 0 ? (
-        <div className="py-8 text-center border border-dashed border-slate-300 rounded-lg">
-          <Cloud className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-[14.5px] text-slate-500 font-medium">No cloud accounts connected</p>
-          <button
-            onClick={() => setConnecting(true)}
-            className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[14px] font-semibold rounded-lg transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Connect a Cloud Account
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {connections.map(c => <ConnectionRow key={c.id} connection={c} />)}
-        </div>
-      )}
+      <ConnectionsBody isLoading={isLoading} connections={connections} onConnect={() => setConnecting(true)} />
 
       {connecting && <ConnectCloudAccountModal onClose={() => setConnecting(false)} />}
     </div>

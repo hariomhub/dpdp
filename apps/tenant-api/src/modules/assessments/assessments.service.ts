@@ -7,8 +7,11 @@ const adminDb  = getSuperAdminPrisma()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function getMaxTaskCode(tenantId: string): Promise<number> {
-  const codes = await tenantDb.complianceTask.findMany({
+// Takes the db handle explicitly (tenantDb or a transaction's tx) so callers can read the
+// max code from inside the same transaction that will insert new codes — narrows, though
+// doesn't fully eliminate, the race window between two concurrent assessment creations.
+async function getMaxTaskCode(db: Pick<typeof tenantDb, 'complianceTask'>, tenantId: string): Promise<number> {
+  const codes = await db.complianceTask.findMany({
     where: { tenantId }, select: { taskCode: true },
   })
   return codes.reduce((max, { taskCode }) => {
@@ -134,7 +137,12 @@ export const assessmentsService = {
       where: { isCustom: true, tenantId, status: 'PUBLISHED' },
     })
 
-    const allControls    = [...regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control)), ...customControls]
+    // A custom control can carry its own regulationMappings pointing at this regulation's
+    // chapters (see controls.service.ts), so it can show up both via the chapter lookup above
+    // and via the tenant-wide custom-controls fetch — dedupe by id or assessmentControl.createMany
+    // below hits the @@unique([assessmentId, controlId]) constraint.
+    const rawAllControls = [...regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control)), ...customControls]
+    const allControls    = Array.from(new Map(rawAllControls.map(c => [c.id, c])).values())
     const exclusionsMap  = new Map(data.exclusions?.map(e => [e.controlId, e.reason]) ?? [])
 
     // Server-side enforcement: controls under a mandatory chapter can never be excluded,
@@ -150,7 +158,6 @@ export const assessmentsService = {
     const activeControls = allControls.filter(c => !exclusionsMap.has(c.id))
 
     // Resolve assignees and get asset names before transaction
-    let taskCounter = await getMaxTaskCode(tenantId)
     const assigneeMap   = new Map<string, string | null>()
     const assetNameMap  = new Map<string, string>()
 
@@ -164,6 +171,10 @@ export const assessmentsService = {
     assets.forEach(a => assetNameMap.set(a.id, a.name))
 
     const assessment = await tenantDb.$transaction(async tx => {
+      // Read inside the transaction, right before use, to keep the window between reading
+      // the max code and inserting new ones as narrow as possible.
+      let taskCounter = await getMaxTaskCode(tx, tenantId)
+
       const created = await tx.assessment.create({
         data: {
           tenantId, name: data.name, description: data.description,
@@ -195,13 +206,13 @@ export const assessmentsService = {
       }
 
       // ── Auto-create ComplianceTasks (active control × asset) ──────────────
-      let openTaskCount = 0
+      // Built up-front and inserted in one createMany instead of N sequential creates —
+      // for a large regulation × "select all assets", N was easily in the hundreds, and
+      // each awaited round-trip ate into the transaction's 60s timeout budget.
       const dueDate = new Date(data.endDate)
-
-      for (const assetId of data.assetIds) {
-        const assetName  = assetNameMap.get(assetId) ?? assetId
-
-        for (const control of activeControls) {
+      const tasksToCreate = data.assetIds.flatMap(assetId => {
+        const assetName = assetNameMap.get(assetId) ?? assetId
+        return activeControls.map(control => {
           // Manual assignment takes priority over auto-delegation
           const manualAssignment = data.taskAssignments?.find(
             ta => ta.controlId === control.id && ta.assetId === assetId
@@ -211,29 +222,30 @@ export const assessmentsService = {
             : assigneeMap.get(assetId) ?? null
 
           taskCounter++
-          await tx.complianceTask.create({
-            data: {
-              tenantId,
-              taskCode:     `ACT-${String(taskCounter).padStart(3, '0')}`,
-              title:        `${control.title} — ${assetName}`,
-              description:  control.description ?? control.title,
-              assessmentId: created.id,
-              controlId:    control.id,
-              assetId,
-              assignedToId: assignedTo,
-              createdById:  userId,
-              status:       'PENDING',
-              priority:     'HIGH',
-              dueDate,
-              autoAssigned: !!assignedTo,
-            },
-          })
-          openTaskCount++
-        }
+          return {
+            tenantId,
+            taskCode:     `ACT-${String(taskCounter).padStart(3, '0')}`,
+            title:        `${control.title} — ${assetName}`,
+            description:  control.description ?? control.title,
+            assessmentId: created.id,
+            controlId:    control.id,
+            assetId,
+            assignedToId: assignedTo,
+            createdById:  userId,
+            status:       'PENDING' as const,
+            priority:     'HIGH' as const,
+            dueDate,
+            autoAssigned: !!assignedTo,
+          }
+        })
+      })
+
+      if (tasksToCreate.length > 0) {
+        await tx.complianceTask.createMany({ data: tasksToCreate })
       }
 
       await tx.assessment.update({
-        where: { id: created.id }, data: { openTasks: openTaskCount },
+        where: { id: created.id }, data: { openTasks: tasksToCreate.length },
       })
 
       return created
