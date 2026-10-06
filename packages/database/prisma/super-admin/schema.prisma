@@ -123,6 +123,34 @@ enum RegulationStatus {
   ARCHIVED
 }
 
+// Regulatory-text-level fact for NodeApplicability: does this node
+// (clause/standard) apply to a given category, and if so is it
+// mandatory or exempted there. Reproduces SEBI CSCRF's exemption
+// tables exactly (e.g. "Standard X is exempted for Self-cert REs").
+enum NodeApplicabilityStatus {
+  MANDATORY
+  APPLICABLE
+  EXEMPT
+}
+
+// Which entity a CustomFieldDefinition's values attach to.
+enum CustomFieldScope {
+  CONTROL
+  ACTION
+}
+
+// Fixed, small, universal set of input-widget types — unlike
+// nodeType/applicability-category code, this never varies per
+// regulation, so it stays a real enum rather than free text.
+enum CustomFieldDataType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  SINGLE_SELECT
+  MULTI_SELECT
+}
+
 enum ProviderCategory {
   CLOUD_INFRASTRUCTURE
   IDENTITY_SAAS
@@ -135,6 +163,7 @@ enum ProviderCategory {
 
 enum AuditAction {
   ORG_CREATED
+  LICENCE_ISSUED
   ORG_UPDATED
   ORG_SUSPENDED
   ORG_ACTIVATED
@@ -142,10 +171,19 @@ enum AuditAction {
   REGULATION_CREATED
   REGULATION_UPDATED
   REGULATION_ARCHIVED
+  REGULATION_DELETED
   CONTROL_CREATED
   CONTROL_UPDATED
   CONTROL_PUBLISHED
   CONTROL_DEACTIVATED
+  MASTER_CONTROL_CREATED
+  MASTER_CONTROL_UPDATED
+  MASTER_CONTROL_DELETED
+  MASTER_CONTROL_ACTION_CREATED
+  MASTER_CONTROL_ACTION_UPDATED
+  MASTER_CONTROL_ACTION_DELETED
+  CONTROL_LINKED_TO_MASTER
+  CONTROL_UNLINKED_FROM_MASTER
   COURSE_CREATED
   COURSE_UPDATED
   COURSE_PUBLISHED
@@ -237,6 +275,14 @@ model Tenant {
   licenseKey   LicenseKey?
   auditLogs    PlatformAuditLog[]
 
+  // Per-regulation classification — a tenant can hold a different
+  // applicability category under every regulation simultaneously
+  // (e.g. Significant DF under DPDP, Qualified RE under SEBI CSCRF).
+  // Supersedes the classification/classUncertain fields above for any
+  // regulation that has been migrated onto RegulationApplicabilityCategory;
+  // those fields stay in place (deprecated) until DPDP is backfilled.
+  regulationClassifications TenantRegulationClassification[]
+
   @@map("tenants")
 }
 
@@ -275,15 +321,30 @@ model Regulation {
   jurisdiction     String           @default("India")
   effectiveDate    DateTime
   status           RegulationStatus @default(DRAFT)
+  documentType     String?          // free text: "Act", "Circular", "Master Circular", "Framework", ...
+  version          String?          // e.g. "1.0" — regulations get amended/reissued over time
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
+  // Deprecated — superseded by nodes/controls below. Kept until the
+  // cutover to RegulationNode/Control.regulationId is verified, then
+  // dropped in a later cleanup migration.
   controlMappings  ControlRegulation[]
   chapters         RegulationChapter[]
+
+  nodes                    RegulationNode[]
+  applicabilityCategories  RegulationApplicabilityCategory[]
+  customFieldDefinitions   CustomFieldDefinition[]
+  controls                 Control[]
+  predefinedActions        ControlPredefinedAction[]
+  tenantClassifications    TenantRegulationClassification[]
 
   @@map("regulations")
 }
 
+// Deprecated — superseded by RegulationNode. Left in place (and still
+// fully populated/functional) until the cutover is verified; removed
+// in a later cleanup migration, not this one.
 model RegulationChapter {
   id           String     @id @default(uuid())
   regulationId String
@@ -303,6 +364,184 @@ model RegulationChapter {
 }
 
 // ============================================
+// REGULATION STRUCTURE (generic — every regulation)
+// Self-referencing tree, replaces RegulationChapter +
+// RegulationSection. nodeType/code are free text so each
+// regulation keeps its own vocabulary and depth: "Chapter"/
+// "Section" for DPDP, "Part"/"Function"/"Domain"/"Standard"
+// for SEBI CSCRF, "Annexure" as a root-level sibling of Parts.
+// ============================================
+
+model RegulationNode {
+  id           String           @id @default(uuid())
+  regulationId String
+  regulation   Regulation       @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  parentId     String?
+  parent       RegulationNode?  @relation("RegulationNodeParent", fields: [parentId], references: [id], onDelete: Cascade)
+  children     RegulationNode[] @relation("RegulationNodeParent")
+
+  nodeType   String   // free text: "Chapter", "Part", "Function", "Domain", "Standard", "Annexure", ...
+  code       String   // the regulation's own citation string, e.g. "II", "8", "GV.RR.S3", "Annexure-K"
+  title      String?
+  content    String?  // optional longer prescriptive text (e.g. a SEBI standard's full wording)
+  orderIndex Int      @default(0)
+  depth      Int      @default(0)
+  path       String   @default("") // materialized path of node ids for fast ancestor/descendant queries
+  metadata   Json?    // escape hatch for regulation-specific structured extras
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  controlLinks    ControlNode[]
+  applicabilities NodeApplicability[]
+
+  @@index([regulationId, parentId])
+  @@map("regulation_nodes")
+}
+
+// A regulation's own classification scheme — DPDP: Data Fiduciary /
+// Significant DF. SEBI CSCRF: MII / Qualified RE / Mid-size RE /
+// Small-size RE / Self-cert RE. Each regulation defines its own rows;
+// no platform-wide enum to extend every time a new regulation arrives.
+model RegulationApplicabilityCategory {
+  id              String     @id @default(uuid())
+  regulationId    String
+  regulation      Regulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  code            String     // e.g. "SIGNIFICANT_DF", "QUALIFIED_RE", "MII"
+  label           String     // e.g. "Significant Data Fiduciary", "Qualified RE"
+  criteriaSummary String?    // e.g. "AUM >= Rs. 1000 crore" — descriptive, not a rules engine
+  orderIndex      Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  nodeApplicabilities    NodeApplicability[]
+  controlApplicabilities ControlApplicability[]
+  tenantClassifications  TenantRegulationClassification[]
+
+  @@unique([regulationId, code])
+  @@map("regulation_applicability_categories")
+}
+
+// Regulatory-text-level fact: does this node (clause/standard) apply
+// to this category, and is it mandatory or exempted there. This is
+// what "mandatory chapter" logic reads going forward (any depth, not
+// just the old chapter-only isMandatory flag), and what reproduces
+// SEBI's exemption tables (Tables 25/26) exactly.
+model NodeApplicability {
+  id                      String                          @id @default(uuid())
+  nodeId                  String
+  node                    RegulationNode                  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  applicabilityCategoryId String
+  applicabilityCategory   RegulationApplicabilityCategory @relation(fields: [applicabilityCategoryId], references: [id], onDelete: Cascade)
+  status                  NodeApplicabilityStatus         @default(APPLICABLE)
+  note                    String?
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+
+  @@unique([nodeId, applicabilityCategoryId])
+  @@map("node_applicabilities")
+}
+
+// Admin-defined, no-deploy custom fields per regulation (e.g. SEBI's
+// "CCI Weightage", "Periodicity"). Field shape is data, not a Prisma
+// model — values are stored in Control.customFields / ControlPredefinedAction.customFields,
+// keyed by `key`. See CustomFieldDataType for why dataType stays an enum
+// while nodeType/category code stay free text.
+model CustomFieldDefinition {
+  id           String              @id @default(uuid())
+  regulationId String
+  regulation   Regulation          @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  scope        CustomFieldScope
+  key          String              // machine name, e.g. "cciWeightage"
+  label        String              // display name, e.g. "CCI Weightage"
+  dataType     CustomFieldDataType
+  options      Json?               // [{ value, label }] for SINGLE_SELECT / MULTI_SELECT
+  isRequired   Boolean             @default(false)
+  helpText     String?
+  orderIndex   Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([regulationId, scope, key])
+  @@map("custom_field_definitions")
+}
+
+// A tenant's classification under one specific regulation — a tenant
+// can be Significant DF under DPDP and Qualified RE under SEBI CSCRF
+// at the same time. Lives here (super-admin DB), next to Tenant, not
+// in the tenant DB, since Tenant.classification already lives here.
+model TenantRegulationClassification {
+  id                      String                          @id @default(uuid())
+  tenantId                String
+  tenant                  Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  regulationId            String
+  regulation              Regulation                      @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  applicabilityCategoryId String
+  applicabilityCategory   RegulationApplicabilityCategory @relation(fields: [applicabilityCategoryId], references: [id], onDelete: Restrict)
+  isUncertain             Boolean                         @default(false)
+  classifiedAt            DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+
+  @@unique([tenantId, regulationId])
+  @@map("tenant_regulation_classifications")
+}
+
+// ============================================
+// MASTER CONTROLS
+// Cross-regulation equivalence, distinct from ControlFamily (a loose,
+// many-to-many browsing tag). A MasterControl asserts a much stronger
+// claim: these regulation-specific controls represent the SAME
+// underlying obligation, such that completing one genuinely satisfies
+// the others (e.g. "MFA for privileged access" cited by both DPDP and
+// SEBI CSCRF). Deliberately admin-curated only — no auto-matching —
+// since a false equivalence here is a real compliance risk, not just a
+// UI inconvenience. Optional on Control: most controls have no
+// cross-regulation equivalent and should stay standalone.
+// ============================================
+
+model MasterControl {
+  id          String   @id @default(uuid())
+  // Human-readable, sequential, admin-facing identifier — MC-001, MC-002, …
+  // "MC" for Master Control, matching the entity's name everywhere else in
+  // the product rather than introducing a second term for the same thing.
+  code        String   @unique
+  title       String
+  description String
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions  MasterControlAction[]
+  controls Control[]
+
+  @@map("master_controls")
+}
+
+// The canonical, regulation-agnostic action list — authored once here
+// instead of duplicated per regulation. A regulation-specific
+// ControlPredefinedAction optionally links back via masterActionId to
+// say "this action IS the master's action for this regulation"; a
+// regulation-specific control can still carry its OWN additional
+// actions on top when its requirement is stricter or genuinely
+// different (additive, never a replacement of the master action).
+model MasterControlAction {
+  id               String         @id @default(uuid())
+  masterControlId  String
+  masterControl    MasterControl  @relation(fields: [masterControlId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  evidenceTypes    EvidenceType[]
+  suggestedDueDays Int            @default(30)
+  priority         Priority       @default(HIGH)
+  orderIndex       Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  linkedActions ControlPredefinedAction[]
+
+  @@map("master_control_actions")
+}
+
+// ============================================
 // CONTROLS
 // ============================================
 
@@ -310,6 +549,9 @@ model Control {
   id               String        @id @default(uuid())
   title            String
   description      String
+  // Deprecated — superseded by ControlApplicability, which reuses the
+  // same regulation-defined category vocabulary instead of this
+  // platform-wide, DPDP-shaped enum. Kept until backfilled/verified.
   applicableTo     ApplicableTo  @default(BOTH)
   status           ControlStatus @default(DRAFT)
   isCustom         Boolean       @default(false)
@@ -317,13 +559,47 @@ model Control {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
+  // Cross-regulation equivalence — see MasterControl above. Nullable:
+  // most controls stand alone.
+  masterControlId String?
+  masterControl   MasterControl? @relation(fields: [masterControlId], references: [id], onDelete: SetNull)
+
+  // "Home" regulation — which regulation this control was authored
+  // under. Nullable: a tenant's purely internal custom control can
+  // have no regulation at all. Denormalizes onto ControlPredefinedAction
+  // for fast filtering. Distinct from `nodes` below, which is the full,
+  // unrestricted set of citations this control satisfies (can span
+  // other regulations too — see ControlNode).
+  regulationId String?
+  regulation   Regulation? @relation(fields: [regulationId], references: [id], onDelete: SetNull)
+
+  // Denormalized union of every regulation this control touches
+  // (its home regulationId plus every regulation reachable through
+  // `nodes`), maintained by the service layer wherever ControlNode
+  // rows change. GIN-indexed for fast "show me everything touching
+  // regulation X" filtering without a join.
+  citedRegulationIds String[] @default([])
+
+  // Regulation-specific structured data (e.g. SEBI's CCI weightage),
+  // keyed by CustomFieldDefinition.key. No schema change needed to
+  // add a new field — see CustomFieldDefinition.
+  customFields Json?
+
+  // Deprecated — superseded by `nodes` (ControlNode) + `regulationId`
+  // above. Kept until backfilled/verified, then dropped.
   regulationMappings  ControlRegulation[]
   predefinedActions   ControlPredefinedAction[]
   families            ControlFamilyMember[]
 
+  nodes          ControlNode[]
+  applicabilities ControlApplicability[]
+
   @@map("controls")
 }
 
+// Deprecated — superseded by ControlNode + Control.regulationId.
+// Left in place (and still fully populated/functional) until the
+// cutover is verified; removed in a later cleanup migration.
 model ControlRegulation {
   controlId        String
   regulationId     String
@@ -336,6 +612,43 @@ model ControlRegulation {
 
   @@id([controlId, regulationId])
   @@map("control_regulations")
+}
+
+// Every citation this control satisfies — deliberately NOT restricted
+// to the control's own `regulationId`. Real data already needs this:
+// a control can be cited against nodes in more than one regulation
+// (e.g. one MFA control satisfying both an RBI clause and a SEBI
+// standard). isPrimary distinguishes the control's home citation(s)
+// from bonus/reused ones for reporting purposes.
+model ControlNode {
+  id        String         @id @default(uuid())
+  controlId String
+  control   Control        @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  nodeId    String
+  node      RegulationNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  isPrimary Boolean        @default(true)
+  note      String?
+  createdAt DateTime       @default(now())
+
+  @@unique([controlId, nodeId])
+  @@map("control_nodes")
+}
+
+// Catalog-curation-level fact: which applicability category(ies) this
+// specific control implementation is scoped to — today's
+// Control.applicableTo, preserved as its own concept because it's
+// independent of NodeApplicability (a regulatory clause's own
+// mandatory/exempt status). Absence of any row = applies broadly,
+// matching today's "BOTH" semantics.
+model ControlApplicability {
+  controlId               String
+  control                 Control                         @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  applicabilityCategoryId String
+  applicabilityCategory   RegulationApplicabilityCategory @relation(fields: [applicabilityCategoryId], references: [id], onDelete: Cascade)
+  addedAt                 DateTime                        @default(now())
+
+  @@id([controlId, applicabilityCategoryId])
+  @@map("control_applicabilities")
 }
 
 model ControlPredefinedAction {
@@ -352,6 +665,24 @@ model ControlPredefinedAction {
   checkMappings    ControlCheckMapping[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+
+  // Denormalized copy of the parent Control's regulationId, set at
+  // creation time, for fast "all SEBI actions" style filtering
+  // without a join back through Control.
+  regulationId String?
+  regulation   Regulation? @relation(fields: [regulationId], references: [id], onDelete: SetNull)
+
+  // Regulation-specific structured data at the action level (e.g.
+  // SEBI's periodicity — how often this action recurs, arguably an
+  // action-level fact rather than a control-level one). Keyed by
+  // CustomFieldDefinition.key, scope=ACTION.
+  customFields Json?
+
+  // Which MasterControlAction this regulation-specific action
+  // implements, if any — see MasterControl above. Nullable: most
+  // actions have no cross-regulation equivalent.
+  masterActionId String?
+  masterAction   MasterControlAction? @relation(fields: [masterActionId], references: [id], onDelete: SetNull)
 
   @@map("control_predefined_actions")
 }
@@ -401,6 +732,7 @@ model LmsCourse {
 
   sections              LmsSection[]
   designations          LmsCourseDesignation[]
+  portalRoles           LmsCoursePortalRole[]
 
   @@map("lms_courses")
 }
@@ -693,6 +1025,27 @@ model LmsCourseDesignation {
 
   @@id([courseId, designationId])
   @@map("lms_course_designations")
+}
+
+// Targets a course at the platform's OWN permission role (CEO/CO/IT_ADMIN/
+// INTERNAL_AUDITOR/EXTERNAL_AUDITOR) rather than a real-world job-function
+// designation — for "how do I use this portal" content, where relevance is
+// determined by what the software lets that role do, not by the learner's
+// actual job title. Independent axis from LmsCourseDesignation; a course can
+// use either, both, or neither.
+model LmsCoursePortalRole {
+  courseId    String
+  portalRole  String   // soft-reference to the tenant schema's TenantRole enum
+                        // by value — same cross-schema pattern already used by
+                        // RoleDesignationDefault.designation (tenant schema)
+                        // referencing LmsDesignation.name (this schema).
+  isMandatory Boolean  @default(true)
+  addedAt     DateTime @default(now())
+
+  course      LmsCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, portalRole])
+  @@map("lms_course_portal_roles")
 }
 
 // ============================================

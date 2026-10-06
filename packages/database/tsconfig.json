@@ -1,0 +1,5 @@
+{
+  "//": "Intentionally empty of compiler options. Its only job is to give tools (vite/vitest, editors) a tsconfig to stop at here, instead of walking up to the root tsconfig.json and following its dangling ./packages/ui reference. Apps typecheck this package's sources with their own tsconfig.",
+  "compilerOptions": {},
+  "include": ["src/**/*"]
+}

@@ -31,7 +31,8 @@ export interface MasterEvidence {
   title:       string
   description: string | null
   fileName:    string | null
-  fileUrl:     string | null
+  /** a sample file exists; open it with openStoredFile({ kind: 'master', id }) */
+  hasFile:     boolean
 }
 
 export interface ActionProductOption {
@@ -47,7 +48,7 @@ export interface ActionEvidence {
   title:       string
   type:        string
   description: string | null
-  fileUrl:     string | null
+  hasFile:     boolean
   fileName:    string | null
   linkUrl:     string | null
   textContent: string | null
@@ -68,7 +69,8 @@ export type GapReasonCode =
 export interface GapFindingFileRef {
   id:       string
   fileName: string
-  fileUrl:  string
+  fileSize: number
+  hasFile:  boolean
 }
 
 export interface GapFinding {
@@ -103,12 +105,26 @@ export interface EvidenceLinkedAction {
   otherLabel:  string | null
 }
 
+/** An earlier state of an evidence record, kept when its file or details were replaced. */
+export interface EvidenceVersionRef {
+  id:             string
+  version:        number
+  title:          string | null
+  fileName:       string | null
+  fileSize:       number | null
+  hasFile:        boolean
+  uploadedAt:     string
+  supersededAt:   string
+}
+
 export interface Evidence {
   id:            string
   title:         string
   type:          string
   description:   string | null
-  fileUrl:       string | null
+  hasFile:       boolean
+  version:       number
+  versions:      EvidenceVersionRef[]
   fileName:      string | null
   linkUrl:       string | null
   textContent:   string | null

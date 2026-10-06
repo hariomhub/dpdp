@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { AuthRequest } from '../../middleware/auth'
+import { EvidenceType } from '@prisma/tenant-client'
 import { controlsService } from './controls.service'
 
 const createCustomControlSchema = z.object({
@@ -11,11 +12,12 @@ const createCustomControlSchema = z.object({
     regulationId: z.string().uuid(),
     chapterId: z.string().uuid().optional(),
     sectionId: z.string().uuid().optional(),
+    nodeId: z.string().uuid().optional(),
   })).optional(),
   predefinedActions: z.array(z.object({
     title: z.string().min(2),
     description: z.string().min(2),
-    evidenceTypes: z.array(z.string()).min(1),
+    evidenceTypes: z.array(z.nativeEnum(EvidenceType)).min(1),
     suggestedDueDays: z.number().int().min(1).max(365),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
   })).min(1),
@@ -39,7 +41,7 @@ export const controlsController = {
   async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const body = createCustomControlSchema.parse(req.body)
-      const control = await controlsService.createCustomControl(req.tenantId!, body)
+      const control = await controlsService.createCustomControl(req.tenantId!, req.userId, body)
       res.status(201).json({ success: true, data: control })
     } catch (err) { next(err) }
   },

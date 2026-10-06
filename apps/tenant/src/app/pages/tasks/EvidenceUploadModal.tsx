@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2, FileText, Upload } from 'lucide-react';
 import { useUploadEvidence, type Action } from '../../../hooks/useTasks';
+import { openStoredFile, UPLOAD_ACCEPT, UPLOAD_HINT } from '../../../lib/files';
 
 const EVIDENCE_TYPES = ['FILE', 'SCREENSHOT', 'CONFIG', 'DOCUMENT', 'LOG', 'LINK', 'TEXT_NOTE'];
 const FILE_BASED_TYPES = ['FILE', 'SCREENSHOT', 'CONFIG', 'DOCUMENT', 'LOG'];
@@ -174,9 +175,9 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
                   )}
                   <p className="text-[14.5px] font-semibold text-[#1A3E5C]">Reference: {me.title}</p>
                   {me.description && <p className="text-[14px] text-[#1A3E5C] mt-0.5">{me.description}</p>}
-                  {me.fileUrl && (
-                    <a href={me.fileUrl} target="_blank" rel="noreferrer"
-                      className="text-[14px] text-[#1A3E5C] underline mt-0.5 inline-block">View sample</a>
+                  {me.hasFile && (
+                    <button onClick={() => void openStoredFile({ kind: 'master', id: me.id })}
+                      className="text-[14px] text-[#1A3E5C] underline mt-0.5 inline-block">View sample</button>
                   )}
                 </div>
               ))}
@@ -212,9 +213,10 @@ export function EvidenceUploadModal({ taskId, actions, initialActionId, initialP
               <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#1A3E5C]/40">
                 <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <span className="text-[15px] text-slate-500">Choose one or more files to upload</span>
-                <input type="file" multiple className="hidden"
+                <input type="file" multiple accept={UPLOAD_ACCEPT} className="hidden"
                   onChange={e => setFiles(prev => [...prev, ...Array.from(e.target.files ?? [])])} />
               </label>
+              <p className="text-[13px] text-slate-400">{UPLOAD_HINT}</p>
               {files.length > 0 && (
                 <div className="space-y-1">
                   {files.map((f, i) => (

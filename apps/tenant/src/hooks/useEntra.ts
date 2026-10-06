@@ -33,6 +33,12 @@ export interface SyncResult {
   synced:  number
   created: number
   updated: number
+  reactivated?: number
+  deactivated?: number
+  skippedProtected?: number
+  skippedDeactivatedByAdmin?: number
+  skippedMappings?: string[]
+  failed?: Array<{ email: string; error: string }>
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -116,16 +122,32 @@ export function useSaveEntraMappings() {
 export function useSyncEntraUsers() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () =>
-      apiClient
-        .post<{ success: boolean; data: SyncResult }>('/entra/sync')
-        .then(r => r.data),
+    // The server refuses a sync that would switch off an unusually large part of the team and says so. The person sees
+    // that warning and decides; only then is the sync repeated with their confirmation.
+    mutationFn: async () => {
+      const run = (confirmRemovals?: boolean) =>
+        apiClient
+          .post<{ success: boolean; data: SyncResult }>('/entra/sync', confirmRemovals ? { confirmRemovals: true } : undefined)
+          .then(r => r.data)
+      try {
+        return await run()
+      } catch (err: any) {
+        if (err?.data?.requiresConfirmation) {
+          if (window.confirm(`${err.data.message}\n\nContinue and deactivate these users?`)) return run(true)
+          throw new Error('Sync cancelled — nobody was changed.')
+        }
+        throw err
+      }
+    },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: queryKeys.entra.status })
       qc.invalidateQueries({ queryKey: queryKeys.users.list })
-      toast.success(
-        `Sync complete — ${res.created} created, ${res.updated} updated`
-      )
+      const extras = [
+        res.deactivated ? `${res.deactivated} deactivated` : '',
+        res.failed?.length ? `${res.failed.length} failed` : '',
+        res.skippedMappings?.length ? `${res.skippedMappings.length} group mapping(s) ignored (role cannot be granted by a group)` : '',
+      ].filter(Boolean).join(', ')
+      toast.success(`Sync complete — ${res.created} created, ${res.updated} updated${extras ? ', ' + extras : ''}`)
     },
     onError: (err: Error) => toast.error(err.message || 'Sync failed'),
   })
@@ -192,7 +214,7 @@ export function useReconnectEntra() {
 
 export function useEntraLogin() {
   return useMutation({
-    mutationFn: (data: { code: string; tenantId: string; redirectUri: string }) =>
+    mutationFn: (data: { code: string; state: string; nonce: string }) =>
       apiClient
         .post<{
           success: boolean

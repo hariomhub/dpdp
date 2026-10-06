@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { controlsService } from './controls.service'
 import { AuthRequest } from '../../middleware/auth'
-import { ControlStatus, ApplicableTo, EvidenceType, Priority } from '@prisma/super-admin-client'
+import { ControlStatus, EvidenceType, Priority } from '@prisma/super-admin-client'
 
 const predefinedActionSchema = z.object({
   title: z.string().min(2, 'Action title is required'),
@@ -17,26 +17,21 @@ const predefinedActionSchema = z.object({
 const createControlSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(5, 'Description must be at least 5 characters'),
-  applicableTo: z.nativeEnum(ApplicableTo).default(ApplicableTo.BOTH),
   status: z.nativeEnum(ControlStatus).default(ControlStatus.DRAFT),
-  regulationMappings: z.array(z.object({
-    regulationId: z.string().uuid(),
-    chapterId: z.string().uuid().optional(),
-    sectionId: z.string().uuid().optional()
-  })).min(1, 'At least one regulation mapping required'),
+  regulationId: z.string().uuid('Select a home regulation'),
+  nodeIds: z.array(z.string().uuid()).default([]),
+  applicabilityCategoryIds: z.array(z.string().uuid()).default([]),
   predefinedActions: z.array(predefinedActionSchema).min(1, 'At least one action required'),
 })
 
 const updateControlSchema = z.object({
   title: z.string().min(5).optional(),
   description: z.string().min(10).optional(),
-  applicableTo: z.nativeEnum(ApplicableTo).optional(),
   status: z.nativeEnum(ControlStatus).optional(),
-  regulationMappings: z.array(z.object({
-    regulationId: z.string().uuid(),
-    chapterId: z.string().uuid().optional(),
-    sectionId: z.string().uuid().optional()
-  })).optional(),
+  regulationId: z.string().uuid().optional(),
+  nodeIds: z.array(z.string().uuid()).optional(),
+  applicabilityCategoryIds: z.array(z.string().uuid()).optional(),
+  masterControlId: z.string().uuid().nullable().optional(),
 })
 
 export const controlsController = {
@@ -192,16 +187,12 @@ export const controlsControllerExtension = {
 
   async createMasterEvidence(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      let fileData: any = undefined
-      if (req.file) {
-        const { uploadFile } = await import('../../utils/storage')
-        fileData = await uploadFile(req.file, `master-evidence/${req.params.actionId}`)
-      }
+      // The temp file is validated and stored by the service, after it has confirmed the action exists.
       const result = await (controlsService as any).createMasterEvidence({
         controlId: req.params.id, actionId: req.params.actionId,
         productId: req.params.productId,
         adminId: req.adminId!,
-        data: { title: req.body.title, description: req.body.description, file: fileData },
+        data: { title: req.body.title, description: req.body.description, upload: req.file },
       })
       res.status(201).json({ success: true, data: result })
     } catch (err) { next(err) }

@@ -11,7 +11,8 @@ export const queryKeys = {
     mappings: ['entra', 'mappings'] as const,
   },
   dashboard: {
-    stats: ['dashboard', 'stats'] as const,
+    stats:   ['dashboard', 'stats'] as const,
+    history: (range: string) => ['dashboard', 'history', range] as const,
   },
   org: {
     departments: ['org', 'departments'] as const,

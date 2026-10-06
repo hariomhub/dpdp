@@ -44,7 +44,7 @@ export const assessmentsController = {
 
   async listRegulations(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const regulations = await assessmentsService.listRegulations()
+      const regulations = await assessmentsService.listRegulations(req.tenantId!)
       res.json({ success: true, data: regulations })
     } catch (error) {
       next(error)

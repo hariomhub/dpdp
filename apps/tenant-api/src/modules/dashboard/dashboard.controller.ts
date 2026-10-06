@@ -11,4 +11,14 @@ export const dashboardController = {
       next(err)
     }
   },
+
+  async getHistory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const range = req.query.range === '90d' ? 90 : 30
+      const data = await dashboardService.getHistory(req.tenantId!, range)
+      res.json({ success: true, data })
+    } catch (err) {
+      next(err)
+    }
+  },
 }

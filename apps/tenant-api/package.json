@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@azure/msal-node": "^2.6.0",
+    "@azure/storage-blob": "^12.34.0",
     "@dpdp/database": "*",
+    "@dpdp/storage": "*",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^6.2.2",

@@ -33,6 +33,13 @@ enum UserStatus {
   INACTIVE
 }
 
+// Why a user is INACTIVE. A directory sync only re-enables users it switched off itself; an administrator's
+// decision is never overridden by it.
+enum DeactivationReason {
+  ADMIN
+  ENTRA_SYNC
+}
+
 enum InviteSource {
   MANUAL
   ENTRA_ID
@@ -186,6 +193,11 @@ enum TenantAuditAction {
   USER_ACTIVATED
   USER_DEACTIVATED
   USER_UPDATED
+  USER_ROLE_CHANGED
+  USER_DEPARTMENTS_UPDATED
+  INVITATION_CANCELLED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
   // Onboarding
   ONBOARDING_COMPLETED
   // Department
@@ -222,8 +234,17 @@ enum TenantAuditAction {
   EVIDENCE_UPDATED
   EVIDENCE_APPROVED
   EVIDENCE_REJECTED
+  EVIDENCE_VIEWED
+  EVIDENCE_DELETED
   // Gap findings
   GAP_FINDING_CREATED
+  DISCOVERY_DRAFT_DISMISSED
+  LMS_ENROLLED
+  LMS_UNENROLLED
+  INSTANCE_ACTIVATED
+  LICENCE_INSTALLED
+  ENTRA_SYNC_COMPLETED
+  ENTRA_SYNC_REFUSED
   // Settings
   SETTINGS_UPDATED
   CLASSIFICATION_CHANGED
@@ -261,11 +282,16 @@ model User {
   invitedBy    User?       @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
   invitees     User[]      @relation("InvitedBy")
   lastLoginAt  DateTime?
+  // Set when the password is reset. Sessions (refresh tokens) issued before this moment are rejected, so a
+  // password reset also ends any session an attacker may be holding.
+  passwordChangedAt DateTime?
+  deactivatedReason DeactivationReason?
   joinedAt     DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   // Relations
+  passwordResetTokens  PasswordResetToken[]
   departments          DepartmentUser[]
   assignedTasks        ComplianceTask[]      @relation("AssignedTo")
   createdTasks         ComplianceTask[]      @relation("CreatedBy")
@@ -277,12 +303,183 @@ model User {
   invitations          UserInvitation[]
   quizAttempts         QuizAttempt[]
   lessonProgress       LmsLessonProgress[]
+  assignmentSubmissions LmsAssignmentSubmission[]
   issuedCertificates   IssuedCertificate[]
 
   lmsDesignation       String?     // references LmsDesignation.name (super admin schema)
 
   @@unique([tenantId, email])
   @@map("users")
+}
+
+// ============================================
+// PASSWORD RESET TOKENS
+// One row per reset link issued. Only a SHA-256 of the token is stored (the token itself exists only in the
+// emailed link), each is single-use, and it expires after one hour.
+// ============================================
+
+model PasswordResetToken {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  requestedIp String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// Refresh tokens that were signed out. Only a hash is stored; rows are removed once the token would have expired anyway.
+model RevokedRefreshToken {
+  tokenHash String   @id
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("revoked_refresh_tokens")
+}
+
+// Per-organisation counters for human-readable codes (AST-001, ACT-001). Allocated atomically in the database, so two
+// concurrent requests can never be handed the same number.
+model CodeCounter {
+  tenantId String
+  name     String
+  value    Int
+
+  @@id([tenantId, name])
+  @@map("code_counters")
+}
+
+// ============================================
+// THE ORGANISATION AND ITS LICENCE
+// The record of who this deployment serves, and the signed licence that activates it. Both live in the customer's own
+// database: nothing about the organisation is kept in the vendor's.
+// ============================================
+
+model TenantProfile {
+  id             String    @id // the organisation id - the same value as `tenantId` on every other row
+  tenantCode     String    @unique
+  name           String
+  industry       String    @default("")
+  orgSize        String    @default("")
+  address        String    @default("")
+  country        String    @default("India")
+  website        String?
+  contactEmail   String
+  dpoName        String    @default("")
+  dpoEmail       String    @default("")
+  dpoPhone       String?
+  panNumber      String?
+  gstNumber      String?
+  classification String    @default("Data Fiduciary")
+  classUncertain Boolean   @default(false)
+  ceoName        String
+  ceoEmail       String
+  plan           String    @default("STARTER")
+  status         String    @default("ONBOARDING") // ONBOARDING | ACTIVE (whether the portal may be used is the licence's business)
+
+  // The first CEO is invited by the instance itself when it is activated
+  inviteToken      String?   @unique
+  inviteExpiresAt  DateTime?
+  inviteAcceptedAt DateTime?
+
+  onboardedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("tenant_profiles")
+}
+
+// Which applicability category (a Library id) the organisation holds under each regulation
+model TenantRegulationClassification {
+  id                      String   @id @default(uuid())
+  tenantId                String
+  regulationId            String
+  applicabilityCategoryId String
+  isUncertain             Boolean  @default(false)
+  classifiedAt            DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([tenantId, regulationId])
+  @@map("tenant_regulation_classifications")
+}
+
+// The licence installed for the organisation, kept verbatim and re-verified on every start
+model PlatformLicence {
+  tenantId     String    @id
+  licenceId    String
+  token        String    // the signed licence exactly as issued
+  keyId        String
+  plan         String
+  issuedAt     DateTime
+  validFrom    DateTime
+  validUntil   DateTime
+  updatesUntil DateTime
+  graceDays    Int
+  airGapped    Boolean   @default(false)
+  limits       Json
+  entitlements Json
+  activatedAt  DateTime  @default(now())
+  // the latest time this instance has observed (monotonic) - a clock wound back to dodge expiry is noticed
+  lastSeenAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@map("platform_licences")
+}
+
+// ============================================
+// CUSTOM CONTROLS (customer-authored; overlay kind ADD)
+// Controls an organisation writes for itself. They live in the organisation's own database, never in the vendor's
+// Library. Citations point at Library regulation nodes by id (a soft reference: the Library replica is replaceable).
+// ============================================
+
+model CustomControl {
+  id           String   @id @default(uuid())
+  tenantId     String
+  title        String
+  description  String
+  applicableTo String   @default("BOTH") // DATA_FIDUCIARY | SIGNIFICANT_DF | BOTH (free text, same vocabulary as the Library)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  citations CustomControlCitation[]
+  actions   CustomControlAction[]
+
+  @@index([tenantId])
+  @@map("custom_controls")
+}
+
+model CustomControlCitation {
+  id           String        @id @default(uuid())
+  controlId    String
+  control      CustomControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  regulationId String
+  nodeId       String?       // Library regulation node (chapter / section / clause); null = the regulation as a whole
+
+  @@index([controlId])
+  @@map("custom_control_citations")
+}
+
+model CustomControlAction {
+  id               String         @id @default(uuid())
+  controlId        String
+  control          CustomControl  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  evidenceTypes    EvidenceType[]
+  suggestedDueDays Int            @default(30)
+  priority         Priority       @default(HIGH)
+  orderIndex       Int            @default(0)
+
+  @@index([controlId])
+  @@map("custom_control_actions")
 }
 
 // ============================================
@@ -730,9 +927,16 @@ model Evidence {
 
   // File storage
   // For FILE, SCREENSHOT, CONFIG, DOCUMENT, LOG:
-  fileUrl      String?      // Azure Blob Storage URL
+  // fileUrl is LEGACY (pre-storage-adapter uploads, e.g. "/uploads/..."); new uploads set
+  // storageProvider + storageKey instead and are only ever served through the authenticated
+  // download route - a raw storage URL is never handed to the browser.
+  fileUrl      String?
   fileName     String?
   fileSize     Int?         // bytes
+  storageProvider String?   // 'azure' | 'local' - which store holds storageKey
+  storageKey      String?   // tenantId/evidence/<taskId>/<uuid>.<ext>
+  contentType     String?   // from the upload file policy, never from the client
+  sha256          String?   // integrity: hash of the stored bytes
 
   // For LINK type
   linkUrl      String?
@@ -752,10 +956,16 @@ model Evidence {
   // Review status
   reviewStatus  TaskStatus? // mirrors task status at time of review
 
-  // Version tracking
+  // Version tracking. Replacing a file or editing evidence snapshots the previous state into
+  // EvidenceVersion and bumps `version`; nothing is overwritten or physically deleted.
   version      Int          @default(1)
   parentId     String?      // FK to previous version of this evidence
   isLatest     Boolean      @default(true)
+
+  // Soft delete: evidence removed from the working view is kept (and its files with it).
+  // Nothing is auto-purged; a retention policy, if any, is a separate decision.
+  deletedAt    DateTime?
+  deletedById  String?
 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -764,6 +974,7 @@ model Evidence {
   versions     EvidenceVersion[]
   actionLinks  EvidenceAction[]
 
+  @@index([taskId, deletedAt])
   @@map("evidence")
 }
 
@@ -840,9 +1051,13 @@ model GapFindingFile {
   id           String     @id @default(uuid())
   gapFindingId String
   gapFinding   GapFinding @relation(fields: [gapFindingId], references: [id], onDelete: Cascade)
-  fileUrl      String
+  fileUrl      String?    // LEGACY ("/uploads/..."); new uploads use storageProvider + storageKey
   fileName     String
   fileSize     Int
+  storageProvider String?
+  storageKey      String?
+  contentType     String?
+  sha256          String?
   createdAt    DateTime   @default(now())
 
   @@map("gap_finding_files")
@@ -855,13 +1070,24 @@ model EvidenceVersion {
   evidenceId   String
   evidence     Evidence  @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
   version      Int
-  fileUrl      String?
+  // Snapshot of the evidence as it was BEFORE it was changed (or the file replaced).
+  title        String?
+  description  String?
+  fileUrl      String?   // LEGACY
   fileName     String?
+  fileSize     Int?
+  storageProvider String?
+  storageKey      String?
+  contentType     String?
+  sha256          String?
   linkUrl      String?
   textContent  String?
-  uploadedById String?
-  uploadedAt   DateTime  @default(now())
+  uploadedById String?   // who submitted that version
+  uploadedAt   DateTime  @default(now())  // when that version was created
+  supersededAt DateTime  @default(now())  // when it was replaced
+  supersededById String? // who replaced it
 
+  @@index([evidenceId, version])
   @@map("evidence_versions")
 }
 
@@ -906,6 +1132,40 @@ model AssetRiskSnapshot {
 
   @@unique([tenantId, assetId, snapshotDate])
   @@map("asset_risk_snapshots")
+}
+
+// ============================================
+// DASHBOARD METRIC SNAPSHOTS
+// Daily org-wide compliance/operational metrics for trend charts.
+// Companion to RiskSnapshot (risk has its own table/shape already);
+// this covers everything else the dashboard computes that has no
+// history today (compliance score, overdue breakdown, etc).
+// ============================================
+
+model DashboardMetricSnapshot {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  snapshotDate        DateTime @db.Date
+
+  complianceScore     Int?     // null if no active assessments that day
+  totalControls       Int      @default(0)
+  compliantControls   Int      @default(0)
+
+  overdueTasksTotal   Int      @default(0)
+  overdueCritical     Int      @default(0)
+  overdueHigh         Int      @default(0)
+  overdueMedium       Int      @default(0)
+  overdueLow          Int      @default(0)
+
+  crossBorderPiiCount Int      @default(0)
+  suppliersWithoutDpa Int      @default(0)
+  auditReadinessScore Int?
+
+  createdAt           DateTime @default(now())
+
+  // One snapshot per tenant per day
+  @@unique([tenantId, snapshotDate])
+  @@map("dashboard_metric_snapshots")
 }
 
 // ============================================
@@ -970,6 +1230,7 @@ model LmsEnrollment {
   // Relations
   lessonProgress LmsLessonProgress[]
   quizAttempts   QuizAttempt[]
+  assignmentSubmissions LmsAssignmentSubmission[]
 
   @@unique([tenantId, userId, courseId])
   @@map("lms_enrollments")
@@ -995,6 +1256,29 @@ model LmsLessonProgress {
 
   @@unique([enrollmentId, lessonId])
   @@map("lms_lesson_progress")
+}
+
+// ============================================
+// LMS ASSIGNMENT SUBMISSIONS
+// A learner's submission for an ASSIGNMENT-type lesson
+// ============================================
+
+model LmsAssignmentSubmission {
+  id           String        @id @default(uuid())
+  tenantId     String
+  enrollmentId String
+  enrollment   LmsEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId     String        // FK to LmsLesson (super admin schema)
+  textAnswer   String?
+  fileUrl      String?
+  fileName     String?
+  fileSize     Int?
+  submittedAt  DateTime      @default(now())
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lms_assignment_submissions")
 }
 
 // ============================================
@@ -1085,6 +1369,9 @@ model EntraConfig {
   isConnected           Boolean   @default(true)
   connectedById         String?   // FK to User who set up the integration
   lastSyncAt            DateTime?
+  // Lease held while a directory sync runs, so two syncs (two clicks, two replicas) cannot overlap. A lease older than
+  // the allowed run time is considered abandoned (the process died) and can be taken over.
+  syncStartedAt         DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

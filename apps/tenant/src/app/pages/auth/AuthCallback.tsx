@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
@@ -14,11 +14,18 @@ export function AuthCallbackPage() {
   const navigate        = useNavigate();
   const { setRole, setOrgName } = useApp();
   const [error, setError] = useState<string | null>(null);
+  // The sign-in must be completed exactly once: the nonce and Microsoft's code are both single-use. In development,
+  // React runs effects twice (StrictMode); without this guard the second run found the nonce already used, reported
+  // "not started in this tab" and hid the successful sign-in behind an error.
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     const params    = new URLSearchParams(window.location.search);
     const code      = params.get('code');
-    const tenantId  = params.get('state');
+    const state     = params.get('state');
     const errParam  = params.get('error');
     const errDesc   = params.get('error_description');
 
@@ -27,14 +34,19 @@ export function AuthCallbackPage() {
       return;
     }
 
-    if (!code || !tenantId) {
+    const nonce = sessionStorage.getItem('entra_login_nonce');
+    sessionStorage.removeItem('entra_login_nonce');   // single use
+
+    if (!code || !state) {
       setError('Invalid callback — missing required parameters.');
       return;
     }
+    if (!nonce) {
+      setError('This sign-in was not started in this browser tab. Please start again from the login page.');
+      return;
+    }
 
-    const redirectUri = `${window.location.origin}/auth/callback`;
-
-    apiClient.post<any>('/entra/login', { code, tenantId, redirectUri })
+    apiClient.post<any>('/entra/login', { code, state, nonce })
       .then((res: any) => {
         apiClient.tokens.set(res.data.accessToken, res.data.refreshToken);
         setRole(ROLE_MAP[res.data.user.role] ?? 'co');

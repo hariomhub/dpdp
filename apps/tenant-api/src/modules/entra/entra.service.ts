@@ -5,6 +5,12 @@ import { logTenantAction } from '../../utils/audit-logger'
 import { generateTokens } from '../../utils/tokens'
 import { encrypt, decrypt } from '../../utils/crypto'
 import { config } from '../../config'
+import { HttpError } from '../../utils/http-error'
+import { invalidateUserAccess } from '../../utils/user-access'
+import { deactivateWithinTransaction } from '../users/deactivation'
+import { runDirectorySync, DirectoryMember } from './entra-sync'
+import { PROTECTED_ROLES, isMappableRole } from './entra-sync-rules'
+import { createLoginSession, openLoginSession } from './entra-state'
 
 const db = getTenantPrisma()
 
@@ -37,6 +43,26 @@ async function graphGet(token: string, endpoint: string) {
   return res.data
 }
 
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Every user in one directory group (all pages). Direct members only, and only people (not nested groups or devices). */
+async function fetchGroupMembers(token: string, groupId: string): Promise<DirectoryMember[]> {
+  if (!GUID.test(groupId)) throw new Error('A mapped directory group has an invalid id. Re-save the group mappings.')
+  const members: DirectoryMember[] = []
+  let pageUrl: string | null = `/groups/${groupId}/members/microsoft.graph.user?$select=id,displayName,mail,userPrincipalName&$top=999`
+  while (pageUrl) {
+    const data = await graphGet(token, pageUrl)
+    for (const m of data.value as any[]) {
+      members.push({ id: m.id, email: m.mail || m.userPrincipalName || '', displayName: m.displayName })
+    }
+    // Graph returns an absolute @odata.nextLink; only its path and query are used (the host is fixed in graphGet).
+    pageUrl = data['@odata.nextLink']
+      ? new URL(data['@odata.nextLink']).pathname.replace(/^\/v1\.0/, '') + new URL(data['@odata.nextLink']).search
+      : null
+  }
+  return members
+}
+
 /** Load and decrypt stored Entra credentials for a tenant. */
 async function getStoredCreds(tenantId: string): Promise<EntraCreds> {
   const cfg = await db.entraConfig.findUnique({ where: { tenantId } })
@@ -53,28 +79,29 @@ async function getStoredCreds(tenantId: string): Promise<EntraCreds> {
 export const entraService = {
 
   async getAuthUrl(tenantId?: string) {
-    let cfg: any
-    if (tenantId) {
-      cfg = await db.entraConfig.findUnique({ where: { tenantId } })
-    } else {
-      // Single-tenant deployment — only one config exists
-      cfg = await db.entraConfig.findFirst()
-    }
+    // One organisation per deployment: without an id, the single configuration is used.
+    const cfg = tenantId
+      ? await db.entraConfig.findUnique({ where: { tenantId } })
+      : await db.entraConfig.findFirst()
     if (!cfg) throw new Error('Entra ID is not configured for this organization')
- 
-    const redirectUri = config.entra.redirectUri
+
+    // `state` is a signed, short-lived token for this attempt; the nonce goes to the browser only (see entra-state.ts).
+    const session = createLoginSession(cfg.tenantId)
     const params = new URLSearchParams({
-      client_id:     cfg.clientId,
-      response_type: 'code',
-      redirect_uri:  redirectUri,
-      scope:         'openid profile email User.Read',
-      state:         cfg.tenantId,   // echoed back in callback, used to identify tenant
-      response_mode: 'query',
+      client_id:             cfg.clientId,
+      response_type:         'code',
+      redirect_uri:          config.entra.redirectUri,
+      scope:                 'openid profile email User.Read',
+      state:                 session.state,
+      response_mode:         'query',
+      code_challenge:        session.codeChallenge,
+      code_challenge_method: 'S256',
     })
- 
+
     return {
       authUrl:  `https://login.microsoftonline.com/${cfg.azureTenantId}/oauth2/v2.0/authorize?${params.toString()}`,
       tenantId: cfg.tenantId,
+      nonce:    session.nonce,
     }
   },
 
@@ -289,22 +316,41 @@ export const entraService = {
     }>
     userId: string
   }) {
-    // Replace strategy — delete all then recreate
-    await db.entraGroupMapping.deleteMany({ where: { tenantId: params.tenantId } })
+    // A directory group may only grant roles that are safe to hand out automatically.
+    for (const m of params.mappings) {
+      if (!isMappableRole(m.role)) {
+        throw HttpError.badRequest(
+          `A directory group cannot be mapped to the ${m.role === 'CO' ? 'Compliance Officer' : m.role === 'CEO' ? 'CEO' : m.role} role. ` +
+          'Invite those people by hand; groups can grant IT Admin, Internal Auditor and External Auditor.',
+        )
+      }
+    }
+    if (new Set(params.mappings.map(m => m.entraGroupId)).size !== params.mappings.length) {
+      throw HttpError.badRequest('Each directory group can be mapped only once.')
+    }
+    const deptIds = [...new Set(params.mappings.map(m => m.departmentId).filter((d): d is string => !!d))]
+    if (deptIds.length > 0 && (await db.department.count({ where: { tenantId: params.tenantId, id: { in: deptIds } } })) !== deptIds.length) {
+      throw HttpError.badRequest('One or more departments were not found in your organization.')
+    }
 
-    const created = await Promise.all(
-      params.mappings.map(m =>
-        db.entraGroupMapping.create({
-          data: {
-            tenantId: params.tenantId,
-            entraGroupId: m.entraGroupId,
-            entraGroupName: m.entraGroupName,
-            role: m.role,
-            departmentId: m.departmentId ?? null,
+    // All or nothing, and a group that stays mapped keeps its id (users carry it as the group that manages them).
+    const created = await db.$transaction(async tx => {
+      await tx.entraGroupMapping.deleteMany({
+        where: { tenantId: params.tenantId, entraGroupId: { notIn: params.mappings.map(m => m.entraGroupId) } },
+      })
+      const saved = []
+      for (const m of params.mappings) {
+        saved.push(await tx.entraGroupMapping.upsert({
+          where: { tenantId_entraGroupId: { tenantId: params.tenantId, entraGroupId: m.entraGroupId } },
+          update: { entraGroupName: m.entraGroupName, role: m.role, departmentId: m.departmentId ?? null },
+          create: {
+            tenantId: params.tenantId, entraGroupId: m.entraGroupId, entraGroupName: m.entraGroupName,
+            role: m.role, departmentId: m.departmentId ?? null,
           },
-        })
-      )
-    )
+        }))
+      }
+      return saved
+    })
 
     await logTenantAction({
       tenantId: params.tenantId,
@@ -324,16 +370,21 @@ export const entraService = {
     })
     if (!mapping) throw new Error('Group mapping not found')
 
-    // Deactivate users synced from this group
-    const { count } = await db.user.updateMany({
+    // Switch off the accounts this group manages - same rules as a sync: never CEO / Compliance Officer, the work they
+    // were doing goes back to the pool, work in review stays.
+    const users = await db.user.findMany({
       where: {
-        tenantId: params.tenantId,
-        syncedGroupId: params.mappingId,
-        source: 'ENTRA_ID',
-        status: 'ACTIVE',
+        tenantId: params.tenantId, syncedGroupId: params.mappingId, source: 'ENTRA_ID', status: 'ACTIVE',
+        role: { notIn: [...PROTECTED_ROLES] as any },
       },
-      data: { status: 'INACTIVE' },
+      select: { id: true },
     })
+    let count = 0
+    for (const u of users) {
+      await db.$transaction(tx => deactivateWithinTransaction(tx as any, params.tenantId, u.id, 'ENTRA_SYNC', params.userId))
+      invalidateUserAccess(u.id)
+      count++
+    }
 
     await db.entraGroupMapping.delete({ where: { id: params.mappingId } })
 
@@ -352,248 +403,101 @@ export const entraService = {
 
   // ── POST /entra/sync ──────────────────────────────────────────────────────
   /**
-   * Pulls group members from Microsoft Graph and upserts them as Users
-   * in the tenant DB. Uses stored credentials — no creds in request body.
+   * Pulls group members from Microsoft Graph and brings the portal's users in line, under the rules in
+   * entra-sync-rules.ts (never touches CEO/CO, never re-enables what an administrator switched off, stops before an
+   * unusually large removal). Uses the stored credentials - none in the request.
    */
-  async syncUsers(params: { tenantId: string; userId: string }) {
+  async syncUsers(params: { tenantId: string; userId: string; confirmRemovals?: boolean }) {
     const creds = await getStoredCreds(params.tenantId)
     const token = await getMsToken(creds)
-    const mappings = await db.entraGroupMapping.findMany({
-      where: { tenantId: params.tenantId },
-    })
-
-    if (mappings.length === 0) {
-      throw new Error('No group mappings configured. Set up group mappings first.')
-    }
-
-    let synced = 0, created = 0, updated = 0
-    const activeEntraObjectIds = new Set<string>()
-
-    for (const mapping of mappings) {
-      let pageUrl: string | null =
-        `/groups/${mapping.entraGroupId}/members?$select=id,displayName,mail,userPrincipalName`
-
-      // Handle pagination (Graph returns max 100 members per page)
-      while (pageUrl) {
-        const data = await graphGet(token, pageUrl)
-
-        for (const member of data.value as any[]) {
-          const email = (member.mail || member.userPrincipalName || '').toLowerCase()
-          if (!email) continue
-
-          const existing = await db.user.findFirst({
-            where: { tenantId: params.tenantId, email: email },
-          })
-
-          if (existing) {
-            const isClaimedByThisMapping = existing.syncedGroupId === mapping.id || existing.syncedGroupId === null
-
-            await db.user.update({
-              where: { id: existing.id },
-              data: { 
-                entraObjectId: member.id, 
-                source: 'ENTRA_ID', 
-                status: 'ACTIVE',
-                syncedGroupId: existing.syncedGroupId ?? mapping.id,
-                ...(isClaimedByThisMapping ? { role: mapping.role as any } : {})
-              },
-            })
-
-            if (isClaimedByThisMapping) {
-              // Clean up old department primary designations
-              if (existing.role === 'IT_ADMIN') {
-                await db.department.updateMany({
-                  where: { tenantId: params.tenantId, assignedItAdminId: existing.id },
-                  data: { assignedItAdminId: null }
-                })
-              }
-              if (existing.role === 'INTERNAL_AUDITOR') {
-                await db.department.updateMany({
-                  where: { tenantId: params.tenantId, assignedAuditorId: existing.id },
-                  data: { assignedAuditorId: null }
-                })
-              }
-
-              // Replace department memberships
-              await db.departmentUser.deleteMany({ where: { userId: existing.id } })
-              
-              if (mapping.departmentId) {
-                await db.departmentUser.create({
-                  data: { userId: existing.id, departmentId: mapping.departmentId },
-                })
-
-                if (mapping.role === 'IT_ADMIN') {
-                  await db.department.updateMany({
-                    where: { id: mapping.departmentId, assignedItAdminId: null },
-                    data: { assignedItAdminId: existing.id },
-                  })
-                }
-                if (mapping.role === 'INTERNAL_AUDITOR') {
-                  await db.department.updateMany({
-                    where: { id: mapping.departmentId, assignedAuditorId: null },
-                    data: { assignedAuditorId: existing.id },
-                  })
-                }
-              }
-            }
-
-            updated++
-          } else {
-            const newUser = await db.user.create({
-              data: {
-                tenantId: params.tenantId,
-                name: member.displayName || email.split('@')[0],
-                email: email,
-                entraObjectId: member.id,
-                role: mapping.role,
-                status: 'ACTIVE',
-                source: 'ENTRA_ID',
-                syncedGroupId: mapping.id,
-                joinedAt: new Date(),
-              },
-            })
-            if (mapping.departmentId) {
-              await db.departmentUser.create({
-                data: { userId: newUser.id, departmentId: mapping.departmentId },
-              })
-
-              if (mapping.role === 'IT_ADMIN') {
-                await db.department.updateMany({
-                  where: { id: mapping.departmentId, assignedItAdminId: null },
-                  data: { assignedItAdminId: newUser.id },
-                })
-              }
-              if (mapping.role === 'INTERNAL_AUDITOR') {
-                await db.department.updateMany({
-                  where: { id: mapping.departmentId, assignedAuditorId: null },
-                  data: { assignedAuditorId: newUser.id },
-                })
-              }
-            }
-            created++
-          }
-          if (member.id) activeEntraObjectIds.add(member.id)
-          synced++
-        }
-
-        // Follow nextLink if present
-        pageUrl = data['@odata.nextLink']
-          ? new URL(data['@odata.nextLink']).pathname + new URL(data['@odata.nextLink']).search
-          : null
-      }
-    }
-
-    // Deactivate users who are no longer in any mapped Entra group
-    const entraUsers = await db.user.findMany({
-      where: { tenantId: params.tenantId, source: 'ENTRA_ID', status: 'ACTIVE' },
-    })
-    
-    let deactivated = 0
-    for (const u of entraUsers) {
-      if (u.entraObjectId && !activeEntraObjectIds.has(u.entraObjectId)) {
-        await db.user.update({
-          where: { id: u.id },
-          data: { status: 'INACTIVE' }
-        })
-        deactivated++
-      }
-    }
-
-    // Update lastSyncAt
-    await db.entraConfig.update({
-      where: { tenantId: params.tenantId },
-      data: { lastSyncAt: new Date() },
-    })
-
-    await logTenantAction({
-      tenantId: params.tenantId,
-      userId: params.userId,
-      action: TenantAuditAction.ENTRA_CONNECTED,
-      targetType: 'entra_sync',
-      details: { synced, created, updated, deactivated },
-    })
-
-    return { synced, created, updated, deactivated }
+    return runDirectorySync(
+      { db, fetchMembers: (mapping) => fetchGroupMembers(token, mapping.entraGroupId) },
+      params,
+    )
   },
 
   // ── POST /entra/login ─────────────────────────────────────────────────────
   /**
-   * OAuth2 Authorization Code flow.
-   * The frontend redirects the user to Microsoft, which redirects back with a `code`.
-   * This endpoint exchanges that code for tokens, identifies the user, and returns
-   * our own JWT pair.
+   * OAuth2 Authorization Code flow with PKCE.
+   * The browser is sent to Microsoft (see getAuthUrl), which redirects back with a `code`. This endpoint proves the
+   * sign-in was started by this same browser (state + nonce), exchanges the code, identifies the person, and returns
+   * our own session tokens.
    */
-  async loginWithEntra(params: {
-    code: string
-    tenantId: string
-    redirectUri: string
-  }) {
-    const creds = await getStoredCreds(params.tenantId)
+  async loginWithEntra(params: { code: string; state: string; nonce: string }) {
+    const { tenantId, codeVerifier } = openLoginSession(params.state, params.nonce)
+    const creds = await getStoredCreds(tenantId)
 
-    // Exchange authorization code for MS token
-    const url = `https://login.microsoftonline.com/${creds.azureTenantId}/oauth2/v2.0/token`
-    const tokenParams = new URLSearchParams({
-      client_id: creds.clientId,
-      client_secret: creds.clientSecret,
-      code: params.code,
-      redirect_uri: params.redirectUri,
-      grant_type: 'authorization_code',
-      scope: 'openid profile email User.Read',
-    })
-
-    const tokenRes = await axios.post(url, tokenParams.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-    const msToken = tokenRes.data.access_token
+    // Exchange authorization code for MS token. The redirect address is the server's own setting - the one used when
+    // the sign-in was started - never a value supplied by the browser.
+    let msToken: string
+    try {
+      const tokenRes = await axios.post(
+        `https://login.microsoftonline.com/${creds.azureTenantId}/oauth2/v2.0/token`,
+        new URLSearchParams({
+          client_id: creds.clientId,
+          client_secret: creds.clientSecret,
+          code: params.code,
+          redirect_uri: config.entra.redirectUri,
+          grant_type: 'authorization_code',
+          scope: 'openid profile email User.Read',
+          code_verifier: codeVerifier,
+        }).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 20_000 },
+      )
+      msToken = tokenRes.data.access_token
+    } catch (err: any) {
+      // Detail (which can name the app registration) stays in the log; the person gets a plain message.
+      console.error('[entra] token exchange failed:', err?.response?.data?.error_description ?? err?.message)
+      throw HttpError.badRequest('Microsoft did not accept this sign-in. Please start again from the login page.')
+    }
 
     // Get user profile from Microsoft
     const profile = await graphGet(msToken, '/me?$select=id,displayName,mail,userPrincipalName')
     const email = (profile.mail || profile.userPrincipalName || '').toLowerCase()
-    
-    if (!email) {
+    if (!profile.id || !email) {
       throw new Error(
         'Could not retrieve email from Microsoft account. ' +
         'Ensure your Microsoft account has an email address.'
       )
     }
 
-    // Find matching active user in tenant DB
-    const user = await db.user.findFirst({
-      where: { tenantId: params.tenantId, email, status: 'ACTIVE' },
-    })
+    // The Microsoft identity (object id) is the stable key. An e-mail address alone can be re-used or edited, so once an
+    // account is linked to an identity, a different identity with the same e-mail is refused.
+    let user = await db.user.findFirst({ where: { tenantId, entraObjectId: profile.id } })
     if (!user) {
+      user = await db.user.findFirst({ where: { tenantId, email: { equals: email, mode: 'insensitive' } } })
+      if (user?.entraObjectId && user.entraObjectId !== profile.id) {
+        throw new Error('This account is linked to a different Microsoft identity. Contact your Compliance Officer.')
+      }
+    }
+    if (!user || user.status !== 'ACTIVE') {
       throw new Error(
         'No account found for this Microsoft user. ' +
         'Contact your Compliance Officer to get invited first.'
       )
     }
 
-    // Sync entraObjectId on first SSO login
-    if (!user.entraObjectId) {
-      await db.user.update({
-        where: { id: user.id },
-        data: { entraObjectId: profile.id, source: 'ENTRA_ID', lastLoginAt: new Date() },
-      })
-    } else {
-      await db.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
-      })
-    }
+    // Link the identity on first SSO login. `source` (who manages the account) is NOT changed by signing in - only a
+    // directory sync decides that.
+    await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), ...(user.entraObjectId ? {} : { entraObjectId: profile.id }) },
+    })
 
     await logTenantAction({
-      tenantId: params.tenantId,
+      tenantId,
       userId: user.id,
       role: user.role,
       action: TenantAuditAction.USER_LOGIN,
       targetType: 'user',
       targetId: user.id,
       targetName: user.name,
+      details: { method: 'entra' },
     })
 
     const tokens = generateTokens({
       userId: user.id,
-      tenantId: params.tenantId,
+      tenantId,
       role: user.role,
     })
 
@@ -604,19 +508,28 @@ export const entraService = {
         name: user.name,
         email: user.email,
         role: user.role,
-        tenantId: params.tenantId,
+        tenantId,
       },
     }
   },
 
   // ── DELETE /entra/disconnect ──────────────────────────────────────────────
   async disconnect(tenantId: string, userId: string) {
-    const { count } = await db.user.updateMany({
-      where: { tenantId, source: 'ENTRA_ID', status: 'ACTIVE' },
-      data: { status: 'INACTIVE' },
+    // Directory-managed accounts have no other way in, so they are switched off - but never the people who run the
+    // organisation (CEO / Compliance Officer), who would otherwise be locked out by a settings change. The same rules
+    // as a sync apply: the work they were doing goes back to the pool, work in review stays.
+    const users = await db.user.findMany({
+      where: { tenantId, source: 'ENTRA_ID', status: 'ACTIVE', role: { notIn: [...PROTECTED_ROLES] as any } },
+      select: { id: true },
     })
+    let count = 0
+    for (const u of users) {
+      await db.$transaction(tx => deactivateWithinTransaction(tx as any, tenantId, u.id, 'ENTRA_SYNC', userId))
+      invalidateUserAccess(u.id)
+      count++
+    }
 
-    await Promise.all([
+    await db.$transaction([
       db.entraGroupMapping.deleteMany({ where: { tenantId } }),
       db.entraConfig.deleteMany({ where: { tenantId } }),
     ])

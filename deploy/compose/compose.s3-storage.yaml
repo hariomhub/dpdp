@@ -1,0 +1,11 @@
+# SKELETON (step 6). Override: keep evidence in an S3-compatible object store (the customer's, or one they run) instead of a
+# local volume / NAS.
+#   docker compose -f compose.yaml -f compose.s3-storage.yaml up -d
+# 🔲 Needs the S3-compatible adapter (step 6); the application currently supports Azure Blob and local disk.
+# Settings (names planned): STORAGE_PROVIDER=s3, S3_ENDPOINT, S3_BUCKET, S3_REGION, S3_ACCESS_KEY_FILE, S3_SECRET_KEY_FILE,
+# S3_FORCE_PATH_STYLE. Files are written under keys  <org>/<area>/<parent>/<uuid>.<ext>  exactly as on Azure Blob.
+services:
+  api:
+    environment:
+      STORAGE_PROVIDER: s3
+    volumes: !reset []                  # no local evidence volume

@@ -1,31 +1,24 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
 import { config } from '../../config'
 import { logTenantAction } from '../../utils/audit-logger'
+import { issuedBeforePasswordChange } from './reset-token'
+import { isRefreshTokenRevoked, revokeRefreshToken } from './sessions'
+import { generateTokens as signTokens, signAccessToken } from '../../utils/tokens'
+import { lmsService } from '../lms/lms.service'
 import { TenantAuditAction, TenantRole } from '@prisma/tenant-client'
 
 const tenantDb = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
 
 function generateTokens(userId: string, tenantId: string, role: string) {
-  const accessToken = jwt.sign(
-    { userId, tenantId, role },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn as any }
-  )
-  const refreshToken = jwt.sign(
-    { userId, tenantId, role, type: 'refresh' },
-    config.jwt.secret,
-    { expiresIn: config.jwt.refreshExpiresIn as any }
-  )
-  return { accessToken, refreshToken }
+  return signTokens({ userId, tenantId, role })
 }
 
 export const authService = {
   async verifyInvite(token: string) {
-    // CEO invite lives in super-admin DB
-    const tenant = await superAdminDb.tenant.findFirst({
+    // The first CEO's invitation is on the organisation record (created when the instance was activated)
+    const tenant = await tenantDb.tenantProfile.findFirst({
       where: { inviteToken: token, inviteAcceptedAt: null },
     })
 
@@ -85,7 +78,7 @@ export const authService = {
         },
       })
 
-      await superAdminDb.tenant.update({
+      await tenantDb.tenantProfile.update({
         where: { id: inviteInfo.tenantId },
         data:  { inviteAcceptedAt: new Date(), inviteToken: null },
       })
@@ -164,16 +157,13 @@ export const authService = {
         data:  { acceptedAt: new Date() },
       })
 
-      // Apply default LMS designation for this portal role
-      const roleDefault = await tenantDb.roleDesignationDefault.findUnique({
-        where: { tenantId_portalRole: { tenantId: inviteInfo.tenantId, portalRole: user.role } },
-      })
-      if (roleDefault?.designation) {
-        await tenantDb.user.update({
-          where: { id: user.id },
-          data:  { lmsDesignation: roleDefault.designation },
-        })
-      }
+      // Apply default LMS designation for this portal role and auto-enroll in
+      // its mandatory courses — same helper the CO's manual designation-assign
+      // flow uses, so new hires don't have to be separately re-enrolled.
+      await lmsService.applyDefaultDesignation(inviteInfo.tenantId, user.id, user.role)
+      // Independent axis: portal-role-targeted courses (e.g. "how to use this
+      // portal as an Internal Auditor"), regardless of the designation above.
+      await lmsService.applyPortalRoleEnrollment(inviteInfo.tenantId, user.id, user.role)
 
       await logTenantAction({
         tenantId:   inviteInfo.tenantId,
@@ -223,17 +213,16 @@ export const authService = {
   },
 
   async loginWithTenantCode(params: { email: string; password: string; tenantCode: string; ipAddress?: string }) {
-    const tenant = await superAdminDb.tenant.findUnique({ where: { tenantCode: params.tenantCode } })
+    const tenant = await tenantDb.tenantProfile.findUnique({ where: { tenantCode: params.tenantCode } })
     if (!tenant) throw new Error('Organization not found')
-    if (tenant.status === 'SUSPENDED') throw new Error('Your organization account has been suspended')
     return authService.login({ email: params.email, password: params.password, tenantId: tenant.id, ipAddress: params.ipAddress })
   },
 
   async loginByEmail(params: { email: string; password: string; ipAddress?: string }) {
     const user = await tenantDb.user.findFirst({ where: { email: params.email, status: 'ACTIVE' } })
     if (!user) throw new Error('Invalid credentials')
-    const tenant = await superAdminDb.tenant.findUnique({ where: { id: user.tenantId } })
-    if (!tenant || tenant.status === 'SUSPENDED') throw new Error('Organization not found or suspended')
+    const tenant = await tenantDb.tenantProfile.findUnique({ where: { id: user.tenantId }, select: { id: true } })
+    if (!tenant) throw new Error('Organization not found')
     return authService.login({ email: params.email, password: params.password, tenantId: user.tenantId, ipAddress: params.ipAddress })
   },
 
@@ -241,17 +230,31 @@ export const authService = {
     try {
       const decoded = jwt.verify(refreshToken, config.jwt.secret) as any
       if (decoded.type !== 'refresh') throw new Error('Invalid token')
+      // Signed out on purpose (this device): the token is no longer accepted even though it has not expired.
+      if (await isRefreshTokenRevoked(refreshToken)) throw new Error('Session ended')
       const user = await tenantDb.user.findUnique({ where: { id: decoded.userId } })
       if (!user || user.status !== 'ACTIVE') throw new Error('User not found')
-      const accessToken = jwt.sign(
-        { userId: user.id, tenantId: decoded.tenantId, role: user.role },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn as any }
-      )
+      if (user.tenantId !== decoded.tenantId) throw new Error('Invalid token')
+      // A password reset ends every session that existed before it.
+      if (issuedBeforePasswordChange(decoded.iat, user.passwordChangedAt)) throw new Error('Session ended by a password change')
+      const accessToken = signAccessToken({ userId: user.id, tenantId: decoded.tenantId, role: user.role })
       return { accessToken }
     } catch {
       throw new Error('Invalid refresh token')
     }
+  },
+
+  /** Sign out this device: the refresh token it holds stops working. */
+  async logout(params: { userId: string; tenantId: string; role?: string; refreshToken?: string; ipAddress?: string }) {
+    const revoked = await revokeRefreshToken(params.userId, params.refreshToken)
+    await logTenantAction({
+      tenantId: params.tenantId, userId: params.userId, role: params.role,
+      action: TenantAuditAction.USER_LOGOUT,
+      targetType: 'user', targetId: params.userId,
+      ipAddress: params.ipAddress,
+      details: { sessionRevoked: revoked },
+    })
+    return { revoked }
   },
 
   async getMe(userId: string, tenantId: string) {
@@ -261,7 +264,7 @@ export const authService = {
     })
     if (!user) throw new Error('User not found')
 
-    const tenant = await superAdminDb.tenant.findUnique({
+    const tenant = await tenantDb.tenantProfile.findUnique({
       where:  { id: tenantId },
       select: { id: true, name: true, tenantCode: true, plan: true, status: true, classification: true },
     })

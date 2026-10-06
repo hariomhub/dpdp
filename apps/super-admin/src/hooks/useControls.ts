@@ -13,33 +13,42 @@ interface PredefinedAction {
   orderIndex: number
 }
 
+interface ControlNodeLink {
+  id: string
+  isPrimary: boolean
+  node: { id: string; regulationId: string; parentId: string | null; nodeType: string; code: string; title?: string | null; depth: number; path: string }
+}
+
+interface ControlApplicabilityLink {
+  applicabilityCategoryId: string
+  applicabilityCategory: { id: string; regulationId: string; code: string; label: string }
+}
+
 interface Control {
   id: string
   title: string
   description: string
-  applicableTo: string
+  applicableTo: string   // deprecated display mirror — see nodes/applicabilities for the real data
   status: string
   isCustom: boolean
   createdAt: string
-  regulationMappings: Array<{
-    regulation: { id: string; name: string; shortCode: string }
-    chapter?: { id: string; name: string; title?: string }
-    sectionId?: string
-  }>
+  regulationId?: string | null
+  citedRegulationIds: string[]
+  nodes: ControlNodeLink[]
+  applicabilities: ControlApplicabilityLink[]
   predefinedActions: PredefinedAction[]
+  masterControlId?: string | null
+  masterControl?: { id: string; code: string; title: string } | null
   _count?: { predefinedActions: number }
 }
 
 interface CreateControlInput {
   title: string
   description: string
-  applicableTo: string
   status: string
-  regulationMappings: Array<{
-    regulationId: string
-    chapterId?: string
-    sectionId?: string
-  }>
+  regulationId: string
+  nodeIds: string[]
+  applicabilityCategoryIds: string[]
   predefinedActions: Array<{
     title: string
     description: string

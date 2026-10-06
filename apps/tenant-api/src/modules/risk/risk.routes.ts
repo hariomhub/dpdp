@@ -6,5 +6,6 @@ const router = Router()
 
 router.use(authenticate)
 router.get('/', riskController.getAnalysis)
+router.get('/history', riskController.getHistory)
 
 export default router

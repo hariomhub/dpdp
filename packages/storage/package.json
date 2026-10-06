@@ -1,0 +1,15 @@
+{
+  "name": "@dpdp/storage",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Storage adapters (Azure Blob, local filesystem) and the upload file policy shared by the DPDP APIs",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.34.0"
+  }
+}

@@ -12,6 +12,19 @@ node_modules/
 .env.*
 **/.env
 **/.env.*
+# ...but the documented templates (names and comments only, no secrets) are committed
+!.env.example
+!**/.env.example
 
 # Local file uploads (evidence / gap-finding attachments) - never commit real user data
 apps/tenant-api/uploads/
+
+# Database backups (pg_dump snapshots) - never commit, may contain real tenant data
+db-backups/
+
+# Azurite (local Azure Storage emulator) data
+.azurite/
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+.licence-keys/

@@ -9,4 +9,12 @@ export const riskController = {
       res.json({ success: true, data })
     } catch (err) { next(err) }
   },
+
+  async getHistory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const days = Number(req.query.days) || 30
+      const data = await riskService.getHistory(req.tenantId!, days)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
 }

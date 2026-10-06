@@ -30,10 +30,11 @@ export interface DashboardStats {
     signedOffLast30Days: number
   }
 
-  complianceScore:   number | null
-  riskScore:         number
-  totalControls:     number
-  compliantControls: number
+  complianceScore:     number | null
+  riskScore:           number
+  auditReadinessScore: number | null
+  totalControls:       number
+  compliantControls:   number
 
   overdueByPriority: { CRITICAL: number; HIGH: number; MEDIUM: number; LOW: number }
 
@@ -76,15 +77,16 @@ export interface DashboardStats {
   myTasks: Array<{
     id: string; title: string; asset: string; status: string
     priority: string; dueDate: string; daysLeft: number
+    rejectionReason: string | null; reasonCodes: string[]
   }>
 
   reviewQueue: Array<{
     id: string; title: string; asset: string; submittedBy: string
-    status: string; daysLeft: number
+    status: string; daysLeft: number; waitingDays: number
   }>
 
   finalSignOffQueue: Array<{
-    id: string; title: string; asset: string; status: string; daysLeft: number
+    id: string; title: string; asset: string; status: string; daysLeft: number; waitingDays: number
   }>
 
   orgName: string
@@ -100,5 +102,23 @@ export function useDashboardStats() {
     enabled:   !!apiClient.tokens.getAccess(),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+  })
+}
+
+export interface DashboardHistoryPoint {
+  date: string
+  complianceScore: number | null
+  riskScore: number | null
+  auditReadinessScore: number | null
+}
+
+export function useDashboardHistory(range: '30d' | '90d' = '30d') {
+  return useQuery({
+    queryKey: queryKeys.dashboard.history(range),
+    queryFn:  () =>
+      apiClient.get<{ success: boolean; data: { points: DashboardHistoryPoint[] } }>(`/dashboard/history?range=${range}`)
+        .then(r => r.data.points),
+    enabled:   !!apiClient.tokens.getAccess(),
+    staleTime: 30_000,
   })
 }

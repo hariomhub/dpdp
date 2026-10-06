@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { AuthRequest } from '../../middleware/auth'
 import { tasksService } from './tasks.service'
 import { EvidenceType, GapReasonCode } from '@prisma/tenant-client'
-import { uploadFile } from '../../utils/storage'
 
 const reviewSchema = z.object({
   decision: z.enum(['approve', 'reject']),
@@ -125,17 +124,13 @@ export const tasksController = {
     try {
       const body = addEvidenceSchema.parse(req.body)
 
-      let fileData: { fileName: string; fileSize: number; fileUrl: string; storageProvider: string } | undefined
-      if (req.file) {
-        fileData = await uploadFile(req.file, `evidence/${req.params.id}`)
-      }
-
+      // The uploaded temp file is validated and moved into storage by the service, after its permission checks.
       const evidence = await tasksService.addEvidence({
         tenantId: req.tenantId!, taskId: req.params.id, userId: req.userId!,
         data: {
           title: body.title, type: body.type, description: body.description,
           linkUrl: body.linkUrl, textContent: body.textContent,
-          file: fileData, actions: body.actions,
+          upload: req.file, actions: body.actions,
         },
       })
       res.status(201).json({ success: true, data: evidence, message: 'Evidence added' })
@@ -153,14 +148,9 @@ export const tasksController = {
     try {
       const body = updateEvidenceSchema.parse(req.body)
 
-      let fileData: { fileName: string; fileSize: number; fileUrl: string; storageProvider: string } | undefined
-      if (req.file) {
-        fileData = await uploadFile(req.file, `evidence/${req.params.id}`)
-      }
-
       const evidence = await tasksService.updateEvidence({
         tenantId: req.tenantId!, taskId: req.params.id, evidenceId: req.params.evidenceId, userId: req.userId!,
-        data: { ...body, file: fileData },
+        data: { ...body, upload: req.file },
       })
       res.json({ success: true, data: evidence, message: 'Evidence updated' })
     } catch (err) { next(err) }
@@ -170,18 +160,13 @@ export const tasksController = {
     try {
       const body = addGapFindingSchema.parse(req.body)
 
-      const files: { fileName: string; fileSize: number; fileUrl: string }[] = []
-      const reqFiles = (req.files as Express.Multer.File[] | undefined) ?? []
-      for (const file of reqFiles) {
-        const stored = await uploadFile(file, `gap-findings/${req.params.id}`)
-        files.push({ fileName: stored.fileName, fileSize: stored.fileSize, fileUrl: stored.fileUrl })
-      }
+      const uploads = (req.files as Express.Multer.File[] | undefined) ?? []
 
       const finding = await tasksService.addGapFinding({
         tenantId: req.tenantId!, taskId: req.params.id, userId: req.userId!,
         data: {
           reasonCodes: body.reasonCodes, otherReason: body.otherReason,
-          remediation: body.remediation, actionIds: body.actionIds, files,
+          remediation: body.remediation, actionIds: body.actionIds, uploads,
         },
       })
       res.status(201).json({ success: true, data: finding, message: 'Gap finding recorded' })

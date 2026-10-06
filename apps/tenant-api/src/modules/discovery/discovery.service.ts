@@ -37,7 +37,7 @@ export const discoveryService = {
 
   // ── POST /cloud-connections/:id/discover ─────────────────────────────────
   async triggerDiscovery(params: { connectionId: string; tenantId: string; userId: string }) {
-    const { providerKey, credentials } = await cloudConnectionsService.getDecryptedCredentials(
+    const { providerKey } = await cloudConnectionsService.getConnectionForScan(
       params.connectionId, params.tenantId
     )
 
@@ -45,7 +45,6 @@ export const discoveryService = {
       tenantId: params.tenantId,
       connectionId: params.connectionId,
       provider: providerKey,
-      credentials,
     })
 
     return { queued: true }
@@ -128,7 +127,7 @@ export const discoveryService = {
 
     await logTenantAction({
       tenantId: params.tenantId, userId: params.userId,
-      action: TenantAuditAction.ASSET_DEACTIVATED, // closest existing action; a dedicated one wasn't warranted for a draft that was never a real asset
+      action: TenantAuditAction.DISCOVERY_DRAFT_DISMISSED,
       targetType: 'discovered_asset_draft', targetId: draft.id, targetName: draft.name,
       details: { dismissed: true },
     })

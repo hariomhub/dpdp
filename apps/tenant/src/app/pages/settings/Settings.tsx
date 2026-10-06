@@ -13,8 +13,9 @@ import {
   type DepartmentFull,
 } from '../../../hooks/useOrg';
 import { SettingsOrgStructure } from './SettingsOrgStructure';
+import { SettingsLicence } from './SettingsLicence';
 import toast from 'react-hot-toast';
-import { useLmsDesignations, useRoleDefaults, useSetRoleDefaults } from '../../../hooks/useLms';
+import { useLmsDesignations, useRoleDefaults, useSetRoleDefaults, useApplyRoleDefaultToExisting } from '../../../hooks/useLms';
 
 const NAV = [
   { id: 'profile',    label: 'Organization Profile' },
@@ -23,8 +24,9 @@ const NAV = [
   { id: 'integrations', label: 'Integrations' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'billing',    label: 'Billing & Plan', ceoOnly: true },
+  { id: 'licence',    label: 'Licence', ceoCoOnly: true },
   { id: 'lms',        label: 'LMS Role Mapping', ceoCoOnly: true },
-  { id: 'audit',      label: 'Audit Log' },
+  { id: 'audit',      label: 'Audit Log', auditViewer: true },
 ];
 
 function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
@@ -39,6 +41,8 @@ function OrgProfile() {
   const { data: status, isLoading } = useOnboardingStatus();
   const saveOrgDetails = useSaveOrgDetails();
   const t = status?.tenant;
+  const { role } = useApp();
+  const canEdit = role === 'ceo' || role === 'co'; // the API only lets CEO / CO change these details
 
   const [form, setForm] = useState<Record<string, string>>({});
   const f = (key: string, fallback = '') => form[key] !== undefined ? form[key] : (t as any)?.[key] ?? fallback;
@@ -72,6 +76,8 @@ function OrgProfile() {
         <h2 className="text-[18px] font-bold text-slate-900 mb-1" style={{ fontFamily: 'Cinzel, serif' }}>Organization Profile</h2>
         <p className="text-[14px] text-slate-400">Update your organization's details and contact information.</p>
       </div>
+      {!canEdit && <p className="text-[13.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Only the CEO or Compliance Officer can change these details.</p>}
+      <fieldset disabled={!canEdit} className="space-y-6 border-0 p-0 m-0 min-w-0">
       <div className="space-y-4">
         <p className="text-[13px] font-bold text-slate-500 uppercase tracking-widest">Basic Information</p>
         <div className="grid grid-cols-2 gap-4">
@@ -105,12 +111,13 @@ function OrgProfile() {
           <div><label className="block text-[13.5px] font-medium text-slate-700 mb-1">GST Number</label><input value={f('gstNumber')} onChange={set('gstNumber')} className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 focus:outline-none focus:border-[#1A3E5C]" style={{ fontFamily: 'JetBrains Mono, monospace' }} /></div>
         </div>
       </div>
-      <div className="flex gap-3 pt-2">
+      </fieldset>
+      {canEdit && <div className="flex gap-3 pt-2">
         <button onClick={handleSave} disabled={saveOrgDetails.isPending} className="px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg transition-colors disabled:opacity-60">
           {saveOrgDetails.isPending ? 'Saving...' : 'Save Changes →'}
         </button>
         <button onClick={() => setForm({})} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">Reset</button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -119,6 +126,8 @@ function DPDPClassification() {
   const { data: status } = useOnboardingStatus();
   const saveClassification = useSaveClassification();
   const current = status?.tenant?.classification;
+  const { role } = useApp();
+  const canEdit = role === 'ceo' || role === 'co'; // the API only lets CEO / CO change the classification
   const [selected, setSelected] = useState<string>('');
   const [notSure, setNotSure] = useState(false);
 
@@ -137,6 +146,8 @@ function DPDPClassification() {
         <p className="text-[14px] text-slate-400">Your organization's classification determines which controls and obligations apply.</p>
       </div>
       {current && <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#1A3E5C]/8 border border-[#D4AF37]/40 rounded-md"><span className="text-[13px] text-[#1A3E5C] font-medium">Current: {current}</span></div>}
+      {!canEdit && <p className="text-[13.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Only the CEO or Compliance Officer can change the classification.</p>}
+      <fieldset disabled={!canEdit} className="space-y-5 border-0 p-0 m-0 min-w-0">
       <div className="flex gap-4">
         {[
           { id: 'df', label: 'Data Fiduciary', desc: 'Determines purpose and means of processing personal data. Standard obligations under DPDP Act.', icon: '🛡️' },
@@ -158,9 +169,10 @@ function DPDPClassification() {
         <span className="text-[14.5px] text-slate-700">I'm not sure about my classification</span>
       </label>
       {notSure && <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" /><p className="text-[14px] text-amber-700">Classification marked as uncertain. Your Compliance Officer will be notified.</p></div>}
-      <button onClick={handleSave} disabled={saveClassification.isPending} className="px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg transition-colors disabled:opacity-60">
+      </fieldset>
+      {canEdit && <button onClick={handleSave} disabled={saveClassification.isPending} className="px-5 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[15px] font-semibold rounded-lg transition-colors disabled:opacity-60">
         {saveClassification.isPending ? 'Saving...' : 'Save →'}
-      </button>
+      </button>}
     </div>
   );
 }
@@ -471,6 +483,7 @@ function LmsRoleMapping() {
   const { data: designations = [] } = useLmsDesignations();
   const { data: defaults = [] }     = useRoleDefaults();
   const setDefaultsMut              = useSetRoleDefaults();
+  const applyExistingMut            = useApplyRoleDefaultToExisting();
   const [mappings, setMappings]     = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
@@ -509,11 +522,16 @@ function LmsRoleMapping() {
           <strong>How it works:</strong> When a new user accepts their invite or is synced via Entra ID,
           they automatically receive the LMS designation configured here for their role.
           You can always override a specific user's designation from the Users page (LMS button).
+          Changing a default here only affects <strong>new</strong> users going forward — use
+          "Apply to existing users" on a saved row to retroactively update everyone who already has that role.
         </p>
       </div>
 
       <div className="space-y-3">
-        {PORTAL_ROLES.map(pr => (
+        {PORTAL_ROLES.map(pr => {
+          const savedValue = (defaults as any[]).find((d: any) => d.portalRole === pr.role)?.designation ?? '';
+          const hasUnsavedChange = (mappings[pr.role] ?? '') !== savedValue;
+          return (
           <div key={pr.role} className="flex items-center gap-4 p-4 bg-white border border-[#D4AF37]/35 rounded-xl shadow-sm shadow-slate-900/[0.04] hover:border-slate-300 transition-colors">
             <div className="flex-1">
               <p className="text-[15px] font-semibold text-slate-800">{pr.label}</p>
@@ -530,9 +548,20 @@ function LmsRoleMapping() {
                   <option key={d.id} value={d.name}>{d.name}</option>
                 ))}
               </select>
+              <button
+                onClick={() => {
+                  if (confirm(`Apply "${savedValue}" to every existing ${pr.label} user now? They'll be auto-enrolled in any mandatory courses for that designation.`)) {
+                    applyExistingMut.mutate(pr.role);
+                  }
+                }}
+                disabled={!savedValue || hasUnsavedChange || applyExistingMut.isPending}
+                title={hasUnsavedChange ? 'Save this default first' : !savedValue ? 'Set a default first' : 'Retroactively apply this default to existing users with this role'}
+                className="text-[13px] font-medium text-[#1A3E5C] border border-[#1A3E5C]/30 px-2.5 py-1.5 rounded-lg hover:bg-[#1A3E5C]/8 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
+                Apply to existing users
+              </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="flex justify-end">
@@ -551,11 +580,14 @@ export function SettingsPage() {
   const { role } = useApp();
   const isCEO = role === 'ceo';
   const isCO  = role === 'co';
-  const [activeSection, setActiveSection] = useState('profile');
+  // The licence banner links here with ?section=licence
+  const [activeSection, setActiveSection] = useState(() => new URLSearchParams(window.location.search).get('section') || 'profile');
 
   const navItems = NAV.filter(n => {
     if ((n as any).ceoOnly && !isCEO) return false;
     if ((n as any).ceoCoOnly && !isCEO && !isCO) return false;
+    // The audit log is limited to CEO, CO and Internal Auditor (the API enforces the same rule).
+    if ((n as any).auditViewer && !isCEO && !isCO && role !== 'internal_auditor') return false;
     return true;
   });
 
@@ -567,6 +599,7 @@ export function SettingsPage() {
     lms:          <LmsRoleMapping />,
     notifications: <Notifications />,
     billing:      <BillingPlan />,
+    licence:      <SettingsLicence />,
     audit:        <AuditLog />,
   };
 

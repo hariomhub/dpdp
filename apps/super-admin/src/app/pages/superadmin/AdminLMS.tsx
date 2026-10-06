@@ -2,46 +2,98 @@ import React, { useState } from 'react';
 import {
   Plus, Play, BookOpen, BarChart2, Search, Edit2, Eye,
   Trash2, GripVertical, X, Check, Image, FileText, Video,
-  Award, Download, AlertTriangle, Loader2
+  Award, Download, AlertTriangle, Loader2, ChevronDown, Archive
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import {
   useCourses, useCourse, useCreateCourse, useUpdateCourse, useSyncCourseContent,
-  useQuestions, useCreateQuestion,
-  useCertificateTemplates, useCreateCertificateTemplate,
+  useArchiveCourse, useDeleteCourse,
+  useQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion,
+  useCertificateTemplates, useCreateCertificateTemplate, useUpdateCertificateTemplate,
   useDesignations, useCreateDesignation, useUpdateDesignation, useDeleteDesignation,
-  useCourseDesignations, useSetCourseDesignations
+  useCourseDesignations, useSetCourseDesignations, useUploadLmsFile,
+  useCoursePortalRoles, useSetCoursePortalRoles,
+  useLmsAnalytics, useIssuedCertificates, useRevokeCertificate,
 } from '../../../hooks/useLms';
 import toast from 'react-hot-toast';
 
-// Enrollment trend kept as mock — requires tenant portal data
-const ENROLLMENT_DATA = [
-  { month: 'Nov', enrollments: 145 }, { month: 'Dec', enrollments: 170 },
-  { month: 'Jan', enrollments: 42 }, { month: 'Feb', enrollments: 68 }, { month: 'Mar', enrollments: 91 },
-  { month: 'Apr', enrollments: 124 },
-];
-
-// Certificate issuance log kept as mock — requires tenant portal data
-const CERT_LOG = [
-  { id: 'CERT-2025-001', learner: 'Amit Rao', org: 'TechNova Solutions', course: 'DPDP Compliance Fundamentals', issued: '2025-04-20', status: 'Active' },
-  { id: 'CERT-2025-002', learner: 'Priya Sharma', org: 'TechNova Solutions', course: 'How to Use the DPDP CMS Portal', issued: '2025-04-18', status: 'Active' },
-  { id: 'CERT-2025-003', learner: 'Manish Kumar', org: 'TechNova Solutions', course: 'Evidence Submission Best Practices', issued: '2025-04-15', status: 'Active' },
-  { id: 'CERT-2025-004', learner: 'Nandan Reddy', org: 'Infosys BPO Ltd', course: 'DPDP Compliance Fundamentals', issued: '2025-04-12', status: 'Revoked' },
-];
-
-//  Content Item Modals 
+//  Content Item Modals
 type ContentModal = { type: 'section' | 'video' | 'reading' | 'assignment' | null };
+
+const SUBMISSION_TYPE_MAP: Record<string, string> = {
+  'Text Response': 'TEXT_RESPONSE',
+  'File Upload':   'FILE_UPLOAD',
+  'Both':          'BOTH',
+};
+
+// The platform's own fixed permission roles — independent of LMS Designation
+// (org job-function). Used for "how do I use this portal" course targeting.
+// Same 5 roles + labels as the tenant Settings "LMS Role Mapping" screen.
+const PORTAL_ROLES = [
+  { value: 'CEO',              label: 'CEO' },
+  { value: 'CO',                label: 'Compliance Officer' },
+  { value: 'IT_ADMIN',          label: 'IT Admin' },
+  { value: 'INTERNAL_AUDITOR',  label: 'Internal Auditor' },
+  { value: 'EXTERNAL_AUDITOR',  label: 'External Auditor' },
+];
 
 function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; onClose: () => void; onSave: (item: any) => void }) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [videoSrc, setVideoSrc] = useState<'upload' | 'embed'>('upload');
+  const [videoSrc, setVideoSrc] = useState<'upload' | 'embed'>('embed');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [contentType, setContentType] = useState<'rich' | 'file'>('rich');
+  const [readingText, setReadingText] = useState('');
+  const [readingFile, setReadingFile] = useState<File | null>(null);
+  const [instructions, setInstructions] = useState('');
   const [submissionType, setSubmissionType] = useState('Text Response');
+  const { mutateAsync: uploadFile, isPending: uploading } = useUploadLmsFile();
+  const [saving, setSaving] = useState(false);
 
   if (!type) return null;
 
   const TITLES = { section: 'Add Section', video: 'Add Video Lesson', reading: 'Add Reading Material', assignment: 'Add Assignment' };
+
+  const canSave = !!title && (
+    type !== 'video' || (videoSrc === 'embed' ? !!videoUrl : !!videoFile)
+  ) && (
+    type !== 'reading' || (contentType === 'rich' ? !!readingText : !!readingFile)
+  ) && (
+    type !== 'assignment' || !!instructions
+  );
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const item: any = { type, title, desc };
+      if (type === 'video') {
+        item.videoSource = videoSrc === 'upload' ? 'UPLOAD' : 'EMBED';
+        if (videoSrc === 'upload' && videoFile) {
+          const uploaded = await uploadFile({ file: videoFile, folder: 'videos' });
+          item.videoUrl = uploaded.fileUrl;
+        } else {
+          item.videoUrl = videoUrl;
+        }
+      } else if (type === 'reading') {
+        item.readingContentType = contentType === 'rich' ? 'RICH_TEXT' : 'FILE';
+        if (contentType === 'file' && readingFile) {
+          const uploaded = await uploadFile({ file: readingFile, folder: 'reading' });
+          item.readingContent = uploaded.fileUrl;
+        } else {
+          item.readingContent = readingText;
+        }
+      } else if (type === 'assignment') {
+        item.assignmentInstructions = instructions;
+        item.assignmentSubmissionType = SUBMISSION_TYPE_MAP[submissionType] ?? 'TEXT_RESPONSE';
+      }
+      onSave(item);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
@@ -75,19 +127,20 @@ function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; o
               <div>
                 <label className="block text-[13.5px] font-medium text-slate-700 mb-2">Video Source</label>
                 <div className="flex gap-2 mb-3">
-                  {[{ val: 'upload', label: 'Upload File' }, { val: 'embed', label: 'Embed URL' }].map(s => (
+                  {[{ val: 'embed', label: 'Embed URL' }, { val: 'upload', label: 'Upload File' }].map(s => (
                     <button key={s.val} onClick={() => setVideoSrc(s.val as any)}
                       className={`px-3 py-1.5 rounded-lg text-[14px] font-medium border transition-all ${videoSrc === s.val ? 'bg-[#15324a] text-white border-slate-800' : 'border-[#64748B]/20 text-slate-600 hover:border-slate-400'}`}>{s.label}</button>
                   ))}
                 </div>
                 {videoSrc === 'upload' ? (
-                  <div className="h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
+                  <label className="h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
+                    <input type="file" accept="video/*" className="hidden" onChange={e => setVideoFile(e.target.files?.[0] ?? null)} />
                     <Video className="w-6 h-6 mb-1" />
-                    Drag and drop video file here, or click to browse
-                    <span className="text-[12.5px] mt-0.5">MP4, MOV, AVI — max 2GB</span>
-                  </div>
+                    {videoFile ? videoFile.name : 'Drag and drop video file here, or click to browse'}
+                    <span className="text-[12.5px] mt-0.5">MP4, MOV, AVI — max 100MB (or use Embed URL for larger files)</span>
+                  </label>
                 ) : (
-                  <input placeholder="https://youtube.com/embed/... or https://vimeo.com/..."
+                  <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/embed/... or https://vimeo.com/..."
                     className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
                 )}
               </div>
@@ -107,16 +160,17 @@ function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; o
                 {contentType === 'rich' ? (
                   <div className="border border-slate-300 rounded-lg overflow-hidden">
                     <div className="flex gap-1 px-2 py-1.5 border-b border-[#64748B]/20 bg-slate-50 text-[13px] text-slate-500">
-                      {['B', 'I', 'U', '• List', '1. List'].map(t => <button key={t} className="px-1.5 py-0.5 hover:bg-slate-200 rounded font-medium transition-colors">{t}</button>)}
+                      {['B', 'I', 'U', '• List', '1. List'].map(t => <button key={t} type="button" className="px-1.5 py-0.5 hover:bg-slate-200 rounded font-medium transition-colors">{t}</button>)}
                     </div>
-                    <textarea rows={6} placeholder="Write the reading material content here…"
+                    <textarea rows={6} value={readingText} onChange={e => setReadingText(e.target.value)} placeholder="Write the reading material content here…"
                       className="w-full px-3 py-2 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none resize-none" />
                   </div>
                 ) : (
-                  <div className="h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
+                  <label className="h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
+                    <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setReadingFile(e.target.files?.[0] ?? null)} />
                     <FileText className="w-5 h-5 mb-1" />
-                    Upload PDF or DOCX file
-                  </div>
+                    {readingFile ? readingFile.name : 'Upload PDF or DOCX file'}
+                  </label>
                 )}
               </div>
             </>
@@ -126,7 +180,7 @@ function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; o
             <>
               <div>
                 <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Instructions <span className="text-slate-400">**</span></label>
-                <textarea rows={4} placeholder="Describe what learners need to do for this assignment…"
+                <textarea rows={4} value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Describe what learners need to do for this assignment…"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 resize-none" />
               </div>
               <div>
@@ -143,8 +197,9 @@ function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; o
         </div>
         <div className="flex items-center gap-3 px-5 py-4 border-t border-[#64748B]/20">
           <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={() => { onSave({ type, title, desc }); onClose(); }} disabled={!title}
-            className="flex-1 py-2 bg-[#15324a] hover:bg-[#1A3E5C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[15px] font-semibold rounded-lg transition-colors">
+          <button onClick={handleSave} disabled={!canSave || saving || uploading}
+            className="flex-1 py-2 bg-[#15324a] hover:bg-[#1A3E5C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+            {(saving || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Save {TITLES[type].replace('Add ', '')} →
           </button>
         </div>
@@ -153,45 +208,82 @@ function ContentModal({ type, onClose, onSave }: { type: ContentModal['type']; o
   );
 }
 
-//  Question Form (Add Question / Quiz) 
+//  Question Form (Add Question / Quiz)
 type QType = 'MCQ' | 'True-False' | 'Descriptive';
-function QuestionFormModal({ onClose, onSave }: { onClose: () => void; onSave: (q: any) => void }) {
-  const [qType, setQType] = useState<QType>('MCQ');
-  const [text, setText] = useState('');
-  const [options, setOptions] = useState(['', '', '', '']);
-  const [correct, setCorrect] = useState(0);
-  const [tfCorrect, setTfCorrect] = useState<'True' | 'False'>('True');
-  const [modelAnswer, setModelAnswer] = useState('');
-  const [wordLimit, setWordLimit] = useState('');
-  const [marks, setMarks] = useState(2);
-  const [difficulty, setDifficulty] = useState('Medium');
-  const [topic, setTopic] = useState('');
-  const { mutate: createQuestion, isPending: savingQ } = useCreateQuestion();
+function QuestionFormModal({ onClose, onSave, mode = 'bank', initial }: {
+  onClose: () => void; onSave: (q: any) => void
+  // 'bank' (default): standalone Question Bank tab — persists to the bank immediately.
+  // 'draft': used inside the course quiz builder — returns the full question to local
+  // state only; syncCourseContent is the single writer when the course is saved, which
+  // avoids creating an orphaned bank copy alongside a second, option-less quiz copy.
+  mode?: 'bank' | 'draft'; initial?: any
+}) {
+  const [qType, setQType] = useState<QType>(initial?.type ?? 'MCQ');
+  const [text, setText] = useState(initial?.text ?? initial?.questionText ?? '');
+  const [options, setOptions] = useState<string[]>(
+    initial?.options?.length ? initial.options.map((o: any) => o.optionText) : ['', '', '', '']
+  );
+  const [correct, setCorrect] = useState(
+    initial?.options?.length ? Math.max(0, initial.options.findIndex((o: any) => o.isCorrect)) : 0
+  );
+  const [tfCorrect, setTfCorrect] = useState<'True' | 'False'>(initial?.tfCorrectAnswer === false ? 'False' : 'True');
+  const [modelAnswer, setModelAnswer] = useState(initial?.modelAnswer ?? '');
+  const [wordLimit, setWordLimit] = useState(initial?.wordLimit ? String(initial.wordLimit) : '');
+  const [marks, setMarks] = useState(initial?.marks ?? 2);
+  const [difficulty, setDifficulty] = useState(initial?.difficulty ?? 'Medium');
+  const [topic, setTopic] = useState(initial?.topic ?? '');
+  const { mutate: createQuestion, isPending: creating } = useCreateQuestion();
+  const { mutate: updateQuestion, isPending: updating } = useUpdateQuestion();
+  const savingQ = creating || updating;
 
   const handleSaveQuestion = () => {
     if (!text) return;
-    createQuestion({
-      questionText: text,
-      type: qType === 'True-False' ? 'TRUE_FALSE' : qType.toUpperCase() as any,
-      marks,
-      difficulty: difficulty.toUpperCase() as any,
-      topic: topic || undefined,
+
+    const draftShape = {
+      id: initial?.id,
+      text, type: qType, marks, difficulty, topic: topic || undefined,
       tfCorrectAnswer: qType === 'True-False' ? (tfCorrect === 'True') : undefined,
       modelAnswer: qType === 'Descriptive' ? modelAnswer : undefined,
       wordLimit: wordLimit ? parseInt(wordLimit) : undefined,
       options: qType === 'MCQ' ? options
         .map((opt, i) => ({ optionText: opt, isCorrect: i === correct, orderIndex: i }))
         .filter(o => o.optionText) : undefined,
-    } as any, {
-      onSuccess: () => { onSave({ text, type: qType, marks, difficulty, topic }); onClose(); },
-    });
+    };
+
+    if (mode === 'draft') {
+      onSave(draftShape);
+      onClose();
+      return;
+    }
+
+    const apiPayload = {
+      questionText: text,
+      type: (qType === 'True-False' ? 'TRUE_FALSE' : qType.toUpperCase()) as any,
+      marks,
+      difficulty: difficulty.toUpperCase() as any,
+      topic: topic || undefined,
+      tfCorrectAnswer: draftShape.tfCorrectAnswer,
+      modelAnswer: draftShape.modelAnswer,
+      wordLimit: draftShape.wordLimit,
+      options: draftShape.options,
+    };
+
+    if (initial?.id) {
+      updateQuestion({ id: initial.id, ...apiPayload } as any, {
+        onSuccess: () => { onSave({ ...draftShape, id: initial.id }); onClose(); },
+      });
+    } else {
+      createQuestion(apiPayload as any, {
+        onSuccess: (res: any) => { onSave({ ...draftShape, id: res?.data?.id ?? draftShape.id }); onClose(); },
+      });
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-xl border border-[#64748B]/20 shadow-xl w-[580px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#64748B]/20">
-          <p className="text-[17px] font-bold text-slate-900">Add Question</p>
+          <p className="text-[17px] font-bold text-slate-900">{initial ? 'Edit Question' : 'Add Question'}</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-700" /></button>
         </div>
         <div className="p-5 space-y-4">
@@ -295,17 +387,227 @@ function QuestionFormModal({ onClose, onSave }: { onClose: () => void; onSave: (
   );
 }
 
-//  Certificate Template Builder 
-function CertTemplateBuilder({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ name: '', layout: 'classic', title: 'Certificate of Completion', body: 'This is to certify that {learner_name} has successfully completed {course_name} on {completion_date}.', signatory: '', designation: '', bg: '#FFFFFF' });
+//  Add from Question Bank (picker)
+function QuestionBankPicker({ excludeIds, onClose, onAdd }: {
+  excludeIds: string[]; onClose: () => void; onAdd: (qs: QuizQuestion[]) => void
+}) {
+  const [search, setSearch] = useState('');
+  const { data, isLoading } = useQuestions({ bankOnly: 'true', search: search || undefined });
+  const questions = (data?.data ?? []).filter((q: any) => !excludeIds.includes(q.id));
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) => setSelected(p => {
+    const n = new Set(p);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  const handleAdd = () => {
+    const picked: QuizQuestion[] = questions
+      .filter((q: any) => selected.has(q.id))
+      .map((q: any) => ({
+        id: q.id,
+        text: q.questionText,
+        type: q.type === 'TRUE_FALSE' ? 'True-False' : q.type.charAt(0) + q.type.slice(1).toLowerCase(),
+        marks: q.marks,
+        difficulty: q.difficulty.charAt(0) + q.difficulty.slice(1).toLowerCase(),
+        topic: q.topic ?? undefined,
+        tfCorrectAnswer: q.tfCorrectAnswer ?? undefined,
+        modelAnswer: q.modelAnswer ?? undefined,
+        wordLimit: q.wordLimit ?? undefined,
+        options: (q.options || []).map((o: any, i: number) => ({ optionText: o.optionText, isCorrect: o.isCorrect, orderIndex: o.orderIndex ?? i })),
+      }));
+    onAdd(picked);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl border border-[#64748B]/20 shadow-xl w-[560px] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#64748B]/20">
+          <p className="text-[17px] font-bold text-slate-900">Add from Question Bank</p>
+          <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-700" /></button>
+        </div>
+        <div className="p-4 border-b border-[#64748B]/20">
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search questions…"
+            className="w-full h-9 px-3 rounded-lg border border-slate-300 text-[14.5px] focus:outline-none focus:border-slate-400" />
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {isLoading && <div className="py-8 text-center text-slate-400 text-[14px]">Loading…</div>}
+          {!isLoading && questions.length === 0 && (
+            <div className="py-8 text-center text-slate-400 text-[14px]">No unattached bank questions found.</div>
+          )}
+          {questions.map((q: any) => (
+            <label key={q.id} className="flex items-start gap-3 p-2.5 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 cursor-pointer">
+              <input type="checkbox" checked={selected.has(q.id)} onChange={() => toggle(q.id)} className="mt-1 accent-slate-800" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[12px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">{q.type}</span>
+                  <span className="text-[12px] text-slate-400">{q.marks} marks</span>
+                </div>
+                <p className="text-[14px] text-slate-700 line-clamp-2">{q.questionText}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 px-5 py-4 border-t border-[#64748B]/20">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+          <button onClick={handleAdd} disabled={selected.size === 0}
+            className="flex-1 py-2 bg-[#15324a] hover:bg-[#1A3E5C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-[15px] font-semibold rounded-lg">
+            Add {selected.size || ''} Question{selected.size === 1 ? '' : 's'} →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+//  Certificate rendering helpers — contrast-aware text colors so a chosen
+// background always stays readable, plus a real NiyamSaathi brand mark (in a
+// white badge, so it stays legible against any background too).
+function hexLuminance(hex: string): number {
+  const clean = (hex || '#FFFFFF').replace('#', '').trim();
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const r = parseInt(full.substring(0, 2), 16) / 255 || 1;
+  const g = parseInt(full.substring(2, 4), 16) / 255 || 1;
+  const b = parseInt(full.substring(4, 6), 16) / 255 || 1;
+  const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function getCertPalette(bg: string) {
+  const isDark = hexLuminance(bg) < 0.5;
+  return {
+    isDark,
+    heading:   isDark ? '#FFFFFF' : '#1A3E5C',
+    body:      isDark ? 'rgba(255,255,255,0.85)' : '#475569',
+    label:     isDark ? 'rgba(255,255,255,0.65)' : '#64748B',
+    faint:     isDark ? 'rgba(255,255,255,0.55)' : '#64748B',
+    sigLine:   isDark ? 'rgba(255,255,255,0.4)'  : '#94A3B8',
+  };
+}
+
+function CertLogoBadge({ className = 'h-11 px-3', imgClassName = 'h-7' }: { className?: string; imgClassName?: string }) {
+  return (
+    <div className={`inline-flex items-center justify-center rounded-lg bg-white border border-black/5 shadow-sm flex-shrink-0 ${className}`}>
+      <img src="/niyamsaathi_logo.png" alt="NiyamSaathi" className={`w-auto object-contain ${imgClassName}`} />
+    </div>
+  );
+}
+
+//  Certificate rendering — three genuinely distinct layouts (not just a label).
+// Kept self-contained here and mirrored in the tenant app's CertificateView,
+// since the two apps don't share a component bundle for this yet — both must
+// stay visually identical so the admin preview matches what's actually issued.
+function CertificateCard({ layout, bg, title, body, signatory, designation, orgName, certId }: {
+  layout: string; bg: string; title: string; body: string
+  signatory?: string; designation?: string; orgName: string; certId: string
+}) {
+  const normalized = (layout || 'CLASSIC').toUpperCase();
+  const palette = getCertPalette(bg);
+
+  if (normalized === 'MODERN') {
+    return (
+      <div className="rounded-xl overflow-hidden flex shadow-sm" style={{ background: bg, minHeight: 320 }}>
+        <div className="w-[32%] bg-[#1A3E5C] relative flex flex-col items-center justify-center p-6 text-center flex-shrink-0 overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.08] pointer-events-none"
+            style={{ backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 14px)' }} />
+          <CertLogoBadge className="relative h-11 px-3 mb-3" imgClassName="h-7" />
+          <p className="relative text-white text-[13px] font-bold uppercase tracking-widest leading-snug" style={{ fontFamily: 'Cinzel, serif' }}>{orgName}</p>
+        </div>
+        <div className="flex-1 p-8 flex flex-col justify-center min-w-0">
+          <p className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-widest mb-2">Verified Certificate</p>
+          <h1 className="text-[25px] font-bold mb-3 leading-tight" style={{ fontFamily: 'Cinzel, serif', color: palette.heading }}>{title}</h1>
+          <p className="text-[14px] leading-relaxed mb-8" style={{ color: palette.body }}>{body}</p>
+          {signatory && (
+            <div className="mb-4">
+              <div className="h-px w-28 mb-1.5" style={{ background: palette.sigLine }} />
+              <p className="text-[13px] font-semibold" style={{ color: palette.body }}>{signatory}</p>
+              {designation && <p className="text-[11.5px]" style={{ color: palette.faint }}>{designation}</p>}
+            </div>
+          )}
+          <p className="text-[11.5px] font-mono font-medium" style={{ color: palette.faint }}>Certificate ID: {certId}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (normalized === 'MINIMAL') {
+    return (
+      <div className="rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ background: bg, minHeight: 320 }}>
+        <div className="p-11">
+          <div className="flex items-center gap-2.5 mb-9">
+            <CertLogoBadge className="h-8 px-2" imgClassName="h-5" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: palette.label }}>{orgName}</p>
+          </div>
+          <h1 className="text-[23px] font-bold mb-2" style={{ fontFamily: 'Cinzel, serif', color: palette.heading }}>{title}</h1>
+          <div className="h-0.5 w-10 bg-[#D4AF37] mb-6" />
+          <p className="text-[14px] leading-relaxed max-w-lg mb-16" style={{ color: palette.body }}>{body}</p>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              {signatory && (
+                <>
+                  <p className="text-[13.5px] font-medium" style={{ color: palette.body }}>{signatory}</p>
+                  {designation && <p className="text-[12px]" style={{ color: palette.faint }}>{designation}</p>}
+                </>
+              )}
+            </div>
+            <p className="text-[11.5px] font-mono font-medium flex-shrink-0" style={{ color: palette.faint }}>{certId}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // CLASSIC (default) — ornamental double border, centered, seal medallion.
+  return (
+    <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: bg, minHeight: 320 }}>
+      <div className="border-[3px] border-double border-[#D4AF37]/70 m-3 rounded-lg">
+        <div className="p-9 text-center">
+          <CertLogoBadge className="h-14 px-4 mb-4 mx-auto" imgClassName="h-9" />
+          <p className="text-[12px] font-semibold uppercase tracking-[0.25em] mb-3" style={{ color: palette.label }}>{orgName}</p>
+          <h1 className="text-[28px] font-bold mb-3" style={{ fontFamily: 'Cinzel, serif', color: palette.heading }}>{title}</h1>
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="h-px w-12 bg-[#D4AF37]/60" />
+            <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]" />
+            <div className="h-px w-12 bg-[#D4AF37]/60" />
+          </div>
+          <p className="text-[14px] leading-relaxed max-w-md mx-auto mb-9" style={{ color: palette.body }}>{body}</p>
+          {signatory && (
+            <div className="mb-5">
+              <div className="h-10 border-b w-32 mb-1 mx-auto" style={{ borderColor: palette.sigLine }} />
+              <p className="text-[13.5px] font-medium" style={{ color: palette.body }}>{signatory}</p>
+              {designation && <p className="text-[12.5px]" style={{ color: palette.faint }}>{designation}</p>}
+            </div>
+          )}
+          <p className="text-[11.5px] font-mono font-medium tracking-wide" style={{ color: palette.faint }}>Certificate ID: {certId}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+//  Certificate Template Builder
+function CertTemplateBuilder({ template, onClose }: { template?: any | null; onClose: () => void }) {
+  const isEditing = !!template;
+  const [form, setForm] = useState(() => template ? {
+    name: template.name ?? '',
+    layout: (template.layout ?? 'CLASSIC').toLowerCase(),
+    title: template.titleText ?? 'Certificate of Completion',
+    body: template.bodyText ?? 'This is to certify that {learner_name} has successfully completed {course_name} on {completion_date}.',
+    signatory: template.signatory ?? '',
+    designation: template.designation ?? '',
+    bg: template.bgColor ?? '#FFFFFF',
+  } : { name: '', layout: 'classic', title: 'Certificate of Completion', body: 'This is to certify that {learner_name} has successfully completed {course_name} on {completion_date}.', signatory: '', designation: '', bg: '#FFFFFF' });
   const up = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
-  const [preview, setPreview] = useState(false);
   const VARS = ['{learner_name}', '{course_name}', '{completion_date}', '{certificate_id}', '{organization_name}'];
-  const { mutate: createTemplate, isPending: savingTemplate } = useCreateCertificateTemplate();
+  const { mutate: createTemplate, isPending: creating } = useCreateCertificateTemplate();
+  const { mutate: updateTemplate, isPending: updating } = useUpdateCertificateTemplate();
+  const savingTemplate = creating || updating;
 
   const handleSaveTemplate = () => {
     if (!form.name) { toast.error('Template name is required'); return; }
-    createTemplate({
+    const payload = {
       name: form.name,
       layout: form.layout.toUpperCase() as any,
       titleText: form.title,
@@ -313,106 +615,103 @@ function CertTemplateBuilder({ onClose }: { onClose: () => void }) {
       signatory: form.signatory || undefined,
       designation: form.designation || undefined,
       bgColor: form.bg,
-      isDefault: false,
-    } as any, { onSuccess: () => onClose() });
+    };
+    if (isEditing) {
+      updateTemplate({ id: template.id, data: payload } as any, { onSuccess: () => onClose() });
+    } else {
+      createTemplate({ ...payload, isDefault: false } as any, { onSuccess: () => onClose() });
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-start justify-end z-50" onClick={onClose}>
-      <div className="w-[860px] h-full bg-white border-l border-[#64748B]/20 overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#64748B]/20 sticky top-0 bg-white z-10">
-          <p className="text-[17px] font-bold text-slate-900">Create Certificate Template</p>
+      <div className="w-[1120px] max-w-[95vw] h-full bg-white border-l border-[#64748B]/20 flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#64748B]/20 flex-shrink-0">
+          <p className="text-[17px] font-bold text-slate-900">{isEditing ? 'Edit Certificate Template' : 'Create Certificate Template'}</p>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-700" /></button>
         </div>
-        <div className="p-5 space-y-5">
-          {preview ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[15px] font-bold text-slate-800">Preview (Sample Data)</p>
-                <button onClick={() => setPreview(false)} className="text-[14px] text-slate-700 font-medium hover:text-slate-800">← Back to Editor</button>
-              </div>
-              <div className="rounded-xl border-2 border-[#64748B]/20 overflow-hidden" style={{ background: form.bg, minHeight: 320, fontFamily: 'Cinzel, serif' }}>
-                <div className="h-1.5 w-full bg-[#1A3E5C]" />
-                <div className="p-10 text-center">
-                  <p className="text-[13px] font-semibold text-slate-400 uppercase tracking-widest mb-4">DPDP CMS Platform</p>
-                  <h1 className="text-[34px] font-bold text-slate-800 mb-2">{form.title}</h1>
-                  <p className="text-[15px] text-slate-500 mb-8">
-                    {form.body.replace('{learner_name}', 'Amit Rao').replace('{course_name}', 'DPDP Compliance Fundamentals').replace('{completion_date}', 'April 26, 2025').replace('{certificate_id}', 'CERT-2025-001').replace('{organization_name}', 'TechNova Solutions')}
-                  </p>
-                  <div className="flex justify-center gap-16 mt-8">
-                    {form.signatory && <div className="text-center"><div className="h-10 border-b border-slate-400 w-32 mb-1" /><p className="text-[13.5px] font-medium text-slate-700">{form.signatory}</p><p className="text-[12.5px] text-slate-400">{form.designation}</p></div>}
-                    <div className="text-center"><div className="h-10 border-b border-slate-400 w-32 mb-1" /><p className="text-[13.5px] font-medium text-slate-700">Platform Director</p><p className="text-[12.5px] text-slate-400">DPDP CMS</p></div>
-                  </div>
-                  <p className="text-[12px] text-slate-300 font-mono mt-6">Certificate ID: CERT-2025-001</p>
-                </div>
+
+        <div className="flex-1 overflow-hidden flex">
+          {/* Form column */}
+          <div className="w-[52%] overflow-y-auto p-5 space-y-5 border-r border-slate-100">
+            <div>
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Template Name <span className="text-slate-400">**</span></label>
+              <input value={form.name} onChange={e => up('name', e.target.value)} placeholder="e.g., Professional Certificate"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-2">Layout</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[{ val: 'classic', label: 'Classic' }, { val: 'modern', label: 'Modern' }, { val: 'minimal', label: 'Minimal' }].map(l => (
+                  <button key={l.val} onClick={() => up('layout', l.val)}
+                    className={`p-3 border-2 rounded-lg text-center transition-all ${form.layout === l.val ? 'border-[#1A3E5C] bg-slate-50' : 'border-[#64748B]/20 hover:border-slate-400'}`}>
+                    <p className="text-[14px] font-medium text-slate-700">{l.label}</p>
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            <>
+            <div>
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Certificate Title Text</label>
+              <input value={form.title} onChange={e => up('title', e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Body Text</label>
+              <textarea rows={3} value={form.body} onChange={e => up('body', e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-400 resize-none" />
+              <p className="text-[12.5px] text-slate-400 mt-1">Available variables:</p>
+              <div className="flex gap-1.5 flex-wrap mt-1">
+                {VARS.map(v => <span key={v} className="font-mono text-[12px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">{v}</span>)}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Template Name <span className="text-slate-400">**</span></label>
-                <input value={form.name} onChange={e => up('name', e.target.value)} placeholder="e.g., Professional Certificate"
+                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Signatory Name</label>
+                <input value={form.signatory} onChange={e => up('signatory', e.target.value)} placeholder="e.g., Rajesh Kumar"
                   className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
               </div>
               <div>
-                <label className="block text-[13.5px] font-medium text-slate-700 mb-2">Layout</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[{ val: 'classic', label: 'Classic', preview: '' }, { val: 'modern', label: 'Modern', preview: '' }, { val: 'minimal', label: 'Minimal', preview: '' }].map(l => (
-                    <button key={l.val} onClick={() => up('layout', l.val)}
-                      className={`p-3 border-2 rounded-lg text-center transition-all ${form.layout === l.val ? 'border-[#1A3E5C] bg-slate-50' : 'border-[#64748B]/20 hover:border-slate-400'}`}>
-                      <p className="text-[22px] mb-1 font-mono text-slate-400">{l.preview}</p>
-                      <p className="text-[14px] font-medium text-slate-700">{l.label}</p>
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Signatory Designation</label>
+                <input value={form.designation} onChange={e => up('designation', e.target.value)} placeholder="e.g., Head of Compliance"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
               </div>
-              <div>
-                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Certificate Title Text</label>
-                <input value={form.title} onChange={e => up('title', e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Background Color</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={form.bg} onChange={e => up('bg', e.target.value)} className="w-10 h-10 rounded-lg border border-[#64748B]/20 cursor-pointer" />
+                <span className="text-[14px] text-slate-500">Or select pattern: </span>
+                <button type="button" onClick={() => up('bg', '#FFFFFF')}
+                  className={`h-8 w-8 rounded border bg-white transition-all ${form.bg === '#FFFFFF' ? 'border-[#1A3E5C] ring-2 ring-[#1A3E5C]/30' : 'border-[#64748B]/20'}`} />
+                <button type="button" onClick={() => up('bg', '#F8FAFC')}
+                  className={`h-8 w-8 rounded border transition-all ${form.bg === '#F8FAFC' ? 'border-[#1A3E5C] ring-2 ring-[#1A3E5C]/30' : 'border-[#64748B]/20'}`}
+                  style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f8fafc 0, #f8fafc 2px, #eef2f7 2px, #eef2f7 4px)' }} />
               </div>
-              <div>
-                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Body Text</label>
-                <textarea rows={3} value={form.body} onChange={e => up('body', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 focus:outline-none focus:border-slate-400 resize-none" />
-                <p className="text-[12.5px] text-slate-400 mt-1">Available variables:</p>
-                <div className="flex gap-1.5 flex-wrap mt-1">
-                  {VARS.map(v => <span key={v} className="font-mono text-[12px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">{v}</span>)}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Signatory Name</label>
-                  <input value={form.signatory} onChange={e => up('signatory', e.target.value)} placeholder="e.g., Rajesh Kumar"
-                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
-                </div>
-                <div>
-                  <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Signatory Designation</label>
-                  <input value={form.designation} onChange={e => up('designation', e.target.value)} placeholder="e.g., Head of Compliance"
-                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Background Color</label>
-                <div className="flex items-center gap-3">
-                  <input type="color" value={form.bg} onChange={e => up('bg', e.target.value)} className="w-10 h-10 rounded-lg border border-[#64748B]/20 cursor-pointer" />
-                  <span className="text-[14px] text-slate-500">Or select pattern: </span>
-                  <div className="h-8 w-8 rounded border border-[#64748B]/20 bg-white" />
-                  <div className="h-8 w-8 rounded border border-[#64748B]/20" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f8fafc 0, #f8fafc 2px, transparent 0, transparent 50%)', backgroundSize: '8px 8px' }} />
-                </div>
-              </div>
-            </>
-          )}
-          <div className="flex items-center gap-3 pt-3 border-t border-[#64748B]/20">
-            <button onClick={() => setPreview(!preview)} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
-              {preview ? '← Edit' : 'Preview Certificate'}
-            </button>
-            <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
-            <button onClick={handleSaveTemplate} disabled={savingTemplate}
-              className="flex-1 py-2 bg-[#15324a] hover:bg-[#1A3E5C] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-              {savingTemplate ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Template →'}
-            </button>
+            </div>
           </div>
+
+          {/* Live preview column — reflects the form state as you type, no toggle needed */}
+          <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
+            <p className="text-[12.5px] font-bold text-slate-500 uppercase tracking-wide mb-3">Live Preview (Sample Data)</p>
+            <CertificateCard
+              layout={form.layout}
+              bg={form.bg}
+              title={form.title || 'Certificate of Completion'}
+              body={(form.body || '').replace('{learner_name}', 'Amit Rao').replace('{course_name}', 'DPDP Compliance Fundamentals').replace('{completion_date}', 'April 26, 2025').replace('{certificate_id}', 'CERT-2025-001').replace('{organization_name}', 'TechNova Solutions')}
+              signatory={form.signatory}
+              designation={form.designation}
+              orgName="TechNova Solutions"
+              certId="CERT-2025-001"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 px-5 py-3.5 border-t border-[#64748B]/20 flex-shrink-0">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={handleSaveTemplate} disabled={savingTemplate}
+            className="flex-1 py-2 bg-[#15324a] hover:bg-[#1A3E5C] disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+            {savingTemplate ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : isEditing ? 'Update Template →' : 'Save Template →'}
+          </button>
         </div>
       </div>
     </div>
@@ -421,13 +720,28 @@ function CertTemplateBuilder({ onClose }: { onClose: () => void }) {
 
 //  Course Builder 
 type CourseFormStep = 1 | 2 | 3;
-type SectionItem = { id: string; title: string; items: { id: string; type: string; title: string }[] };
-type QuizQuestion = { id: string; text: string; type: string; marks: number; difficulty: string };
+type SectionContentItem = {
+  id: string; type: string; title: string; desc?: string;
+  videoSource?: string; videoUrl?: string;
+  readingContentType?: string; readingContent?: string;
+  assignmentInstructions?: string; assignmentSubmissionType?: string;
+};
+type SectionItem = { id: string; title: string; items: SectionContentItem[] };
+type QuizQuestion = {
+  id: string; text: string; type: string; marks: number; difficulty: string; topic?: string;
+  tfCorrectAnswer?: boolean; modelAnswer?: string; wordLimit?: number;
+  options?: { optionText: string; isCorrect: boolean; orderIndex: number }[];
+};
 
 function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => void }) {
   const { data: fullCourseData, isLoading: isLoadingCourse } = useCourse(courseId || '');
   const [step, setStep] = useState<CourseFormStep>(1);
-  const [form, setForm] = useState({ title: '', desc: '', category: 'DPDP Compliance', difficulty: 'Beginner', durationH: '', durationM: '', status: 'Draft', certTemplate: '' });
+  const [form, setForm] = useState({ title: '', desc: '', category: 'DPDP Compliance', difficulty: 'Beginner', durationH: '', durationM: '', status: 'Draft', certTemplate: '', thumbnailUrl: '' });
+  // form.thumbnailUrl is the stable URL that gets persisted; thumbnailPreviewUrl
+  // is a short-lived signed URL used only to render the <img> here — the blob
+  // container is private, so the stable URL alone won't load in a browser.
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState('');
+  const { mutateAsync: uploadThumbnail, isPending: uploadingThumbnail } = useUploadLmsFile();
   
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [includeQuiz, setIncludeQuiz] = useState(false);
@@ -446,14 +760,21 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
         durationH: String(fullCourseData.estimatedHours || ''),
         durationM: String(fullCourseData.estimatedMinutes || ''),
         status: fullCourseData.status === 'PUBLISHED' ? 'Published' : 'Draft',
-        certTemplate: (fullCourseData as any).certificateTemplate?.name || ''
+        certTemplate: (fullCourseData as any).certificateTemplate?.name || '',
+        thumbnailUrl: fullCourseData.thumbnailUrl || ''
       });
+      setThumbnailPreviewUrl((fullCourseData as any).thumbnailPreviewUrl || '');
 
       if ((fullCourseData as any).sections && (fullCourseData as any).sections.length > 0) {
         setSections((fullCourseData as any).sections.map((s: any) => ({
           id: s.id,
           title: s.title,
-          items: (s.lessons || []).map((l: any) => ({ id: l.id, type: l.type.replace('_', '-').toLowerCase(), title: l.title }))
+          items: (s.lessons || []).map((l: any) => ({
+            id: l.id, type: l.type.replace('_', '-').toLowerCase(), title: l.title, desc: l.description ?? '',
+            videoSource: l.videoSource, videoUrl: l.videoUrl,
+            readingContentType: l.readingContentType, readingContent: l.readingContent,
+            assignmentInstructions: l.assignmentInstructions, assignmentSubmissionType: l.assignmentSubmissionType,
+          }))
         })));
 
         const lastSection = (fullCourseData as any).sections[(fullCourseData as any).sections.length - 1];
@@ -467,7 +788,12 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
             text: q.questionText,
             type: q.type === 'TRUE_FALSE' ? 'True-False' : q.type.charAt(0) + q.type.slice(1).toLowerCase(),
             marks: q.marks,
-            difficulty: q.difficulty.charAt(0) + q.difficulty.slice(1).toLowerCase()
+            difficulty: q.difficulty.charAt(0) + q.difficulty.slice(1).toLowerCase(),
+            topic: q.topic ?? undefined,
+            tfCorrectAnswer: q.tfCorrectAnswer ?? undefined,
+            modelAnswer: q.modelAnswer ?? undefined,
+            wordLimit: q.wordLimit ?? undefined,
+            options: (q.options || []).map((o: any, i: number) => ({ optionText: o.optionText, isCorrect: o.isCorrect, orderIndex: o.orderIndex ?? i })),
           })));
         }
       }
@@ -486,11 +812,21 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
   const { mutate: setCourseDesignations } = useSetCourseDesignations();
   const [selectedDesignations, setSelectedDesignations] = React.useState<Set<string>>(new Set());
 
+  const { data: coursePortalRoles = [] } = useCoursePortalRoles(courseId || '');
+  const { mutate: setCoursePortalRoles } = useSetCoursePortalRoles();
+  const [selectedPortalRoles, setSelectedPortalRoles] = React.useState<Set<string>>(new Set());
+
   React.useEffect(() => {
     if (courseDesignations.length > 0) {
       setSelectedDesignations(new Set(courseDesignations.map((d: any) => d.designationId)));
     }
   }, [courseDesignations]);
+
+  React.useEffect(() => {
+    if (coursePortalRoles.length > 0) {
+      setSelectedPortalRoles(new Set(coursePortalRoles.map((r: any) => r.portalRole)));
+    }
+  }, [coursePortalRoles]);
 
   const handleSaveCourse = (status: 'DRAFT' | 'PUBLISHED') => {
     if (!form.title) { toast.error('Course title is required'); return; }
@@ -504,6 +840,7 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
       estimatedMinutes: parseInt(form.durationM || '0'),
       status,
       certificateTemplateId: selectedTemplate?.id ?? undefined,
+      thumbnailUrl: form.thumbnailUrl || undefined,
     };
     
     const contentPayload = {
@@ -522,6 +859,7 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
           if (selectedDesignations.size >= 0) {
             setCourseDesignations({ courseId: courseId, targets: Array.from(selectedDesignations).map(id => ({ designationId: id, isMandatory: true })) });
           }
+          setCoursePortalRoles({ courseId: courseId, targets: Array.from(selectedPortalRoles).map(role => ({ portalRole: role, isMandatory: true })) });
           toast.success('Course saved successfully');
           onClose();
         }});
@@ -532,6 +870,9 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
           syncContent({ courseId: res.data.id, data: contentPayload }, { onSuccess: () => {
             if (selectedDesignations.size > 0) {
               setCourseDesignations({ courseId: res.data.id, targets: Array.from(selectedDesignations).map(id => ({ designationId: id, isMandatory: true })) });
+            }
+            if (selectedPortalRoles.size > 0) {
+              setCoursePortalRoles({ courseId: res.data.id, targets: Array.from(selectedPortalRoles).map(role => ({ portalRole: role, isMandatory: true })) });
             }
             toast.success('Course created successfully');
             onClose();
@@ -545,12 +886,13 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
 
 
   const [showQForm, setShowQForm] = useState(false);
+  const [showBankPicker, setShowBankPicker] = useState(false);
   const totalMarks = quizQuestions.reduce((s, q) => s + q.marks, 0);
 
   const [contentModal, setContentModal] = useState<{ type: ContentModal['type']; sectionId: string | null }>({ type: null, sectionId: null });
 
   const addToSection = (sectionId: string, item: any) => {
-    setSections(p => p.map(s => s.id === sectionId ? { ...s, items: [...s.items, { id: String(Date.now()), type: item.type, title: item.title }] } : s));
+    setSections(p => p.map(s => s.id === sectionId ? { ...s, items: [...s.items, { ...item, id: String(Date.now()) }] } : s));
   };
   const addSection = (item: any) => {
     setSections(p => [...p, { id: String(Date.now()), title: item.title, items: [] }]);
@@ -574,7 +916,6 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
             else if (contentModal.sectionId) addToSection(contentModal.sectionId, { ...item, type: contentModal.type });
           }} />
       )}
-      {showQForm && <QuestionFormModal onClose={() => setShowQForm(false)} onSave={q => setQuizQuestions(p => [...p, { ...q, id: String(Date.now()) }])} />}
 
       <div className="w-[860px] h-full bg-white border-l border-[#64748B]/20 overflow-y-auto" onClick={e => e.stopPropagation()}>
         {isLoadingCourse ? (
@@ -649,10 +990,25 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
               </div>
               <div>
                 <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Thumbnail</label>
-                <div className="h-24 px-3 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors">
-                  <Image className="w-5 h-5 mb-1" />
-                  Drag and drop or click to upload. Recommended: 1280×720px
-                </div>
+                <label className="h-24 px-3 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-[14px] text-slate-400 cursor-pointer hover:border-slate-400 hover:text-slate-600 transition-colors overflow-hidden">
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const uploaded = await uploadThumbnail({ file, folder: 'thumbnails' });
+                    up('thumbnailUrl', uploaded.fileUrl);
+                    setThumbnailPreviewUrl(uploaded.previewUrl);
+                  }} />
+                  {uploadingThumbnail ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : thumbnailPreviewUrl ? (
+                    <img src={thumbnailPreviewUrl} alt="Course thumbnail" className="h-full w-full object-cover rounded" />
+                  ) : (
+                    <>
+                      <Image className="w-5 h-5 mb-1" />
+                      Drag and drop or click to upload. Recommended: 1280×720px
+                    </>
+                  )}
+                </label>
               </div>
               <div>
                 <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Target Designations</label>
@@ -673,6 +1029,27 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
                     </label>
                   ))}
                   {(designations as any[]).length === 0 && <p className="text-[13px] text-slate-400 p-1">No designations available.</p>}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Target Portal Roles</label>
+                <p className="text-[12.5px] text-slate-400 mb-1.5">For "how to use this portal" guides — targets the platform role a learner holds, independent of their job-function designation above.</p>
+                <div className="space-y-2 border border-[#64748B]/20 rounded-lg p-2.5">
+                  {PORTAL_ROLES.map(r => (
+                    <label key={r.value} className="flex items-center gap-2 text-[14.5px] text-slate-700 cursor-pointer">
+                      <input type="checkbox" checked={selectedPortalRoles.has(r.value)}
+                        onChange={(e) => {
+                          const newSet = new Set(selectedPortalRoles);
+                          if (e.target.checked) newSet.add(r.value);
+                          else newSet.delete(r.value);
+                          setSelectedPortalRoles(newSet);
+                        }}
+                        className="accent-slate-800"
+                      />
+                      <span className="font-medium text-slate-900">{r.label}</span>
+                      <span className="text-[13px] text-slate-400 font-mono">({r.value})</span>
+                    </label>
+                  ))}
                 </div>
               </div>
               <div>
@@ -742,7 +1119,14 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
           {/* Step 3 — Quiz Builder */}
           {step === 3 && (
             <div className="space-y-4">
-              {showQForm && <QuestionFormModal onClose={() => setShowQForm(false)} onSave={q => setQuizQuestions(p => [...p, { ...q, id: String(Date.now()) }])} />}
+              {showQForm && <QuestionFormModal mode="draft" onClose={() => setShowQForm(false)} onSave={q => setQuizQuestions(p => [...p, { ...q, id: q.id ?? String(Date.now()) }])} />}
+              {showBankPicker && (
+                <QuestionBankPicker
+                  excludeIds={quizQuestions.map(q => q.id)}
+                  onClose={() => setShowBankPicker(false)}
+                  onAdd={qs => setQuizQuestions(p => [...p, ...qs])}
+                />
+              )}
               <div>
                 <p className="text-[15px] font-bold text-slate-800 mb-1">Add Quiz (Optional)</p>
                 <p className="text-[14px] text-slate-500">Add a quiz learners must pass to complete this course.</p>
@@ -794,7 +1178,7 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
                     <div className="flex items-center justify-between">
                       <p className="text-[14.5px] font-bold text-slate-800">{quizQuestions.length} Questions Added</p>
                       <div className="flex gap-2">
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] border border-[#64748B]/20 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                        <button onClick={() => setShowBankPicker(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] border border-[#64748B]/20 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
                           + Add from Question Bank
                         </button>
                         <button onClick={() => setShowQForm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium text-slate-700 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
@@ -816,7 +1200,8 @@ function CourseForm({ courseId, onClose }: { courseId?: string; onClose: () => v
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-[13px] font-semibold text-slate-600">{q.marks} marks</span>
-                          <button className="p-1 text-slate-300 hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100">
+                          <button onClick={() => setQuizQuestions(p => p.filter(x => x.id !== q.id))}
+                            className="p-1 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -989,59 +1374,338 @@ function DesignationsTab() {
   )
 }
 
-function CoursePreviewModal({ courseId, onClose }: { courseId: string; onClose: () => void }) {
+const LESSON_TYPE_ICON: Record<string, React.ReactNode> = {
+  VIDEO: <Video className="w-3.5 h-3.5 text-blue-500" />,
+  READING: <FileText className="w-3.5 h-3.5 text-green-500" />,
+  ASSIGNMENT: <BookOpen className="w-3.5 h-3.5 text-amber-500" />,
+}
+const LESSON_TYPE_LABEL: Record<string, string> = { VIDEO: 'Video', READING: 'Reading', ASSIGNMENT: 'Assignment' }
+
+function CoursePreviewModal({ courseId, onClose, onEdit }: { courseId: string; onClose: () => void; onEdit: () => void }) {
   const { data: course, isLoading } = useCourse(courseId);
+  const { data: courseDesignations = [] } = useCourseDesignations(courseId);
+  const { data: coursePortalRoles = [] } = useCoursePortalRoles(courseId);
+  const archiveMut = useArchiveCourse();
+  const deleteMut = useDeleteCourse();
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   if (isLoading) return <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>;
   if (!course) return null;
 
+  const sections = (course as any).sections ?? [];
+  const totalLessons = sections.reduce((s: number, sec: any) => s + (sec.lessons?.length ?? 0), 0);
+  const totalQuizzes = sections.filter((sec: any) => sec.quiz).length;
+
+  const handleArchive = () => {
+    if (!confirm(`Archive "${course.title}"? It will disappear from every tenant's catalog immediately, but all enrollment history and certificates already issued for it stay intact. You can't undo this from the UI yet — ask engineering to flip it back to Published if needed.`)) return;
+    archiveMut.mutate(course.id, { onSuccess: onClose });
+  };
+  const handleDelete = () => {
+    if (!confirm(`Permanently delete "${course.title}"? This removes the course and all its content forever and cannot be undone.`)) return;
+    deleteMut.mutate(course.id, { onSuccess: onClose });
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50" onClick={onClose}>
-       <div className="bg-white rounded-xl shadow-xl w-[600px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-           <div className="flex items-center justify-between px-5 py-4 border-b border-[#64748B]/20 shrink-0">
-             <h2 className="text-[18px] font-bold text-slate-900">Preview: {course.title}</h2>
-             <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-600" /></button>
-           </div>
-           <div className="p-5 space-y-4 overflow-y-auto">
-             <div className="flex gap-2">
-               <span className="px-2 py-1 bg-slate-100 rounded text-[13px] font-medium">{course.category?.replace('_', ' ')}</span>
-               <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-[13px] font-medium">{course.difficulty}</span>
-               <span className="px-2 py-1 bg-slate-100 rounded text-[13px] font-medium">{course.estimatedHours}h {course.estimatedMinutes}m</span>
-             </div>
-             <p className="text-[15px] text-slate-600">{course.description}</p>
-             
-             <div className="mt-4 border border-[#64748B]/20 rounded-lg overflow-hidden">
-                <div className="px-4 py-2 bg-slate-50 border-b border-[#64748B]/20">
-                  <p className="text-[14px] font-bold text-slate-800">Course Curriculum</p>
-                </div>
-                {(course as any).sections?.length === 0 && <div className="p-4 text-center text-[14px] text-slate-400">No content added yet.</div>}
-                {(course as any).sections?.map((sec: any, i: number) => (
-                  <div key={sec.id} className="border-b border-slate-100 last:border-0">
-                    <div className="px-4 py-2 bg-slate-50/50">
-                       <p className="text-[14.5px] font-semibold text-slate-800">Section {i+1}: {sec.title}</p>
-                    </div>
-                    {sec.lessons?.map((l: any, j: number) => (
-                       <div key={l.id} className="px-5 py-2 flex items-center gap-2 hover:bg-slate-50">
-                          <Play className="w-3 h-3 text-blue-500" />
-                          <p className="text-[14px] text-slate-600">{j+1}. {l.title}</p>
-                          <span className="ml-auto text-[12px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">{l.type}</span>
-                       </div>
-                    ))}
-                    {sec.quiz && (
-                       <div className="px-5 py-2 flex items-center gap-2 hover:bg-slate-50 border-t border-slate-100">
-                          <Award className="w-3.5 h-3.5 text-amber-500" />
-                          <p className="text-[14px] text-slate-600">{sec.quiz.title} ({sec.quiz.questions?.length} Questions) - Passing: {sec.quiz.passThreshold}%</p>
-                       </div>
-                    )}
-                  </div>
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-end z-50" onClick={onClose}>
+      <div className="w-[900px] max-w-[95vw] h-full bg-white border-l border-[#64748B]/20 overflow-y-auto flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#64748B]/20 sticky top-0 bg-white z-20 shrink-0">
+          <p className="text-[17px] font-bold text-slate-900">Course Details</p>
+          <div className="flex items-center gap-2">
+            {course.status === 'DRAFT' ? (
+              <button onClick={handleDelete} disabled={deleteMut.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium border border-red-200 text-red-600 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50">
+                <Trash2 className="w-3 h-3" /> Delete
+              </button>
+            ) : course.status !== 'ARCHIVED' ? (
+              <button onClick={handleArchive} disabled={archiveMut.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium border border-[#64748B]/20 text-slate-600 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-50">
+                <Archive className="w-3 h-3" /> Archive
+              </button>
+            ) : null}
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium border border-[#64748B]/20 rounded-md hover:bg-slate-50 transition-colors">
+              <Edit2 className="w-3 h-3" /> Edit Course
+            </button>
+            <button onClick={onClose}><X className="w-4 h-4 text-slate-400 hover:text-slate-600" /></button>
+          </div>
+        </div>
+
+        {/* Hero — a scrim sits between the thumbnail and the text so the
+            title/badges stay legible no matter what the uploaded image
+            contains (busy graphics, baked-in text, etc.) */}
+        <div className="h-64 bg-gradient-to-br from-[#15324a] to-[#1A3E5C] relative flex items-end p-6 shrink-0 overflow-hidden">
+          {(course as any).thumbnailPreviewUrl && (
+            <img src={(course as any).thumbnailPreviewUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f2438] via-[#0f2438]/70 to-[#0f2438]/10" />
+          <div className="relative z-10">
+            <div className="flex gap-1.5 mb-2 flex-wrap">
+              <span className={`text-[11.5px] font-bold px-2 py-0.5 rounded-full ${course.status === 'PUBLISHED' ? 'bg-green-500 text-white' : 'bg-amber-400 text-white'}`}>{course.status}</span>
+              <span className="text-[11.5px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">{course.difficulty}</span>
+              <span className="text-[11.5px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">{course.category?.replace('_', ' ')}</span>
+            </div>
+            <h2 className="text-[24px] font-bold text-white leading-tight" style={{ fontFamily: 'Cinzel, serif' }}>{course.title}</h2>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5 flex-1">
+          <p className="text-[14.5px] text-slate-600 leading-relaxed">{course.description}</p>
+
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Duration', value: `${course.estimatedHours}h ${course.estimatedMinutes}m` },
+              { label: 'Sections', value: sections.length },
+              { label: 'Lessons', value: totalLessons },
+              { label: 'Quizzes', value: totalQuizzes },
+            ].map(s => (
+              <div key={s.label} className="border border-[#64748B]/20 rounded-lg p-2.5 text-center">
+                <p className="text-[16px] font-bold text-slate-800">{s.value}</p>
+                <p className="text-[11.5px] text-slate-400 uppercase tracking-wide">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 text-[13.5px]">
+            {(course as any).certificateTemplate ? (
+              <span className="flex items-center gap-1.5 text-slate-600"><Award className="w-3.5 h-3.5 text-amber-500" /> {(course as any).certificateTemplate.name}</span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-slate-400"><Award className="w-3.5 h-3.5" /> No certificate configured</span>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[13.5px] font-bold text-slate-600 uppercase tracking-wide mb-2">Target Designations</p>
+            {courseDesignations.length === 0 ? (
+              <p className="text-[13.5px] text-slate-400">No designations targeted.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {courseDesignations.map((cd: any) => (
+                  <span key={cd.designationId} className={`text-[12.5px] font-semibold px-2 py-1 rounded font-mono ${cd.isMandatory ? 'bg-red-50 text-red-700' : 'bg-[#D4AF37]/10 text-[#8a6d1f]'}`}>
+                    {cd.designation?.name} {cd.isMandatory ? '(Required)' : '(Recommended)'}
+                  </span>
                 ))}
-             </div>
-           </div>
-       </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[13.5px] font-bold text-slate-600 uppercase tracking-wide mb-2">Target Portal Roles</p>
+            {coursePortalRoles.length === 0 ? (
+              <p className="text-[13.5px] text-slate-400">No portal roles targeted.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {coursePortalRoles.map((r: any) => (
+                  <span key={r.portalRole} className={`text-[12.5px] font-semibold px-2 py-1 rounded font-mono ${r.isMandatory ? 'bg-blue-50 text-blue-700' : 'bg-[#D4AF37]/10 text-[#8a6d1f]'}`}>
+                    {PORTAL_ROLES.find(pr => pr.value === r.portalRole)?.label ?? r.portalRole} {r.isMandatory ? '(Required)' : '(Recommended)'}
+                  </span>
+                ))}
+              </div>
+            )}
+            {courseDesignations.length === 0 && coursePortalRoles.length === 0 && (
+              <p className="text-[12.5px] text-slate-400 italic mt-1">This course is optional for everyone.</p>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[13.5px] font-bold text-slate-600 uppercase tracking-wide mb-2">Course Curriculum</p>
+            <p className="text-[12.5px] text-slate-400 mb-2">Click any lesson or quiz to preview its content exactly as a learner would see it.</p>
+            <div className="border border-[#64748B]/20 rounded-lg overflow-hidden">
+              {sections.length === 0 && <div className="p-4 text-center text-[14px] text-slate-400">No content added yet.</div>}
+              {sections.map((sec: any, i: number) => (
+                <div key={sec.id} className="border-b border-slate-100 last:border-0">
+                  <div className="px-4 py-2 bg-slate-50/70">
+                    <p className="text-[14.5px] font-semibold text-slate-800">Section {i + 1}: {sec.title}</p>
+                  </div>
+                  {sec.lessons?.map((l: any, j: number) => {
+                    const key = `lesson:${l.id}`;
+                    const isOpen = expandedKey === key;
+                    return (
+                      <div key={l.id} className="border-t border-slate-50">
+                        <button onClick={() => setExpandedKey(isOpen ? null : key)}
+                          className="w-full px-5 py-2 flex items-center gap-2 hover:bg-slate-50 text-left">
+                          {LESSON_TYPE_ICON[l.type] ?? <Play className="w-3 h-3 text-blue-500" />}
+                          <p className="text-[14px] text-slate-600 flex-1">{j + 1}. {l.title}</p>
+                          <span className="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">{LESSON_TYPE_LABEL[l.type] ?? l.type}</span>
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isOpen && <AdminLessonContentPreview lesson={l} />}
+                      </div>
+                    );
+                  })}
+                  {sec.quiz && (() => {
+                    const key = `quiz:${sec.id}`;
+                    const isOpen = expandedKey === key;
+                    return (
+                      <div className="border-t border-slate-50">
+                        <button onClick={() => setExpandedKey(isOpen ? null : key)}
+                          className="w-full px-5 py-2 flex items-center gap-2 hover:bg-slate-50 text-left">
+                          <Award className="w-3.5 h-3.5 text-amber-500" />
+                          <p className="text-[14px] text-slate-600 flex-1">{sec.quiz.title}</p>
+                          <span className="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">{sec.quiz.questions?.length ?? 0} questions · {sec.quiz.passThreshold}% to pass</span>
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isOpen && <AdminQuizContentPreview quiz={sec.quiz} />}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
+// Read-only content preview for a single lesson — same content types
+// LessonViewer (tenant) renders, no mark-complete/submission actions here.
+function AdminLessonContentPreview({ lesson }: { lesson: any }) {
+  if (lesson.type === 'VIDEO') {
+    return (
+      <div className="px-5 py-3 bg-slate-50/70 space-y-2">
+        {lesson.videoPreviewUrl ? (
+          /youtube\.com|youtu\.be|vimeo\.com/.test(lesson.videoPreviewUrl) ? (
+            <div className="aspect-video w-full max-w-md rounded-lg overflow-hidden bg-black border border-[#64748B]/20">
+              <iframe src={lesson.videoPreviewUrl} className="w-full h-full" allowFullScreen title={lesson.title} />
+            </div>
+          ) : (
+            <video src={lesson.videoPreviewUrl} controls className="w-full max-w-md rounded-lg bg-black border border-[#64748B]/20" />
+          )
+        ) : (
+          <p className="text-[13px] text-slate-400 italic">No video added yet.</p>
+        )}
+        {lesson.description && <p className="text-[13px] text-slate-500">{lesson.description}</p>}
+      </div>
+    );
+  }
+  if (lesson.type === 'READING') {
+    return (
+      <div className="px-5 py-3 bg-slate-50/70">
+        {lesson.readingContentType === 'FILE' && lesson.readingPreviewUrl ? (
+          <a href={lesson.readingPreviewUrl} target="_blank" rel="noreferrer" className="text-[13.5px] text-[#1A3E5C] underline font-medium inline-flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" /> Open reading material
+          </a>
+        ) : lesson.readingContent ? (
+          <div className="text-[13.5px] text-slate-600 bg-white border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+            {lesson.readingContent.split(/\n\s*\n/).map((p: string, i: number) => (
+              <p key={i} className="mb-2 last:mb-0 whitespace-pre-wrap">{p}</p>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-slate-400 italic">No reading content added yet.</p>
+        )}
+      </div>
+    );
+  }
+  // ASSIGNMENT
+  return (
+    <div className="px-5 py-3 bg-slate-50/70">
+      <p className="text-[13.5px] text-slate-600 whitespace-pre-wrap">{lesson.assignmentInstructions || 'No instructions provided.'}</p>
+      <p className="text-[12px] text-slate-400 mt-1.5">Submission type: {lesson.assignmentSubmissionType?.replace('_', ' ') ?? '—'}</p>
+    </div>
+  );
+}
+
+// Read-only content preview for a quiz — shown to the author, so correct
+// answers ARE revealed here (unlike the sanitized learner-facing payload).
+function AdminQuizContentPreview({ quiz }: { quiz: any }) {
+  if (!quiz.questions || quiz.questions.length === 0) {
+    return <div className="px-5 py-3 bg-slate-50/70"><p className="text-[13px] text-slate-400 italic">No questions added yet.</p></div>;
+  }
+  return (
+    <div className="px-5 py-3 bg-slate-50/70 space-y-3">
+      {quiz.questions.map((q: any, i: number) => (
+        <div key={q.id} className="text-[13.5px]">
+          <p className="text-slate-700 font-medium">{i + 1}. {q.questionText} <span className="text-slate-400 font-normal">({q.marks} marks)</span></p>
+          {q.type === 'MCQ' && (
+            <ul className="mt-1 ml-4 space-y-0.5">
+              {q.options?.map((o: any) => (
+                <li key={o.id} className={`flex items-center gap-1.5 ${o.isCorrect ? 'text-green-600 font-medium' : 'text-slate-500'}`}>
+                  {o.isCorrect ? <Check className="w-3 h-3 flex-shrink-0" /> : <span className="w-3 flex-shrink-0" />}
+                  {o.optionText}
+                </li>
+              ))}
+            </ul>
+          )}
+          {q.type === 'TRUE_FALSE' && (
+            <p className="mt-1 ml-4 text-green-600 font-medium flex items-center gap-1.5"><Check className="w-3 h-3" /> Correct answer: {q.tfCorrectAnswer ? 'True' : 'False'}</p>
+          )}
+          {q.type === 'DESCRIPTIVE' && q.modelAnswer && (
+            <p className="mt-1 ml-4 text-slate-500 italic">Model answer: {q.modelAnswer}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+//  Analytics Tab
+function AnalyticsTab() {
+  const { data, isLoading } = useLmsAnalytics();
+  const totals = data?.totals ?? { enrollments: 0, completions: 0, avgQuizScore: 0 };
+  const trend = data?.trend ?? [];
+  const perCourse = data?.perCourse ?? [];
+
+  if (isLoading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total Enrollments', value: totals.enrollments, color: '#3B82F6' },
+          { label: 'Total Completions', value: totals.completions, color: '#10B981' },
+          { label: 'Avg Quiz Score', value: `${totals.avgQuizScore}%`, color: '#8B5CF6' },
+        ].map(s => (
+          <div key={s.label} className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
+            <div className="h-0.5 w-full" style={{ background: s.color }} />
+            <div className="p-4">
+              <p className="text-[13px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{s.label}</p>
+              <p className="text-[34px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{s.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
+        <p className="text-[15px] font-semibold text-slate-800 mb-3">Enrollment Trend (Last 6 Months)</p>
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={trend}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 6 }} />
+            <Line type="monotone" dataKey="enrollments" stroke="#EF4444" strokeWidth={2} dot={false} name="Enrollments" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-slate-100">
+          <p className="text-[15px] font-semibold text-slate-800">Per-Course Analytics</p>
+        </div>
+        <table className="w-full text-[14px]">
+          <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
+            {['Course', 'Duration', 'Enrollments', 'Completions', 'Completion Rate'].map(h => (
+              <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {perCourse.map(c => (
+              <tr key={c.courseId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[200px] truncate">{c.title}</td>
+                <td className="px-4 py-2.5 text-slate-500">{c.duration}</td>
+                <td className="px-4 py-2.5 text-slate-600">{c.enrollments}</td>
+                <td className="px-4 py-2.5 text-slate-600">{c.completions}</td>
+                <td className="px-4 py-2.5 text-slate-600">{c.enrollments > 0 ? Math.round((c.completions / c.enrollments) * 100) : 0}%</td>
+              </tr>
+            ))}
+            {perCourse.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">No published courses yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export function AdminLMSPage() {
   const [activeTab, setActiveTab] = useState<'Courses' | 'Question Bank' | 'Analytics' | 'Certificates' | 'Designations'>('Courses');
@@ -1049,11 +1713,14 @@ export function AdminLMSPage() {
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [previewCourse, setPreviewCourse] = useState<any>(null);
   const [showQForm, setShowQForm] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [showCertBuilder, setShowCertBuilder] = useState(false);
+  const [editingCertTemplate, setEditingCertTemplate] = useState<any | null>(null);
   const [search, setSearch] = useState('');
   const [qTypeFilter, setQTypeFilter] = useState('All');
   const [qDiffFilter, setQDiffFilter] = useState('All');
   const [revokeId, setRevokeId] = useState<string | null>(null);
+  const deleteQuestionMut = useDeleteQuestion();
 
   // API hooks
   const { data: coursesData, isLoading: coursesLoading } = useCourses();
@@ -1075,9 +1742,26 @@ export function AdminLMSPage() {
   return (
     <div className="space-y-4">
       {(showCourseForm || editingCourse) && <CourseForm courseId={editingCourse?.id} onClose={() => { setShowCourseForm(false); setEditingCourse(null); }} />}
-      {previewCourse && <CoursePreviewModal courseId={previewCourse.id} onClose={() => setPreviewCourse(null)} />}
-      {showQForm && <QuestionFormModal onClose={() => setShowQForm(false)} onSave={() => {}} />}
-      {showCertBuilder && <CertTemplateBuilder onClose={() => setShowCertBuilder(false)} />}
+      {previewCourse && (
+        <CoursePreviewModal
+          courseId={previewCourse.id}
+          onClose={() => setPreviewCourse(null)}
+          onEdit={() => { setEditingCourse(previewCourse); setPreviewCourse(null); }}
+        />
+      )}
+      {(showQForm || editingQuestion) && (
+        <QuestionFormModal
+          initial={editingQuestion}
+          onClose={() => { setShowQForm(false); setEditingQuestion(null); }}
+          onSave={() => {}}
+        />
+      )}
+      {showCertBuilder && (
+        <CertTemplateBuilder
+          template={editingCertTemplate}
+          onClose={() => { setShowCertBuilder(false); setEditingCertTemplate(null); }}
+        />
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -1116,10 +1800,14 @@ export function AdminLMSPage() {
           ? <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
           : <div className="grid grid-cols-3 gap-4">
           {courses.map((c: any) => (
-            <div key={c.id} onClick={() => setEditingCourse(c)}
+            <div key={c.id} onClick={() => setPreviewCourse(c)}
               className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden hover:shadow-md hover:border-[#64748B]/40 transition-all cursor-pointer">
-              <div className="h-28 bg-slate-50 border-b border-slate-100 flex items-center justify-center">
-                <BookOpen className="w-12 h-12 text-slate-200" />
+              <div className="h-28 bg-slate-50 border-b border-slate-100 flex items-center justify-center overflow-hidden">
+                {c.thumbnailPreviewUrl ? (
+                  <img src={c.thumbnailPreviewUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <BookOpen className="w-12 h-12 text-slate-200" />
+                )}
               </div>
               <div className="p-3.5">
                 <div className="flex items-start gap-2 mb-1">
@@ -1173,7 +1861,24 @@ export function AdminLMSPage() {
                     <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[12.5px] font-semibold ${DIFF_COLORS[q.difficulty] || ''}`}>{q.difficulty}</span></td>
                     <td className="px-4 py-3 font-semibold text-slate-700">{q.marks}</td>
                     <td className="px-4 py-3 text-slate-500">{q.topic ?? '—'}</td>
-                    <td className="px-4 py-3"><div className="flex gap-1.5"><button className="p-1 text-slate-400 hover:text-amber-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1 text-slate-400 hover:text-rose-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
+                    <td className="px-4 py-3"><div className="flex gap-1.5">
+                      <button onClick={() => setEditingQuestion({
+                        id: q.id,
+                        text: q.questionText,
+                        type: q.type === 'TRUE_FALSE' ? 'True-False' : q.type.charAt(0) + q.type.slice(1).toLowerCase(),
+                        marks: q.marks,
+                        difficulty: q.difficulty.charAt(0) + q.difficulty.slice(1).toLowerCase(),
+                        topic: q.topic ?? undefined,
+                        tfCorrectAnswer: q.tfCorrectAnswer ?? undefined,
+                        modelAnswer: q.modelAnswer ?? undefined,
+                        wordLimit: q.wordLimit ?? undefined,
+                        options: (q.options || []).map((o: any, i: number) => ({ optionText: o.optionText, isCorrect: o.isCorrect, orderIndex: o.orderIndex ?? i })),
+                      })} className="p-1 text-slate-400 hover:text-amber-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button
+                        onClick={() => { if (confirm('Delete this question? This cannot be undone.')) deleteQuestionMut.mutate(q.id); }}
+                        disabled={deleteQuestionMut.isPending}
+                        className="p-1 text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-40"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div></td>
                   </tr>
                 ))}
                 {questions.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-[14px] text-slate-400">No questions found.</td></tr>}
@@ -1185,60 +1890,7 @@ export function AdminLMSPage() {
 
       {/* Analytics Tab */}
       {activeTab === 'Analytics' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Total Enrollments', value: '—', color: '#3B82F6' },
-              { label: 'Total Completions', value: '—', color: '#10B981' },
-              { label: 'Avg Quiz Score', value: '—', color: '#8B5CF6' },
-            ].map(s => (
-              <div key={s.label} className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
-                <div className="h-0.5 w-full" style={{ background: s.color }} />
-                <div className="p-4">
-                  <p className="text-[13px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{s.label}</p>
-                  <p className="text-[34px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{s.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="bg-white border border-[#64748B]/20 rounded-lg p-4">
-            <p className="text-[15px] font-semibold text-slate-800 mb-3">Enrollment Trend (Last 6 Months)</p>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={ENROLLMENT_DATA}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 6 }} />
-                <Line type="monotone" dataKey="enrollments" stroke="#EF4444" strokeWidth={2} dot={false} name="Enrollments" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-[15px] font-semibold text-slate-800">Per-Course Analytics</p>
-              <p className="text-[12.5px] text-slate-400 italic">Enrollment data available after tenant portal connection</p>
-            </div>
-            <table className="w-full text-[14px]">
-              <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-                {['Course', 'Status', 'Duration', 'Enrollments', 'Completions', 'Avg Score'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {courses.filter((c: any) => c.status === 'PUBLISHED').map((c: any) => (
-                  <tr key={c.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[200px] truncate">{c.title}</td>
-                    <td className="px-4 py-2.5"><span className="text-[12px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">{c.status}</span></td>
-                    <td className="px-4 py-2.5 text-slate-500">{c.estimatedHours}h {c.estimatedMinutes}m</td>
-                    <td className="px-4 py-2.5 text-slate-400">—</td>
-                    <td className="px-4 py-2.5 text-slate-400">—</td>
-                    <td className="px-4 py-2.5 text-slate-400">—</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AnalyticsTab />
       )}
 
       {/* Designations Tab */}
@@ -1268,13 +1920,13 @@ export function AdminLMSPage() {
                   <div className="p-3.5">
                     <p className="text-[15px] font-bold text-slate-900 mb-0.5">{t.name}</p>
                     <p className="text-[12.5px] text-slate-400 mb-3">{t.layout} layout · Used by {t._count?.courses ?? 0} course{(t._count?.courses ?? 0) !== 1 ? 's' : ''}</p>
-                    <button onClick={() => setShowCertBuilder(true)} className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium border border-[#64748B]/20 rounded-md hover:bg-slate-50 transition-colors">
+                    <button onClick={() => { setEditingCertTemplate(t); setShowCertBuilder(true); }} className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium border border-[#64748B]/20 rounded-md hover:bg-slate-50 transition-colors">
                       <Edit2 className="w-3 h-3" /> Edit Template
                     </button>
                   </div>
                 </div>
               ))}
-              <button onClick={() => setShowCertBuilder(true)} className="bg-white border-2 border-dashed border-[#64748B]/20 rounded-lg p-4 flex flex-col items-center justify-center text-[14px] text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors cursor-pointer min-h-[160px]">
+              <button onClick={() => { setEditingCertTemplate(null); setShowCertBuilder(true); }} className="bg-white border-2 border-dashed border-[#64748B]/20 rounded-lg p-4 flex flex-col items-center justify-center text-[14px] text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors cursor-pointer min-h-[160px]">
                 <Plus className="w-6 h-6 mb-2" />
                 Create New Template
               </button>
@@ -1282,65 +1934,98 @@ export function AdminLMSPage() {
           </div>
 
           {/* Part 2: Issuance Log */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Certificate Issuance Log</p>
-                <p className="text-[13.5px] text-slate-400">All certificates issued across all organizations.</p>
-              </div>
-              <div className="flex gap-2">
-                <input type="date" className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400" />
-                <select className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
-                  {['All Orgs', 'TechNova Solutions', 'Infosys BPO Ltd'].map(o => <option key={o}>{o}</option>)}
-                </select>
-              </div>
+          <CertificateIssuanceLog revokeId={revokeId} setRevokeId={setRevokeId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+//  Certificate Issuance Log
+function CertificateIssuanceLog({ revokeId, setRevokeId }: { revokeId: string | null; setRevokeId: (id: string | null) => void }) {
+  const { data: certs = [], isLoading } = useIssuedCertificates();
+  const revokeMut = useRevokeCertificate();
+  const [orgFilter, setOrgFilter] = useState('All Orgs');
+  const [reason, setReason] = useState('');
+
+  const orgNames = ['All Orgs', ...Array.from(new Set(certs.map(c => c.organizationName)))];
+  const filtered = orgFilter === 'All Orgs' ? certs : certs.filter(c => c.organizationName === orgFilter);
+  const revokeTarget = certs.find(c => c.id === revokeId);
+
+  const handleRevoke = () => {
+    if (!revokeId || reason.trim().length < 3) return;
+    revokeMut.mutate({ id: revokeId, reason: reason.trim() }, {
+      onSuccess: () => { setRevokeId(null); setReason(''); },
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-[16px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>Certificate Issuance Log</p>
+          <p className="text-[13.5px] text-slate-400">All certificates issued across all organizations.</p>
+        </div>
+        <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)}
+          className="h-8 px-2 rounded-md border border-[#64748B]/20 text-[14px] text-slate-700 focus:outline-none focus:border-slate-400 bg-white">
+          {orgNames.map(o => <option key={o}>{o}</option>)}
+        </select>
+      </div>
+      {revokeId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setRevokeId(null)}>
+          <div className="bg-white rounded-xl border border-[#64748B]/20 shadow-xl w-[400px] p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-3"><AlertTriangle className="w-5 h-5 text-amber-500" /><p className="text-[17px] font-bold text-slate-900">Revoke Certificate?</p></div>
+            <p className="text-[15px] text-slate-600 mb-3">
+              This will mark <span className="font-mono">{revokeTarget?.certificateCode}</span> as revoked for {revokeTarget?.learnerName}. This action cannot be undone.
+            </p>
+            <div className="mb-4">
+              <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Reason for Revocation <span className="text-slate-400">**</span></label>
+              <textarea rows={2} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g., Academic dishonesty — re-examination required"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 resize-none" />
             </div>
-            {revokeId && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl border border-[#64748B]/20 shadow-xl w-[400px] p-5">
-                  <div className="flex items-center gap-2 mb-3"><AlertTriangle className="w-5 h-5 text-amber-500" /><p className="text-[17px] font-bold text-slate-900">Revoke Certificate?</p></div>
-                  <p className="text-[15px] text-slate-600 mb-3">This will mark the certificate as revoked and notify the learner. This action cannot be undone.</p>
-                  <div className="mb-4">
-                    <label className="block text-[13.5px] font-medium text-slate-700 mb-1">Reason for Revocation <span className="text-slate-400">**</span></label>
-                    <textarea rows={2} placeholder="e.g., Academic dishonesty — re-examination required"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[14.5px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 resize-none" />
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={() => setRevokeId(null)} className="flex-1 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
-                    <button onClick={() => setRevokeId(null)} className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[15px] font-bold rounded-lg">Confirm Revoke</button>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
-              <table className="w-full text-[14px]">
-                <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-                  {['Learner', 'Organization', 'Course', 'Issue Date', 'Certificate ID', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {CERT_LOG.map(cert => (
-                    <tr key={cert.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
-                      <td className="px-4 py-2.5 font-semibold text-slate-800">{cert.learner}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{cert.org}</td>
-                      <td className="px-4 py-2.5 text-slate-600 max-w-[180px] truncate">{cert.course}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{cert.issued}</td>
-                      <td className="px-4 py-2.5"><span className="font-mono text-[12.5px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{cert.id}</span></td>
-                      <td className="px-4 py-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[12.5px] font-semibold ${cert.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>{cert.status}</span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {cert.status === 'Active' && (
-                          <button onClick={() => setRevokeId(cert.id)} className="text-[13px] text-slate-400 hover:text-slate-800 font-medium border border-[#64748B]/20 px-2 py-0.5 rounded hover:bg-slate-50 transition-colors">Revoke</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex gap-3">
+              <button onClick={() => { setRevokeId(null); setReason(''); }} className="flex-1 py-2 border border-slate-300 text-[15px] text-slate-600 rounded-lg hover:bg-slate-50">Cancel</button>
+              <button onClick={handleRevoke} disabled={reason.trim().length < 3 || revokeMut.isPending}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-[15px] font-bold rounded-lg flex items-center justify-center gap-2">
+                {revokeMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Confirm Revoke
+              </button>
             </div>
           </div>
+        </div>
+      )}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
+      ) : (
+        <div className="bg-white border border-[#64748B]/20 rounded-lg overflow-hidden">
+          <table className="w-full text-[14px]">
+            <thead><tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
+              {['Learner', 'Organization', 'Course', 'Issue Date', 'Certificate ID', 'Status', ''].map(h => (
+                <th key={h} className="px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filtered.map(cert => (
+                <tr key={cert.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                  <td className="px-4 py-2.5 font-semibold text-slate-800">{cert.learnerName}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{cert.organizationName}</td>
+                  <td className="px-4 py-2.5 text-slate-600 max-w-[180px] truncate">{cert.courseTitle}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{new Date(cert.issuedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                  <td className="px-4 py-2.5"><span className="font-mono text-[12.5px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{cert.certificateCode}</span></td>
+                  <td className="px-4 py-2.5">
+                    <span className={`px-2 py-0.5 rounded text-[12.5px] font-semibold ${!cert.isRevoked ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>{cert.isRevoked ? 'Revoked' : 'Active'}</span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {!cert.isRevoked && (
+                      <button onClick={() => setRevokeId(cert.id)} className="text-[13px] text-slate-400 hover:text-slate-800 font-medium border border-[#64748B]/20 px-2 py-0.5 rounded hover:bg-slate-50 transition-colors">Revoke</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No certificates issued yet.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

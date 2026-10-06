@@ -7,16 +7,26 @@ export interface TokenPayload {
   role:     string
 }
 
-export function generateTokens(payload: TokenPayload) {
-  const accessToken = jwt.sign(
-    { userId: payload.userId, tenantId: payload.tenantId, role: payload.role },
+/**
+ * Every signed token says what it is for (`type`). An access token is the only kind the API accepts on a request, so a
+ * refresh token (valid for days) or a sign-in `state` token can never be used as one.
+ */
+export function signAccessToken(payload: TokenPayload): string {
+  return jwt.sign(
+    { userId: payload.userId, tenantId: payload.tenantId, role: payload.role, type: 'access' },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn as any }
+    { expiresIn: config.jwt.expiresIn as any },
   )
-  const refreshToken = jwt.sign(
+}
+
+export function signRefreshToken(payload: TokenPayload): string {
+  return jwt.sign(
     { userId: payload.userId, tenantId: payload.tenantId, role: payload.role, type: 'refresh' },
     config.jwt.secret,
-    { expiresIn: config.jwt.refreshExpiresIn as any }
+    { expiresIn: config.jwt.refreshExpiresIn as any },
   )
-  return { accessToken, refreshToken }
+}
+
+export function generateTokens(payload: TokenPayload) {
+  return { accessToken: signAccessToken(payload), refreshToken: signRefreshToken(payload) }
 }

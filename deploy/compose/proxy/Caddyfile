@@ -1,0 +1,30 @@
+# SKELETON (step 6). Reverse proxy: terminates TLS with the CUSTOMER'S certificate and forwards to the api container.
+# Customers who already run a proxy (nginx, F5, IIS ARR, ...) can skip this service and forward to api:3000 instead —
+# keep the same headers and set TRUST_PROXY to the number of proxy hops.
+{
+	# On-prem: no automatic public certificates (no internet assumed). The customer supplies cert + key.
+	auto_https off
+	admin off
+}
+
+:443 {
+	tls /certs/server.crt /certs/server.key
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=15552000"
+		-Server
+	}
+
+	reverse_proxy api:3000 {
+		health_uri /ready
+		health_interval 15s
+		# the application drains in-flight requests on SIGTERM; give it the time
+		lb_try_duration 5s
+	}
+}
+
+# Plain http only redirects (remove if the site must not listen on 80)
+:80 {
+	redir https://{host}{uri} permanent
+}

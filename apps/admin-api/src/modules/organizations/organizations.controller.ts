@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { organizationsService } from './organizations.service'
+import { issueLicence } from './licence-issuer'
 import { AuthRequest } from '../../middleware/auth'
 import { Plan } from '@prisma/super-admin-client'
 
@@ -13,6 +14,12 @@ const createOrgSchema = z.object({
   ceoEmail: z.string().email('Invalid CEO email'),
   internalNotes: z.string().optional(),
   tenantPortalUrl: z.string().url().optional(),
+})
+
+const issueLicenceSchema = z.object({
+  airGapped: z.boolean().optional(),
+  /** renewal: push the end of the licensed term forward by this many months */
+  extendMonths: z.number().int().min(1).max(60).optional(),
 })
 
 const updateOrgSchema = z.object({
@@ -55,7 +62,7 @@ export const organizationsController = {
       res.status(201).json({
         success: true,
         data: org,
-        message: 'Organization created and invitation sent',
+        message: 'Organization created. Generate its licence to activate the customer\'s deployment; the deployment invites the CEO itself.',
       })
     } catch (err) {
       next(err)
@@ -98,13 +105,22 @@ export const organizationsController = {
     }
   },
 
+  /** POST /organizations/:id/licence - issue (or, with extendMonths, renew) the signed licence for the customer's deployment */
+  async issueLicence(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = issueLicenceSchema.parse(req.body ?? {})
+      const result = await issueLicence({ tenantId: req.params.id, adminId: req.adminId, ipAddress: req.ip, ...body })
+      res.status(201).json({ success: true, data: result, message: 'Licence issued' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   async resendInvite(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const result = await organizationsService.resendInvite(
-        req.params.id,
-        req.adminId!
-      )
-      res.json({ success: true, message: result.message })
+      // Always refuses with an explanation: invitations now come from the customer's own deployment.
+      await organizationsService.resendInvite(req.params.id, req.adminId!)
+      res.json({ success: true })
     } catch (err) {
       next(err)
     }

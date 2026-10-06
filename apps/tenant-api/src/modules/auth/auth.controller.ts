@@ -2,13 +2,21 @@ import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { authService } from './auth.service'
 import { AuthRequest } from '../../middleware/auth'
+import { passwordSchema } from './password-policy'
+import { passwordResetService } from './password-reset.service'
 
 const setPasswordSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain uppercase letter')
-    .regex(/[0-9]/, 'Must contain a number')
-    .regex(/[^A-Za-z0-9]/, 'Must contain a special character'),
+  password: passwordSchema,
   name: z.string().optional(),
+})
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+})
+
+const resetPasswordSchema = z.object({
+  token:    z.string().min(20).max(200),
+  password: passwordSchema,
 })
 
 const loginSchema = z.object({
@@ -17,6 +25,30 @@ const loginSchema = z.object({
 })
 
 export const authController = {
+  /**
+   * Always answers the same thing, immediately, whether or not the address has an account; the work happens after the
+   * response, so neither the message nor the response time reveals which emails are registered.
+   */
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body)
+      void passwordResetService.request(email, req.ip).catch(err => console.error('[password-reset] request failed:', err))
+      res.json({ success: true, message: 'If an account exists for that email, a reset link is on its way.' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = resetPasswordSchema.parse(req.body)
+      await passwordResetService.reset({ token: body.token, password: body.password, ipAddress: req.ip })
+      res.json({ success: true, message: 'Your password has been changed. You can sign in now.' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   async verifyInvite(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await authService.verifyInvite(req.params.token)
@@ -71,6 +103,11 @@ export const authController = {
 
   async logout(req: AuthRequest, res: Response, next: NextFunction) {
     try {
+      const refreshToken = typeof req.body?.refreshToken === 'string' ? req.body.refreshToken : undefined
+      await authService.logout({
+        userId: req.userId!, tenantId: req.tenantId!, role: req.userRole,
+        refreshToken, ipAddress: req.ip,
+      })
       res.json({ success: true, message: 'Logged out successfully' })
     } catch (err) {
       next(err)

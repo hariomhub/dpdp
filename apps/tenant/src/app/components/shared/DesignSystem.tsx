@@ -1,5 +1,7 @@
 import React from 'react';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { TenantRole, ROLE_COLORS, ROLE_LABELS } from '../../context/AppContext';
+import { Sparkline } from './Sparkline';
 
 // ─── Brand Logo ───────────────────────────────────────────────────────────────
 // Source file: apps/tenant/public/niyamsaathi_logo.png — a flat 593x421
@@ -127,19 +129,45 @@ interface MetricCardProps {
   accentColor?: string;
   children?: React.ReactNode;
   onClick?: () => void;
+  trend?: { direction: 'up' | 'down' | 'flat'; label: string };
+  sparklineData?: number[];
+  icon?: React.ElementType;
 }
 
-export function MetricCard({ label, value, sub, accentColor = '#1A3E5C', children, onClick }: MetricCardProps) {
+export function MetricCard({ label, value, sub, accentColor = '#1A3E5C', children, onClick, trend, sparklineData, icon: Icon }: MetricCardProps) {
+  const TrendIcon = trend?.direction === 'up' ? ArrowUpRight : trend?.direction === 'down' ? ArrowDownRight : Minus;
+  const trendColor = trend?.direction === 'up' ? 'text-green-500' : trend?.direction === 'down' ? 'text-red-500' : 'text-slate-400';
   return (
     <div
-      className="bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+      className={`group bg-white border border-[#D4AF37]/35 rounded-lg shadow-sm shadow-slate-900/[0.04] overflow-hidden transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="h-0.5 w-full" style={{ background: accentColor }} />
-      <div className="p-4">
-        <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">{label}</p>
-        <p className="text-[34px] font-bold text-slate-900 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>{value}</p>
-        {sub && <p className="text-[13px] text-slate-400">{sub}</p>}
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2 mb-0.5">
+          <div className="flex items-center gap-1.5">
+            {Icon && (
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                style={{ background: `${accentColor}14` }}
+              >
+                <Icon style={{ width: 12, height: 12, color: accentColor }} />
+              </div>
+            )}
+            <p className="text-[12px] font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+          </div>
+          {sparklineData && sparklineData.length >= 2 && (
+            <Sparkline data={sparklineData} color={accentColor} />
+          )}
+        </div>
+        <p className="text-[26px] font-bold text-slate-900 leading-none mb-0.5" style={{ fontFamily: 'Cinzel, serif' }}>{value}</p>
+        {sub && <p className="text-[12px] text-slate-400 leading-snug">{sub}</p>}
+        {trend && (
+          <div className={`flex items-center gap-1 mt-0.5 ${trendColor}`}>
+            <TrendIcon className="w-3 h-3" />
+            <span className="text-[11.5px]">{trend.label}</span>
+          </div>
+        )}
         {children}
       </div>
     </div>

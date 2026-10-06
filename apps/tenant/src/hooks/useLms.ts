@@ -9,7 +9,10 @@ export interface LmsCourse {
   thumbnailUrl: string | null; status: string
   totalLessons: number; completedLessons: number; progress: number
   isEnrolled: boolean
-  enrollment: { id: string; enrolledAt: string; isCompleted: boolean; completedAt: string | null } | null
+  enrollment: {
+    id: string; enrolledAt: string; isCompleted: boolean; completedAt: string | null
+    lessonProgress: any[]; quizAttempts: any[]; assignmentSubmissions: any[]
+  } | null
   designations: any[]; sections: any[]
   certificateTemplate: any | null
 }
@@ -41,6 +44,27 @@ export function useLmsCertificates() {
   })
 }
 
+export interface MyPerformance {
+  required: { completed: number; total: number }
+  recommended: { completed: number; total: number }
+  optional: { completed: number; total: number }
+  certification: { completed: number; total: number }
+  guide: { completed: number; total: number }
+  certificatesEarned: number
+  avgQuizScore: number
+  totalQuizAttempts: number
+  quizScoreHistory: Array<{ date: string; score: number; passed: boolean; quizTitle: string; courseTitle: string }>
+  recentActivity: Array<{ type: 'quiz' | 'certificate'; date: string; title: string; courseTitle: string }>
+}
+
+export function useMyPerformance() {
+  return useQuery({
+    queryKey: ['lms', 'my-performance'],
+    queryFn:  () => apiClient.get<{ success: boolean; data: MyPerformance }>('/lms/my-performance').then(r => r.data),
+    staleTime: 30_000,
+  })
+}
+
 export function useLmsDesignations() {
   return useQuery({
     queryKey: KEYS.designations,
@@ -66,6 +90,15 @@ export function useEnrollCourse() {
   })
 }
 
+export function useUnenrollCourse() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (courseId: string) => apiClient.delete(`/lms/courses/${courseId}/enroll`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: KEYS.courses }); toast.success('Unenrolled from course') },
+    onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
 export function useMarkLessonComplete() {
   const qc = useQueryClient()
   return useMutation({
@@ -76,13 +109,61 @@ export function useMarkLessonComplete() {
   })
 }
 
+export interface QuizReviewQuestion {
+  questionId: string; questionText: string; type: string; marks: number
+  marksAwarded: number | null; isCorrect: boolean | null
+  yourAnswerText: string | null; correctAnswerText: string | null; modelAnswer: string | null
+}
+
 export function useSubmitQuiz() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ enrollmentId, quizId, answers }: { enrollmentId: string; quizId: string; answers: Record<string, string> }) =>
-      apiClient.post(`/lms/enrollments/${enrollmentId}/quiz/${quizId}/submit`, { answers }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.courses }),
+      apiClient.post<{ success: boolean; data: {
+        score: number; passed: boolean; correct: number; total: number; review: QuizReviewQuestion[]
+      } }>(`/lms/enrollments/${enrollmentId}/quiz/${quizId}/submit`, { answers }).then(r => r.data),
+    onSuccess: (data, vars) => {
+      qc.invalidateQueries({ queryKey: KEYS.courses })
+      qc.invalidateQueries({ queryKey: KEYS.certificates })
+      qc.invalidateQueries({ queryKey: ['lms', 'quiz-review', vars.enrollmentId, vars.quizId] })
+      if (data.passed) toast.success(`Passed with ${data.score}%!`)
+      else toast.error(`Scored ${data.score}% — below the pass threshold`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useQuizReview(enrollmentId: string | undefined, quizId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['lms', 'quiz-review', enrollmentId, quizId],
+    queryFn:  () => apiClient.get<{ success: boolean; data: {
+      score: number; passed: boolean; attemptNumber: number; completedAt: string | null; review: QuizReviewQuestion[]
+    } }>(`/lms/enrollments/${enrollmentId}/quiz/${quizId}/review`).then(r => r.data),
+    enabled: enabled && !!enrollmentId && !!quizId,
+  })
+}
+
+export function useSubmitAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ enrollmentId, lessonId, textAnswer, file }: {
+      enrollmentId: string; lessonId: string; textAnswer?: string; file?: File
+    }) => {
+      const fd = new FormData()
+      if (textAnswer) fd.append('textAnswer', textAnswer)
+      if (file) fd.append('file', file)
+      return apiClient.upload(`/lms/enrollments/${enrollmentId}/lessons/${lessonId}/submit`, fd)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: KEYS.courses }); toast.success('Assignment submitted') },
     onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useCertificateByCode(code: string) {
+  return useQuery({
+    queryKey: ['lms', 'certificates', code],
+    queryFn:  () => apiClient.get<{ success: boolean; data: any }>(`/lms/certificates/${code}`).then(r => r.data),
+    enabled:  !!code,
   })
 }
 
@@ -113,6 +194,25 @@ export function useBulkSetDesignation() {
   })
 }
 
+export interface LmsCoverageSection {
+  totalUsers: number
+  usersWithMandatory: number
+  orgCompletionRate: number
+  perDesignation: Array<{ designation: string; userCount: number; mandatoryCourseCount: number; avgCompletionRate: number }>
+  behindUsers: Array<{ userId: string; name: string; role: string; designation: string | null; mandatoryCount: number; completedCount: number; missingCourses: string[]; completionRate: number }>
+}
+
+export function useLmsCoverage() {
+  return useQuery({
+    queryKey: ['lms', 'coverage'],
+    queryFn:  () => apiClient.get<{ success: boolean; data: {
+      certification: LmsCoverageSection
+      guides: LmsCoverageSection
+    } }>('/lms/coverage').then(r => r.data),
+    staleTime: 60_000,
+  })
+}
+
 export function useSetRoleDefaults() {
   const qc = useQueryClient()
   return useMutation({
@@ -120,5 +220,19 @@ export function useSetRoleDefaults() {
       apiClient.post('/lms/role-defaults', { mappings }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: KEYS.roleDefaults }); toast.success('Role defaults saved') },
     onError:   (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useApplyRoleDefaultToExisting() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (portalRole: string) =>
+      apiClient.post<{ success: boolean; data: { usersUpdated: number }; message: string }>(`/lms/role-defaults/${portalRole}/apply-existing`),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      qc.invalidateQueries({ queryKey: KEYS.courses })
+      toast.success(res.message)
+    },
+    onError: (err: Error) => toast.error(err.message),
   })
 }

@@ -125,3 +125,22 @@ export function useResendInvite() {
     },
   })
 }
+
+export interface IssuedLicence {
+  licence: string
+  licenceId: string
+  validUntil: string
+  keyId: string
+  organization: { id: string; name: string }
+}
+
+/** Issue (or renew, with extendMonths) the signed licence that activates a customer's deployment. */
+export function useIssueLicence() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, airGapped, extendMonths }: { id: string; airGapped?: boolean; extendMonths?: number }) =>
+      apiClient.post<{ success: boolean; data: IssuedLicence }>(`/organizations/${id}/licence`, { airGapped, extendMonths }).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['organizations'] }) },
+    onError: (err: Error) => { toast.error(err.message || 'Could not issue the licence') },
+  })
+}

@@ -1,24 +1,14 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
 import { logTenantAction } from '../../utils/audit-logger'
 import { TenantAuditAction } from '@prisma/tenant-client'
+import { reserveCodeNumbers, formatCode } from '../../utils/code-counter'
+import { validateAssessmentReferences } from './assessment-input'
+import { getRegulationSummaries, listActiveRegulations, loadRegulationTree } from '../../library/regulations'
+import { getControlHeads, loadAssessmentScope } from '../controls/control-directory'
 
 const tenantDb = getTenantPrisma()
-const adminDb  = getSuperAdminPrisma()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// Takes the db handle explicitly (tenantDb or a transaction's tx) so callers can read the
-// max code from inside the same transaction that will insert new codes — narrows, though
-// doesn't fully eliminate, the race window between two concurrent assessment creations.
-async function getMaxTaskCode(db: Pick<typeof tenantDb, 'complianceTask'>, tenantId: string): Promise<number> {
-  const codes = await db.complianceTask.findMany({
-    where: { tenantId }, select: { taskCode: true },
-  })
-  return codes.reduce((max, { taskCode }) => {
-    const n = parseInt(taskCode.replace('ACT-', ''), 10)
-    return isNaN(n) ? max : Math.max(max, n)
-  }, 0)
-}
 
 /**
  * 3-level delegation:
@@ -60,19 +50,16 @@ export const assessmentsService = {
     })
   },
 
-  async listRegulations() {
-    const regulations = await adminDb.regulation.findMany({
-      where:   { status: 'ACTIVE' },
-      include: { chapters: { include: { controlMappings: { include: { control: true }, where: { control: { status: 'PUBLISHED', isCustom: false, tenantId: { equals: null } } } } }, orderBy: { orderIndex: 'asc' } } },
-      orderBy: { name: 'asc' },
-    })
-    
-    return regulations.map((reg: any) => ({
+  async listRegulations(tenantId: string) {
+    // Regulations with their top-level groups ("chapters" in the portal's vocabulary) and platform controls, built from
+    // the regulation node tree. `isMandatory` reflects this organisation's classification.
+    const regulations = await listActiveRegulations()
+    const trees = await Promise.all(regulations.map(r => loadRegulationTree(tenantId, r.id)))
+    return regulations.map((reg, i) => ({
       ...reg,
-      chapters: reg.chapters.map((ch: any) => ({
-        ...ch,
-        controls: ch.controlMappings.map((cm: any) => cm.control)
-      }))
+      chapters: (trees[i]?.groups ?? []).map(g => ({
+        id: g.id, name: g.name, title: g.title, isMandatory: g.isMandatory, orderIndex: g.orderIndex, controls: g.controls,
+      })),
     }))
   },
 
@@ -125,55 +112,43 @@ export const assessmentsService = {
     assetIds: string[]; exclusions?: { controlId: string; reason: string }[]
     taskAssignments?: Array<{ controlId: string; assetId: string; assigneeId: string | null }>
   }) {
-    const regulation = await adminDb.regulation.findUnique({
-      where:   { id: data.regulationId },
-      include: { chapters: { include: { controlMappings: { include: { control: true }, where: { control: { status: 'PUBLISHED' } } } } } },
-    })
-    if (!regulation) throw new Error('Regulation not found or not active')
+    const scope = await loadAssessmentScope(tenantId, data.regulationId)
+    if (!scope || scope.regulation.status !== 'ACTIVE') throw new Error('Regulation not found or not active')
+    const regulation = scope.regulation
 
-    // Tenant-authored custom controls are always optional (no chapter/mandatory concept)
-    // and apply regardless of which regulation was picked for this assessment.
-    const customControls = await adminDb.control.findMany({
-      where: { isCustom: true, tenantId, status: 'PUBLISHED' },
-    })
+    // Every id in the request must belong to this organisation (and assignees must be able to take the work).
+    const refs = await validateAssessmentReferences(tenantDb as any, tenantId, data)
+    data = { ...data, assetIds: refs.assetIds }
 
-    // A custom control can carry its own regulationMappings pointing at this regulation's
-    // chapters (see controls.service.ts), so it can show up both via the chapter lookup above
-    // and via the tenant-wide custom-controls fetch — dedupe by id or assessmentControl.createMany
-    // below hits the @@unique([assessmentId, controlId]) constraint.
-    const rawAllControls = [...regulation.chapters.flatMap(c => c.controlMappings.map(cm => cm.control)), ...customControls]
-    const allControls    = Array.from(new Map(rawAllControls.map(c => [c.id, c])).values())
+    // The regulation's platform controls plus all of this organisation's own custom controls (always optional). A custom
+    // control can also cite this regulation, so de-duplicate by id or assessmentControl.createMany below would hit its
+    // @@unique([assessmentId, controlId]) constraint.
+    const allControls    = Array.from(new Map(scope.controls.map(c => [c.id, c])).values())
     const exclusionsMap  = new Map(data.exclusions?.map(e => [e.controlId, e.reason]) ?? [])
 
-    // Server-side enforcement: controls under a mandatory chapter can never be excluded,
-    // regardless of what the client sends — the UI lock is just the friendly version of this rule.
-    for (const chapter of regulation.chapters) {
-      if (!chapter.isMandatory) continue
-      const excludedInChapter = chapter.controlMappings.filter(cm => exclusionsMap.has(cm.control.id))
-      if (excludedInChapter.length > 0) {
-        throw new Error(`Cannot exclude controls from mandatory chapter "${chapter.title ?? chapter.name}"`)
-      }
+    // Server-side enforcement: a control that is mandatory for this organisation (it sits under a mandatory node) can
+    // never be excluded, whatever the client sends - the UI lock is just the friendly version of this rule.
+    for (const controlId of exclusionsMap.keys()) {
+      const where = scope.placement.get(controlId)
+      if (where?.isMandatory) throw new Error(`Cannot exclude controls from mandatory chapter "${where.groupTitle ?? where.groupName}"`)
     }
 
     const activeControls = allControls.filter(c => !exclusionsMap.has(c.id))
 
     // Resolve assignees and get asset names before transaction
     const assigneeMap   = new Map<string, string | null>()
-    const assetNameMap  = new Map<string, string>()
+    const assetNameMap  = refs.assetNames
 
     for (const assetId of data.assetIds) {
       assigneeMap.set(assetId, await resolveAssignee(tenantId, assetId))
     }
 
-    const assets = await tenantDb.asset.findMany({
-      where: { tenantId, id: { in: data.assetIds } }, select: { id: true, name: true },
-    })
-    assets.forEach(a => assetNameMap.set(a.id, a.name))
-
     const assessment = await tenantDb.$transaction(async tx => {
-      // Read inside the transaction, right before use, to keep the window between reading
-      // the max code and inserting new ones as narrow as possible.
-      let taskCounter = await getMaxTaskCode(tx, tenantId)
+      // Reserve one block of task numbers for the whole assessment, atomically in the database. Done inside the
+      // transaction, so a failed creation leaves no gap, and concurrent creations queue on the counter instead of
+      // computing the same "next" number.
+      const taskTotal = data.assetIds.length * activeControls.length
+      let taskCounter = taskTotal > 0 ? (await reserveCodeNumbers(tx, tenantId, 'TASK', taskTotal)) - 1 : 0
 
       const created = await tx.assessment.create({
         data: {
@@ -224,7 +199,7 @@ export const assessmentsService = {
           taskCounter++
           return {
             tenantId,
-            taskCode:     `ACT-${String(taskCounter).padStart(3, '0')}`,
+            taskCode:     formatCode('TASK', taskCounter),
             title:        `${control.title} — ${assetName}`,
             description:  control.description ?? control.title,
             assessmentId: created.id,
@@ -288,36 +263,17 @@ export const assessmentsService = {
     if (!assessment) throw new Error('Assessment not found')
 
     if (assessment.regulations.length > 0) {
-      const regId      = assessment.regulations[0].regulationId
-      const regDetails = await adminDb.regulation.findUnique({
-        where:   { id: regId },
-        include: { chapters: { include: { controlMappings: { include: { control: true } } } } },
-      })
-      if (regDetails) {
-        // Controls not found under this regulation's chapters (e.g. tenant-authored
-        // custom controls, which have no chapter/mandatory concept) are resolved directly.
-        const unresolvedIds = assessment.controls
-          .filter(ac => !regDetails.chapters.some(ch => ch.controlMappings.some(cm => cm.control.id === ac.controlId)))
-          .map(ac => ac.controlId)
-        const customControls = unresolvedIds.length > 0
-          ? await adminDb.control.findMany({ where: { id: { in: unresolvedIds } } })
-          : []
-        const customControlMap = new Map(customControls.map(c => [c.id, c]))
-
+      const regId = assessment.regulations[0].regulationId
+      const [regulation] = await getRegulationSummaries([regId])
+      if (regulation) {
+        // Titles and chapter labels for every control, platform or custom, labelled by their place in THIS regulation.
+        const heads = await getControlHeads(tenantId, assessment.controls.map(ac => ac.controlId), regId)
         const enriched = assessment.controls.map(ac => {
-          let superCtrl = null, chapterName = 'Unknown Chapter'
-          for (const ch of regDetails.chapters) {
-            const found = ch.controlMappings.find(cm => cm.control.id === ac.controlId)
-            if (found) { superCtrl = found.control; chapterName = ch.name; break }
-          }
-          if (!superCtrl && customControlMap.has(ac.controlId)) {
-            superCtrl = customControlMap.get(ac.controlId)!
-            chapterName = 'Custom Control'
-          }
-          return { ...ac, title: superCtrl?.title ?? ac.controlId, description: superCtrl?.description ?? '', chapter: chapterName }
+          const head = heads.get(ac.controlId)
+          return { ...ac, title: head?.title ?? ac.controlId, description: head?.description ?? '', chapter: head?.chapter ?? 'Unknown Chapter' }
         });
         (assessment as any).controls        = enriched;
-        (assessment as any).regulationDetails = { name: regDetails.name, shortCode: regDetails.shortCode }
+        (assessment as any).regulationDetails = { name: regulation.name, shortCode: regulation.shortCode }
       }
     }
     return assessment

@@ -9,6 +9,15 @@ export const config = {
     url: process.env.SUPER_ADMIN_DATABASE_URL!,
   },
 
+  licence: {
+    /** PEM private key (or a file holding it) used to sign licences. In production this is a managed key (e.g. Key Vault), never committed. */
+    signingKey: process.env.LICENCE_SIGNING_KEY || '',
+    signingKeyFile: process.env.LICENCE_SIGNING_KEY_FILE || '',
+    /** id of that key; instances look it up in their trust list */
+    keyId: process.env.LICENCE_KEY_ID || '',
+    issuer: process.env.LICENCE_ISSUER || 'niyamsaathi',
+  },
+
   jwt: {
     secret: process.env.JWT_SECRET!,
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
@@ -28,9 +37,14 @@ export const config = {
     provider: (process.env.STORAGE_PROVIDER || 'local') as 'local' | 'azure',
     uploadDir: process.env.UPLOAD_DIR || 'uploads',
     maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '25'),
+    /** Container (in the vendor content account, `azure.connectionString`) for the sample evidence files shown to tenants. */
+    masterEvidenceContainer: process.env.AZURE_STORAGE_MASTER_EVIDENCE_CONTAINER || 'master-evidence',
     azure: {
-      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
-      container:        process.env.AZURE_STORAGE_CONTAINER        || 'master-evidence',
+      connectionString:        process.env.AZURE_STORAGE_CONNECTION_STRING || '',
+      container:                process.env.AZURE_STORAGE_CONTAINER              || 'master-evidence',
+      lmsContentContainer:      process.env.AZURE_STORAGE_LMS_CONTENT_CONTAINER     || 'lms-content',
+      lmsSubmissionsContainer:  process.env.AZURE_STORAGE_LMS_SUBMISSIONS_CONTAINER || 'lms-submissions',
+      sasExpiryMinutes:         parseInt(process.env.AZURE_STORAGE_SAS_EXPIRY_MINUTES || '120'),
     },
   },
 

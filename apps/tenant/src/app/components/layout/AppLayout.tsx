@@ -4,12 +4,14 @@ import {
   LayoutDashboard, Database, ShieldCheck, ClipboardList, Zap,
   BarChart2, Bell, GraduationCap, Users,
   Settings, LogOut, ChevronLeft, ChevronRight,
-  Search, ChevronDown, AlertTriangle, CheckSquare,
+  Search, AlertTriangle, CheckSquare,
   TrendingDown, FileText
 } from 'lucide-react';
 import { useApp, ROLE_LABELS, ROLE_COLORS, ROLE_INITIALS, TenantRole } from '../../context/AppContext';
 import { NOTIFICATIONS } from '../../data/mockData';
 import { LogoIcon } from '../shared/DesignSystem';
+import { useMe } from '../../../hooks/useAuth';
+import { LicenceBanner } from './LicenceBanner';
 
 // ─── Nav Structure ────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -38,13 +40,14 @@ const NAV_ITEMS = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { role, setRole, sidebarCollapsed, setSidebarCollapsed, orgName } = useApp();
+  // AppContext's role/org/user fields are in-memory only and reset to their
+  // hardcoded defaults on every mount — this restores them from the real
+  // session on load and on every refresh.
+  useMe();
   const location = useLocation();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [roleOpen, setRoleOpen] = useState(false);
-  const [riskExpanded, setRiskExpanded] = useState(
-    location.pathname.startsWith('/org/risk')
-  );
   const unreadCount = NOTIFICATIONS.filter(n => n.unread).length;
 
   const roleColor    = ROLE_COLORS[role];
@@ -93,7 +96,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {(NAV_ITEMS as unknown as any[]).map((item: any, i: number) => {
             if (item.type === 'divider') return <div key={i} className="h-px bg-white/18 my-1 mx-3" />;
 
-            // Risk & Analytics collapsible group
+            // Risk & Analytics — a static, always-expanded group (only 2
+            // children, so there's nothing gained by hiding them behind a
+            // toggle — both are always visible, matching how small fixed
+            // sections read in most dashboard sidebars).
             if (item.group === 'risk') {
               if (!item.roles?.includes(role)) return null;
               const Icon = item.icon;
@@ -101,26 +107,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               const visibleChildren = item.children.filter((c: any) => c.roles.includes(role));
               return (
                 <div key="risk-group">
-                  <button
-                    onClick={() => sidebarCollapsed ? navigate('/org/risk/analysis') : setRiskExpanded(v => !v)}
-                    className={`w-full flex items-center gap-2.5 mx-2 pl-[9px] pr-2.5 py-1.5 rounded-md text-[14.5px] font-medium transition-all group border-l-2
-                      ${isGroupActive ? 'bg-white/[0.15] text-white border-[#D4AF37]' : 'text-white/82 hover:text-white hover:bg-white/[0.1] border-transparent'}`}
-                    style={{ width: sidebarCollapsed ? 'calc(100% - 16px)' : 'calc(100% - 16px)' }}
-                  >
-                    <Icon className="flex-shrink-0" style={{ width: 17, height: 17 }} />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${riskExpanded ? 'rotate-180' : ''}`} />
-                      </>
-                    )}
-                    {sidebarCollapsed && (
+                  {sidebarCollapsed ? (
+                    <button
+                      onClick={() => navigate('/org/risk/analysis')}
+                      className={`w-full flex items-center gap-2.5 mx-2 pl-[9px] pr-2.5 py-1.5 rounded-md text-[14.5px] font-medium transition-all group border-l-2
+                        ${isGroupActive ? 'bg-white/[0.15] text-white border-[#D4AF37]' : 'text-white/82 hover:text-white hover:bg-white/[0.1] border-transparent'}`}
+                      style={{ width: 'calc(100% - 16px)' }}
+                    >
+                      <Icon className="flex-shrink-0" style={{ width: 17, height: 17 }} />
                       <div className="absolute left-full ml-2 px-2 py-1 bg-[#1A3E5C] text-white rounded text-[13px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity ring-1 ring-[#D4AF37]/45">
                         {item.label}
                       </div>
-                    )}
-                  </button>
-                  {!sidebarCollapsed && riskExpanded && (
+                    </button>
+                  ) : (
+                    <div
+                      className={`flex items-center gap-2.5 mx-2 pl-[9px] pr-2.5 py-1.5 rounded-md text-[14.5px] font-medium border-l-2
+                        ${isGroupActive ? 'bg-white/[0.15] text-white border-[#D4AF37]' : 'text-white/82 border-transparent'}`}
+                      style={{ width: 'calc(100% - 16px)' }}
+                    >
+                      <Icon className="flex-shrink-0" style={{ width: 17, height: 17 }} />
+                      <span className="flex-1 text-left">{item.label}</span>
+                    </div>
+                  )}
+                  {!sidebarCollapsed && (
                     <div className="ml-5 mt-0.5 space-y-0.5">
                       {visibleChildren.map((child: any) => {
                         const CIcon = child.icon;
@@ -245,12 +254,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </div>
-          <button onClick={() => navigate('/admin/dashboard')}
-            className="text-[13px] font-medium text-[#1A3E5C] hover:text-white hover:bg-[#1A3E5C] border border-[#D4AF37]/55 px-2.5 py-1.5 rounded-md transition-colors hidden lg:block">
-            Super Admin ↗
-          </button>
         </header>
 
+        <LicenceBanner />
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4">
           {children}
         </main>

@@ -4,6 +4,8 @@ import { AppLayout } from './components/layout/AppLayout';
 
 import { LoginPage } from './pages/auth/Login';
 import { SetPasswordPage } from './pages/auth/SetPassword';
+import { ForgotPasswordPage } from './pages/auth/ForgotPassword';
+import { ResetPasswordPage } from './pages/auth/ResetPassword';
 import { OnboardingPage } from './pages/onboarding/Onboarding';
 import { DashboardPage } from './pages/dashboard/Dashboard';
 import { AssetsPage } from './pages/assets/Assets';
@@ -20,20 +22,25 @@ import { RiskReportsPage } from './pages/risk/RiskReports';
 import { ReportsPage } from './pages/reports/Reports';
 import { AlertsPage } from './pages/alerts/Alerts';
 import { LMSPage } from './pages/lms/LMS';
+import { CertificateViewPage } from './pages/lms/CertificateView';
 import { UsersPage } from './pages/users/Users';
 import { AuthCallbackPage } from './pages/auth/AuthCallback';
+import { ActivatePage } from './pages/auth/Activate';
+import { LicenceGate } from './components/layout/LicenceGate';
 import { SettingsPage } from './pages/settings/Settings';
 
-const T = (C: React.ComponentType) => () => <AppLayout><C /></AppLayout>;
+const T = (C: React.ComponentType) => () => <LicenceGate><AppLayout><C /></AppLayout></LicenceGate>;
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/login" replace /> },
   { path: '/login', element: <LoginPage /> },
-  { path: '/forgot-password', element: <SetPasswordPage /> },
+  { path: '/activate', element: <ActivatePage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password/:token', element: <ResetPasswordPage /> },
   { path: '/set-password', element: <SetPasswordPage /> },
   { path: '/invite/:token', element: <SetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
-  { path: '/org/onboarding', element: <OnboardingPage /> },
+  { path: '/org/onboarding', element: <LicenceGate><OnboardingPage /></LicenceGate> },
 
   // Tenant Portal
   { path: '/org/dashboard', Component: T(DashboardPage) },
@@ -56,6 +63,7 @@ export const router = createBrowserRouter([
   { path: '/org/alerts', Component: T(AlertsPage) },
   { path: '/org/lms', Component: T(LMSPage) },
   { path: '/org/lms/courses/:id', Component: T(LMSPage) },
+  { path: '/org/lms/certificates/:code', Component: T(CertificateViewPage) },
   { path: '/org/users', Component: T(UsersPage) },
   { path: '/org/settings', Component: T(SettingsPage) },
 

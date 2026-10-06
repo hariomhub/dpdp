@@ -43,3 +43,18 @@ export function useRiskAnalysis() {
     staleTime: 30_000,
   })
 }
+
+export interface RiskHistoryPoint { date: string; score: number }
+export interface RiskHistory {
+  departments: Array<{ id: string; name: string; points: RiskHistoryPoint[] }>
+  regulations: Array<{ id: string; label: string; points: RiskHistoryPoint[] }>
+}
+
+export function useRiskHistory(days = 30) {
+  return useQuery({
+    queryKey: ['risk', 'history', days],
+    queryFn:  () => apiClient.get<{ success: boolean; data: RiskHistory }>(`/risk/history?days=${days}`).then(r => r.data),
+    enabled:   !!apiClient.tokens.getAccess(),
+    staleTime: 30_000,
+  })
+}

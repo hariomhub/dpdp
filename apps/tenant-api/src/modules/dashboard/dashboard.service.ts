@@ -1,7 +1,9 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
+import { getOrgSummary } from '../../platform/tenant-profile'
+import { getRegulationSummaries } from '../../library/regulations'
+import { computeRiskScore } from '../risk/risk.service'
 
 const db = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,29 +18,109 @@ function relativeTime(date: Date): string {
   return `${days} days ago`
 }
 
-/** Compute an overall risk score (0-100) from existing snapshot or derive from controls */
+function clamp(min: number, max: number, n: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+/** Risk-band thresholds shared with the frontend's RISK_LEVEL helper (Dashboard.tsx) */
+export function riskLevelOf(score: number): string {
+  return score <= 20 ? 'Low'
+    : score <= 40 ? 'Moderate'
+    : score <= 60 ? 'High'
+    : score <= 80 ? 'Critical'
+    : 'Severe'
+}
+
+/**
+ * Live-computed org-wide risk score (0-100) — same weighted formula
+ * (`computeRiskScore`) used for every department/asset/regulation-level
+ * figure on the Risk Analysis page, applied across all tenant tasks/assets.
+ * Deliberately does NOT read RiskSnapshot — that table is history written
+ * by the daily snapshot job; reading it here would make this "live" number
+ * silently go stale the moment that job starts running.
+ */
 export async function computeOrgRiskScore(tenantId: string): Promise<number> {
-  // Try latest org-level risk snapshot
-  const snap = await db.riskSnapshot.findFirst({
-    where: { tenantId, entityType: 'org' },
-    orderBy: { snapshotDate: 'desc' },
-  })
-  if (snap) return Math.round(snap.riskScore)
+  const [tasks, assets] = await Promise.all([
+    db.complianceTask.findMany({
+      where: { tenantId },
+      select: { status: true, dueDate: true },
+    }),
+    db.asset.findMany({
+      where: { tenantId },
+      select: {
+        criticality: true,
+        piiRecords: { select: { sensitivity: true, crossBorderTransfer: true } },
+      },
+    }),
+  ])
+  return computeRiskScore(tasks, assets).score
+}
 
-  // Fallback: derive from non-compliant controls across active assessments
-  const assessments = await db.assessment.findMany({
-    where: { tenantId, status: 'ACTIVE' },
-    include: { controls: true },
-  })
-  if (assessments.length === 0) return 0
+/**
+ * Tenant-wide (not per-user) metrics shared by the live dashboard
+ * (`getStats`) and the daily snapshot job — one implementation of
+ * "what is today's compliance score / overdue breakdown / risk score",
+ * rather than duplicating the calculation in both places.
+ */
+export async function computeLiveOrgMetrics(tenantId: string) {
+  const [activeAssessments, allTasks, crossBorderPiiCount, suppliersWithoutDpa, riskScore] = await Promise.all([
+    db.assessment.findMany({
+      where: { tenantId, status: 'ACTIVE' },
+      select: { controls: { select: { complianceStatus: true } } },
+    }),
+    db.complianceTask.findMany({
+      where: { tenantId },
+      select: { status: true, priority: true, dueDate: true },
+    }),
+    db.piiRecord.count({ where: { tenantId, crossBorderTransfer: true } }),
+    db.supplier.count({ where: { tenantId, dpaSigned: false } }),
+    computeOrgRiskScore(tenantId),
+  ])
 
-  let total = 0, nonCompliant = 0
-  for (const a of assessments) {
-    total += a.controls.length
-    nonCompliant += a.controls.filter(c => c.complianceStatus === 'NON_COMPLIANT').length
+  const now = new Date()
+
+  let totalControls = 0, compliantControls = 0
+  for (const a of activeAssessments) {
+    totalControls     += a.controls.length
+    compliantControls += a.controls.filter(c => c.complianceStatus === 'COMPLIANT').length
   }
-  if (total === 0) return 0
-  return Math.round((nonCompliant / total) * 100)
+  const complianceScore = totalControls > 0
+    ? Math.round((compliantControls / totalControls) * 100)
+    : null
+
+  const overdueTasks = allTasks.filter(t => t.dueDate < now && !['COMPLIANT'].includes(t.status))
+  const overdueByPriority = {
+    CRITICAL: overdueTasks.filter(t => t.priority === 'CRITICAL').length,
+    HIGH:     overdueTasks.filter(t => t.priority === 'HIGH').length,
+    MEDIUM:   overdueTasks.filter(t => t.priority === 'MEDIUM').length,
+    LOW:      overdueTasks.filter(t => t.priority === 'LOW').length,
+  }
+
+  return {
+    complianceScore, totalControls, compliantControls,
+    overdueByPriority, overdueTasksTotal: overdueTasks.length,
+    crossBorderPiiCount, suppliersWithoutDpa, riskScore,
+  }
+}
+
+/**
+ * Audit Readiness — a simple, transparent heuristic (NOT an external
+ * benchmark): compliance score penalized per open overdue item, weighted
+ * by severity. Surface it to users with a plain-language explanation of
+ * this formula rather than presenting it as an authoritative score.
+ */
+export function computeAuditReadinessScore(
+  complianceScore: number | null,
+  overdueByPriority: { CRITICAL: number; HIGH: number; MEDIUM: number; LOW: number }
+): number | null {
+  if (complianceScore === null) return null
+  return clamp(0, 100,
+    complianceScore
+    - overdueByPriority.CRITICAL * 8
+    - overdueByPriority.HIGH * 4
+    - overdueByPriority.MEDIUM * 2
+    - overdueByPriority.LOW * 1
+  )
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -55,9 +137,8 @@ export const dashboardService = {
       auditLogs,
       assets,
       tenant,
-      crossBorderPiiCount,
-      suppliersWithoutDpa,
       recentEvidence,
+      liveMetrics,
     ] = await Promise.all([
       db.department.findMany({
         where: { tenantId },
@@ -83,6 +164,11 @@ export const dashboardService = {
         include: {
           asset:      { select: { name: true } },
           assignedTo: { select: { name: true } },
+          gapFindings: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { reasonCodes: true, otherReason: true, remediation: true },
+          },
         },
         orderBy: { dueDate: 'asc' },
       }),
@@ -99,21 +185,20 @@ export const dashboardService = {
           departmentId: true, piiRecords: { select: { id: true } },
         },
       }),
-      superAdminDb.tenant.findUnique({
-        where: { id: tenantId },
-        select: { name: true, classification: true },
-      }),
-      db.piiRecord.count({ where: { tenantId, crossBorderTransfer: true } }),
-      db.supplier.count({ where: { tenantId, dpaSigned: false } }),
+      getOrgSummary(tenantId),
       db.evidence.findMany({
-        where: { tenantId, submittedById: userId },
+        where: { tenantId, submittedById: userId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: { task: { select: { status: true, asset: { select: { name: true } } } } },
       }),
+      computeLiveOrgMetrics(tenantId),
     ])
 
     const now = new Date()
+    const { complianceScore, totalControls, compliantControls, overdueByPriority, riskScore,
+      crossBorderPiiCount, suppliersWithoutDpa } = liveMetrics
+    const auditReadinessScore = computeAuditReadinessScore(complianceScore, overdueByPriority)
 
     // ── Task breakdowns ────────────────────────────────────────────────────────
     const openTasks    = allTasks.filter(t =>
@@ -129,27 +214,6 @@ export const dashboardService = {
     const finalReviewTasks = allTasks.filter(t =>
       ['APPROVED_INTERNAL', 'FINAL_REVIEW'].includes(t.status)
     )
-
-    // ── Compliance score ───────────────────────────────────────────────────────
-    let totalControls = 0, compliantControls = 0
-    for (const a of activeAssessments) {
-      totalControls     += a.controls.length
-      compliantControls += a.controls.filter(c => c.complianceStatus === 'COMPLIANT').length
-    }
-    const complianceScore = totalControls > 0
-      ? Math.round((compliantControls / totalControls) * 100)
-      : null
-
-    // ── Risk score ─────────────────────────────────────────────────────────────
-    const riskScore = await computeOrgRiskScore(tenantId)
-
-    // ── Overdue tasks by priority ──────────────────────────────────────────────
-    const overdueByPriority = {
-      CRITICAL: overdueTasks.filter(t => t.priority === 'CRITICAL').length,
-      HIGH:     overdueTasks.filter(t => t.priority === 'HIGH').length,
-      MEDIUM:   overdueTasks.filter(t => t.priority === 'MEDIUM').length,
-      LOW:      overdueTasks.filter(t => t.priority === 'LOW').length,
-    }
 
     // ── Internal Auditor: this user's own review activity ──────────────────────
     const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
@@ -240,9 +304,7 @@ export const dashboardService = {
     // Resolve raw regulation UUIDs to their real shortCode/name from super-admin
     const regulationIds = Object.keys(regulationMap)
     if (regulationIds.length > 0) {
-      const regulationRecords = await superAdminDb.regulation.findMany({
-        where: { id: { in: regulationIds } }, select: { id: true, shortCode: true, name: true },
-      })
+      const regulationRecords = await getRegulationSummaries(regulationIds)
       for (const rec of regulationRecords) {
         if (regulationMap[rec.id]) regulationMap[rec.id].name = rec.shortCode || rec.name
       }
@@ -349,6 +411,7 @@ export const dashboardService = {
 
       complianceScore,
       riskScore,
+      auditReadinessScore,
       totalControls,
       compliantControls,
       overdueByPriority,
@@ -376,6 +439,8 @@ export const dashboardService = {
         priority: t.priority,
         dueDate:  t.dueDate.toISOString().split('T')[0],
         daysLeft: Math.round((t.dueDate.getTime() - now.getTime()) / 86_400_000),
+        rejectionReason: t.gapFindings[0]?.remediation ?? null,
+        reasonCodes:     t.gapFindings[0]?.reasonCodes ?? [],
       })),
 
       // IA review queue
@@ -386,6 +451,7 @@ export const dashboardService = {
         submittedBy: t.assignedTo?.name ?? 'Unknown',
         status:      t.status,
         daysLeft:    Math.round((t.dueDate.getTime() - now.getTime()) / 86_400_000),
+        waitingDays: Math.max(0, Math.round((now.getTime() - (t.submittedAt ?? t.dueDate).getTime()) / 86_400_000)),
       })),
 
       // EA final sign-off queue
@@ -395,10 +461,45 @@ export const dashboardService = {
         asset:   t.asset.name,
         status:  t.status,
         daysLeft: Math.round((t.dueDate.getTime() - now.getTime()) / 86_400_000),
+        waitingDays: Math.max(0, Math.round((now.getTime() - (t.approvedAt ?? t.submittedAt ?? now).getTime()) / 86_400_000)),
       })),
 
       orgName:        tenant?.name ?? '',
       classification: tenant?.classification ?? '',
     }
+  },
+
+  /** Time-series points for the CEO dashboard's trend chart. */
+  async getHistory(tenantId: string, days: number) {
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+    since.setHours(0, 0, 0, 0)
+
+    const [metrics, risk] = await Promise.all([
+      db.dashboardMetricSnapshot.findMany({
+        where:   { tenantId, snapshotDate: { gte: since } },
+        orderBy: { snapshotDate: 'asc' },
+      }),
+      db.riskSnapshot.findMany({
+        where:   { tenantId, entityType: 'org', snapshotDate: { gte: since } },
+        orderBy: { snapshotDate: 'asc' },
+      }),
+    ])
+
+    const riskByDate = new Map(
+      risk.map(r => [r.snapshotDate.toISOString().split('T')[0], r.riskScore])
+    )
+
+    const points = metrics.map(m => {
+      const date = m.snapshotDate.toISOString().split('T')[0]
+      return {
+        date,
+        complianceScore:     m.complianceScore,
+        riskScore:           riskByDate.get(date) ?? null,
+        auditReadinessScore: m.auditReadinessScore,
+      }
+    })
+
+    return { points }
   },
 }

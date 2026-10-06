@@ -2,7 +2,7 @@ import { getSuperAdminPrisma } from '@dpdp/database'
 import { OrgStatus, Plan, AuditAction, Prisma } from '@prisma/super-admin-client'
 import { parsePagination, buildMeta } from '../../utils/pagination'
 import { logAuditAction } from '../../utils/audit-logger'
-import { sendOrgInvitationEmail } from '../../utils/email'
+import { HttpError } from '../../utils/http-error'
 import { config } from '../../config'
 import crypto from 'crypto'
 
@@ -197,14 +197,9 @@ export const organizationsService = {
       ipAddress: params.ipAddress,
     })
 
-    // Send invitation email with stored token
-    await sendOrgInvitationEmail({
-      toEmail: params.ceoEmail,
-      toName: params.ceoName,
-      orgName: params.name,
-      inviteToken,
-      tenantPortalUrl: params.tenantPortalUrl,
-    })
+    // No invitation email is sent from here any more. The customer's deployment invites its own CEO when it is activated
+    // with this organization's signed licence (POST /organizations/:id/licence), so the link always points at the
+    // deployment that can actually accept it.
 
     return tenant
   },
@@ -278,40 +273,9 @@ export const organizationsService = {
     return updated
   },
 
-  async resendInvite(id: string, adminId: string) {
-    const org = await db.tenant.findUnique({ where: { id } })
-    if (!org) throw new Error('Organization not found')
-
-    // Generate fresh token
-    const inviteToken = crypto.randomUUID()
-    const inviteExpiresAt = new Date(
-      Date.now() + 1000 * 60 * 60 * config.platform.inviteTokenExpiryHours
-    )
-
-    // Update token in database
-    await db.tenant.update({
-      where: { id },
-      data: { inviteToken, inviteExpiresAt, inviteAcceptedAt: null },
-    })
-
-    await sendOrgInvitationEmail({
-      toEmail: org.ceoEmail,
-      toName: org.ceoName,
-      orgName: org.name,
-      inviteToken,
-      tenantPortalUrl: org.tenantPortalUrl,
-    })
-
-    await logAuditAction({
-      superAdminId: adminId,
-      tenantId: id,
-      action: AuditAction.ORG_UPDATED,
-      targetType: 'tenant',
-      targetId: id,
-      targetName: org.name,
-      details: { action: 'invitation_resent' } as Prisma.InputJsonValue,
-    })
-
-    return { message: 'Invitation resent successfully' }
+  async resendInvite(_id: string, _adminId: string) {
+    throw HttpError.badRequest(
+      "Invitations are created by the customer's deployment when it is activated with the licence. " +
+      'Generate or re-issue the licence instead; to invite the CEO again, use "Invite" in the deployment itself.')
   },
 }

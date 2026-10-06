@@ -1,6 +1,11 @@
-import path from 'path'
-import fs   from 'fs'
 import { config } from '../config'
+import {
+  BlobServiceClient, StorageSharedKeyCredential,
+  generateBlobSASQueryParameters, BlobSASPermissions,
+} from '@azure/storage-blob'
+
+// NOTE: evidence and gap-finding files no longer go through this module - they use the storage adapter
+// (src/storage/) with authenticated, audited access. This module now only serves the LMS, which is unchanged.
 
 export interface StoredFile {
   fileName:        string
@@ -10,79 +15,78 @@ export interface StoredFile {
   storageProvider: 'local' | 'azure'
 }
 
-/**
- * Upload a file. Uses local disk by default.
- * To switch to Azure Blob Storage:
- *   1. npm install @azure/storage-blob
- *   2. Set STORAGE_PROVIDER=azure in .env
- *   3. Set AZURE_STORAGE_CONNECTION_STRING and AZURE_STORAGE_CONTAINER
- * No other code changes needed.
- */
-export async function uploadFile(
-  file: Express.Multer.File,
-  folder: string
-): Promise<StoredFile> {
-  if (config.storage.provider === 'azure') {
-    return uploadToAzure(file, folder)
+// ─── LMS Azure Blob Storage (private containers, signed URLs) ─────────────────
+// Unlike evidence / gap-findings (which use the provider-switchable storage
+// adapter), LMS uploads always go to Azure Blob Storage unconditionally
+// — a deliberate migration, not gated by STORAGE_PROVIDER. Containers are
+// created private; callers must sign a URL with getSignedUrl() before it's
+// ever sent to a client. Never persist a signed URL — only the stable,
+// unsigned blob URL belongs in the database.
+
+let lmsBlobServiceClient: BlobServiceClient | undefined
+function getLmsBlobServiceClient(): BlobServiceClient {
+  if (!lmsBlobServiceClient) {
+    if (!config.storage.azure.connectionString) {
+      throw new Error('AZURE_STORAGE_CONNECTION_STRING is not configured')
+    }
+    lmsBlobServiceClient = BlobServiceClient.fromConnectionString(config.storage.azure.connectionString)
   }
-  return uploadToLocal(file, folder)
+  return lmsBlobServiceClient
 }
 
-export async function deleteFile(fileUrl: string, storageProvider: string): Promise<void> {
-  if (storageProvider === 'local') {
-    const filePath = path.join(process.cwd(), fileUrl.replace(/^\//, ''))
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-    return
-  }
-  // Azure: TODO when STORAGE_PROVIDER=azure
-  // const { BlobServiceClient } = require('@azure/storage-blob')
-  // const client = BlobServiceClient.fromConnectionString(config.storage.azure.connectionString)
-  // const container = client.getContainerClient(config.storage.azure.container)
-  // const blobName = new URL(fileUrl).pathname.split('/').slice(2).join('/')
-  // await container.getBlockBlobClient(blobName).delete()
+function lmsContainerName(kind: 'content' | 'submission'): string {
+  return kind === 'content' ? config.storage.azure.lmsContentContainer : config.storage.azure.lmsSubmissionsContainer
 }
 
-// ─── Local disk ───────────────────────────────────────────────────────────────
-
-async function uploadToLocal(
+export async function uploadLmsFile(
   file: Express.Multer.File,
-  folder: string
+  folder: string,
+  kind: 'content' | 'submission'
 ): Promise<StoredFile> {
-  const uploadDir = path.join(process.cwd(), config.storage.uploadDir, folder)
-  fs.mkdirSync(uploadDir, { recursive: true })
+  const client = getLmsBlobServiceClient()
+  const container = client.getContainerClient(lmsContainerName(kind))
+  await container.createIfNotExists() // no `access` option → private, no anonymous reads
 
   const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-  const fullPath = path.join(uploadDir, safeName)
-  fs.writeFileSync(fullPath, file.buffer)
+  const blockBlobClient = container.getBlockBlobClient(`${folder}/${safeName}`)
+  await blockBlobClient.uploadData(file.buffer, {
+    blobHTTPHeaders: { blobContentType: file.mimetype },
+  })
 
   return {
     fileName:        file.originalname,
     fileSize:        file.size,
     mimeType:        file.mimetype,
-    fileUrl:         `/${config.storage.uploadDir}/${folder}/${safeName}`,
-    storageProvider: 'local',
+    fileUrl:         blockBlobClient.url, // unsigned — always sign before returning to a client
+    storageProvider: 'azure',
   }
 }
 
-// ─── Azure Blob (ready to implement) ─────────────────────────────────────────
+/**
+ * Turns a stable (unsigned) LMS blob URL into a short-lived read-only signed
+ * URL safe to hand to a browser. Anything that isn't one of our own LMS blob
+ * URLs (null, a legacy local /uploads/... path, an external embed URL) is
+ * returned unchanged.
+ */
+export function getSignedUrl<T extends string | null | undefined>(url: T): T {
+  if (!url) return url
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return url }
 
-async function uploadToAzure(
-  file: Express.Multer.File,
-  folder: string
-): Promise<StoredFile> {
-  // TODO: uncomment when Azure Blob Storage is configured
-  // const { BlobServiceClient } = require('@azure/storage-blob')
-  // const client    = BlobServiceClient.fromConnectionString(config.storage.azure.connectionString)
-  // const container = client.getContainerClient(config.storage.azure.container)
-  // await container.createIfNotExists({ access: 'blob' })
-  // const blobName    = `${folder}/${Date.now()}-${file.originalname}`
-  // const blobClient  = container.getBlockBlobClient(blobName)
-  // await blobClient.uploadData(file.buffer, {
-  //   blobHTTPHeaders: { blobContentType: file.mimetype },
-  // })
-  // return {
-  //   fileName: file.originalname, fileSize: file.size,
-  //   mimeType: file.mimetype, fileUrl: blobClient.url, storageProvider: 'azure',
-  // }
-  throw new Error('Azure Blob Storage not yet configured. Set STORAGE_PROVIDER=azure in .env')
+  const containerName = [config.storage.azure.lmsContentContainer, config.storage.azure.lmsSubmissionsContainer]
+    .find(name => parsed.pathname.startsWith(`/${name}/`))
+  if (!containerName) return url
+
+  const client = getLmsBlobServiceClient()
+  const credential = client.credential as StorageSharedKeyCredential
+  const blobName = decodeURIComponent(parsed.pathname.slice(`/${containerName}/`.length))
+
+  const sas = generateBlobSASQueryParameters({
+    containerName,
+    blobName,
+    permissions: BlobSASPermissions.parse('r'),
+    expiresOn: new Date(Date.now() + config.storage.azure.sasExpiryMinutes * 60 * 1000),
+  }, credential).toString()
+
+  return `${url}?${sas}` as T
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2, Save, Upload } from 'lucide-react';
 import { useUpdateEvidence } from '../../../hooks/useTasks';
+import { UPLOAD_ACCEPT, UPLOAD_HINT } from '../../../lib/files';
 
 export interface EditableEvidence {
   id:          string;
@@ -77,8 +78,9 @@ export function EditEvidenceModal({ taskId, evidence, onClose }: EditEvidenceMod
               <label className="mt-0.5 flex items-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#1A3E5C]/40">
                 <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <span className="text-[15px] text-slate-500 truncate">{file ? file.name : `Current: ${evidence.fileName ?? '—'} (click to replace)`}</span>
-                <input type="file" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                <input type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)} />
               </label>
+              <p className="mt-1 text-[13px] text-slate-400">The current file is kept as a previous version. {UPLOAD_HINT}</p>
             </div>
           ) : null}
 

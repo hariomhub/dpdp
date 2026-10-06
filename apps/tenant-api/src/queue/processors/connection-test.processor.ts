@@ -3,6 +3,7 @@ import { getTenantPrisma } from '@dpdp/database'
 import { TenantAuditAction } from '@prisma/tenant-client'
 import { config } from '../../config'
 import { logTenantAction } from '../../utils/audit-logger'
+import { loadConnectionWithCredentials } from '../../modules/cloud-connections/credentials'
 import { ConnectionTestJobData } from '../queues'
 
 const db = getTenantPrisma()
@@ -13,7 +14,16 @@ interface ScannerConnectionTestResponse {
 }
 
 export async function processConnectionTest(data: ConnectionTestJobData): Promise<void> {
-  const { tenantId, connectionId, provider, credentials } = data
+  const { tenantId, connectionId, provider } = data
+
+  // Credentials are read from the encrypted store now, not carried in the job. A connection removed while the job was
+  // waiting is simply nothing to test.
+  const connection = await loadConnectionWithCredentials(connectionId, tenantId)
+  if (!connection) {
+    console.warn(`[worker] connection-test skipped: connection ${connectionId} no longer exists`)
+    return
+  }
+  const { credentials } = connection
 
   let result: ScannerConnectionTestResponse
   try {

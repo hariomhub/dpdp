@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express'
 import { z } from 'zod'
-import { lmsService, lmsDesignationService } from './lms.service'
+import { lmsService, lmsDesignationService, lmsCoursePortalRoleService, lmsAnalyticsService } from './lms.service'
 import { AuthRequest } from '../../middleware/auth'
 import {
   CourseStatus, CourseDifficulty, CourseCategory,
@@ -16,7 +16,10 @@ const createCourseSchema = z.object({
   difficulty: z.nativeEnum(CourseDifficulty),
   estimatedHours: z.number().int().min(0).default(0),
   estimatedMinutes: z.number().int().min(0).max(59).default(0),
-  thumbnailUrl: z.string().url().optional(),
+  // Azure Blob URLs are absolute, but z.string().url() has rejected legacy
+  // local-disk relative paths in the past (from before the blob migration) —
+  // kept relaxed as defense-in-depth.
+  thumbnailUrl: z.string().min(1).optional(),
   status: z.nativeEnum(CourseStatus).default(CourseStatus.DRAFT),
   certificateTemplateId: z.string().uuid().optional(),
 })
@@ -78,7 +81,26 @@ const createCertTemplateSchema = z.object({
   isDefault: z.boolean().default(false),
 })
 
+const ALLOWED_UPLOAD_FOLDERS = ['videos', 'reading', 'thumbnails', 'certificate-templates']
+
 export const lmsController = {
+  async uploadFile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) { res.status(400).json({ success: false, message: 'No file provided' }); return }
+      const folder = String(req.body?.folder || '')
+      if (!ALLOWED_UPLOAD_FOLDERS.includes(folder)) {
+        res.status(400).json({ success: false, message: 'Invalid upload folder' }); return
+      }
+      const { uploadLmsFile, getSignedUrl } = await import('../../utils/storage')
+      const stored = await uploadLmsFile(req.file, folder, 'content')
+      // fileUrl is the stable, unsigned URL — this is what the course builder
+      // must persist (in videoUrl/readingContent/thumbnailUrl). previewUrl is
+      // a short-lived signed URL, only for rendering the file immediately in
+      // the builder's own preview; it must never be saved anywhere.
+      res.status(201).json({ success: true, data: { ...stored, previewUrl: getSignedUrl(stored.fileUrl) } })
+    } catch (err) { next(err) }
+  },
+
   // Courses
   async listCourses(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -130,6 +152,13 @@ export const lmsController = {
     try {
       const course = await lmsService.archiveCourse(req.params.id, req.adminId!)
       res.json({ success: true, data: course, message: 'Course archived' })
+    } catch (err) { next(err) }
+  },
+
+  async deleteCourse(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await lmsService.deleteCourse(req.params.id, req.adminId!)
+      res.json({ success: true, message: result.message })
     } catch (err) { next(err) }
   },
 
@@ -230,6 +259,13 @@ export const lmsController = {
     } catch (err) { next(err) }
   },
 
+  async deleteQuestion(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await lmsService.deleteQuestion(req.params.id, req.adminId!)
+      res.json({ success: true, message: result.message })
+    } catch (err) { next(err) }
+  },
+
   async addQuestionToQuiz(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { questionId } = z.object({ questionId: z.string().uuid() }).parse(req.body)
@@ -302,6 +338,46 @@ export const lmsDesignationController = {
       const { targets } = req.body
       const data = await lmsDesignationService.setCourseDesignations(req.params.courseId, targets ?? [])
       res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+}
+
+// ─── Course ↔ Portal Role targeting controller ────────────────────────────────
+
+export const lmsCoursePortalRoleController = {
+  async getCoursePortalRoles(req: any, res: any, next: any) {
+    try {
+      const data = await lmsCoursePortalRoleService.getCoursePortalRoles(req.params.courseId)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+  async setCoursePortalRoles(req: any, res: any, next: any) {
+    try {
+      const { targets } = req.body
+      const data = await lmsCoursePortalRoleService.setCoursePortalRoles(req.params.courseId, targets ?? [])
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+}
+
+// ─── Analytics & Certificate Log controller ───────────────────────────────────
+
+export const lmsAnalyticsController = {
+  async getAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await lmsAnalyticsService.getAnalytics() })
+    } catch (err) { next(err) }
+  },
+  async getIssuedCertificates(_req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await lmsAnalyticsService.getIssuedCertificates() })
+    } catch (err) { next(err) }
+  },
+  async revokeCertificate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { reason } = z.object({ reason: z.string().min(3) }).parse(req.body)
+      const data = await lmsAnalyticsService.revokeCertificate(req.params.id, reason, req.adminId!)
+      res.json({ success: true, data, message: 'Certificate revoked' })
     } catch (err) { next(err) }
   },
 }

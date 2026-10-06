@@ -1,89 +1,60 @@
-import express from 'express'
-import cors from 'cors'
-import helmet from 'helmet'
-import rateLimit from 'express-rate-limit'
-import path from 'path'
+// Entry point of the API process. Keep these two imports first: the settings are loaded and validated before any
+// module that creates a database client or reads a setting runs.
+import './config/boot-check'
 import { config } from './config'
-import { errorHandler } from './middleware/error-handler'
-import authRoutes from './modules/auth/auth.routes'
-import onboardingRoutes from './modules/onboarding/onboarding.routes'
-import entraRoutes from './modules/entra/entra.routes'
-import dashboardRoutes from './modules/dashboard/dashboard.routes'
-import orgRoutes from './modules/org/org.routes'
-import auditRoutes from './modules/audit/audit.routes'
-import usersRoutes from './modules/users/users.routes'
-import assessmentsRoutes from './modules/assessments/assessments.routes'
-import controlsRoutes from './modules/controls/controls.routes'
-import riskRoutes from './modules/risk/risk.routes'
-import tasksRoutes from './modules/tasks/tasks.routes'
-import lmsRoutes from './modules/lms/lms.routes'
-import cloudConnectionsRoutes from './modules/cloud-connections/cloud-connections.routes'
-import discoveryRoutes from './modules/discovery/discovery.routes'
+import path from 'path'
+import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { createApp } from './create-app'
+import { cachedReadiness, databaseProbe, migrationsProbe, redisProbe, objectStoreProbe, localDiskProbe, Probe } from './health'
+import { createShutdown } from './shutdown'
+import { cloudScansQueue } from './queue/queues'
+import { dashboardSnapshotsQueue } from './queue/snapshot-queue'
+import { azureEvidenceStore } from './storage/stores'
+import { activateFromConfiguration } from './platform/boot-activation'
 
-const app = express()
+let shuttingDown = false
 
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-}))
+const tenantDb = getTenantPrisma()
+const superAdminDb = getSuperAdminPrisma()
 
-// In production, the frontend and API are served from the same domain
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? true // allow same-origin implicitly by not restricting tightly
-    : ['http://localhost:5173'],
-  credentials: true,
-}))
+const probes: Probe[] = [
+  databaseProbe('database', tenantDb as any),
+  // Until the decoupling work removes it, the portal cannot work without the Super Admin database.
+  databaseProbe('superAdminDatabase', superAdminDb as any),
+  migrationsProbe(tenantDb as any),
+  redisProbe(() => cloudScansQueue.getJobCounts('waiting')),
+  config.storage.provider === 'azure'
+    ? objectStoreProbe(azureEvidenceStore())
+    : localDiskProbe(path.resolve(process.cwd(), config.storage.uploadDir), config.runtime.storageMinFreeMb),
+]
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-})
-app.use(limiter)
+const readiness = cachedReadiness(probes)
+const app = createApp({ readiness: readiness.get, isShuttingDown: () => shuttingDown })
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-app.use(`/${config.storage.uploadDir}`, express.static(path.join(process.cwd(), config.storage.uploadDir)))
-
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'tenant-api',
-    version: '1.0.0',
-  })
-})
-
-app.use('/api/v1/auth', authRoutes)
-app.use('/api/v1/onboarding', onboardingRoutes)
-app.use('/api/v1/entra', entraRoutes)
-app.use('/api/v1/dashboard', dashboardRoutes)
-app.use('/api/v1/org', orgRoutes)
-app.use('/api/v1/audit-log', auditRoutes)
-app.use('/api/v1/assessments', assessmentsRoutes)
-app.use('/api/v1/controls', controlsRoutes)
-app.use('/api/v1/risk', riskRoutes)
-app.use('/api/v1/users', usersRoutes)
-app.use('/api/v1/tasks', tasksRoutes)
-app.use('/api/v1/lms', lmsRoutes)
-app.use('/api/v1/cloud-connections', cloudConnectionsRoutes)
-app.use('/api/v1/discovery', discoveryRoutes)
-
-app.use(errorHandler)
-
-// ─── STATIC SERVING & SPA FALLBACK (Production) ─────────────────────────────
-if (process.env.NODE_ENV === 'production') {
-  const publicPath = path.join(__dirname, '../public')
-  app.use(express.static(publicPath))
-  
-  // SPA fallback - must be the very last route
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'))
-  })
-}
-
-app.listen(config.port, () => {
-  console.log(`Tenant API running on port ${config.port}`)
+const server = app.listen(config.port, () => {
+  console.log(`Tenant API ${config.platform.version} running on port ${config.port}`)
   console.log(`Environment: ${config.env}`)
+  if (config.licence.mode === 'off') console.warn('[licence] LICENCE_MODE=off: licences are NOT being enforced (development only).')
+  void activateFromConfiguration()
 })
+
+// Load balancers reuse connections for a while; Node's default 5 s keep-alive would close them first and surface as 502s.
+server.keepAliveTimeout = 65_000
+server.headersTimeout = 66_000
+
+const shutdown = createShutdown({
+  server,
+  markNotReady: () => { shuttingDown = true },
+  graceMs: config.runtime.shutdownGraceSeconds * 1000,
+  closers: [
+    { name: 'cloud-scans queue',         close: () => cloudScansQueue.close() },
+    { name: 'dashboard-snapshots queue', close: () => dashboardSnapshotsQueue.close() },
+    { name: 'tenant database',           close: () => tenantDb.$disconnect() },
+    { name: 'super admin database',      close: () => superAdminDb.$disconnect() },
+  ],
+  exit: (code) => process.exit(code),
+})
+process.on('SIGTERM', () => { void shutdown('SIGTERM') })
+process.on('SIGINT',  () => { void shutdown('SIGINT') })
 
 export default app

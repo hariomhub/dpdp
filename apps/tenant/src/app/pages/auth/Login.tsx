@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '../../../hooks/useAuth';
+import { usePlatformStatus } from '../../../hooks/usePlatform';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../lib/api-client';
 import { BrandSpinner, LogoIcon } from '../../components/shared/DesignSystem';
@@ -165,12 +166,21 @@ function VerifyingOverlay() {
 export function LoginPage() {
   const loginMutation = useLogin();
   const [entraLoading, setEntraLoading] = useState(false);
+  const navigate = useNavigate();
+  // A fresh install has no organization yet: send whoever is installing it to the activation page.
+  const platform = usePlatformStatus();
+  useEffect(() => {
+    if (platform.data && platform.data.activated === false) navigate('/activate', { replace: true });
+  }, [platform.data, navigate]);
 
   const handleMicrosoftLogin = async () => {
     setEntraLoading(true);
     try {
       const data = await apiClient.get<any>('/entra/auth-url');
       if (data.success && data.data.authUrl) {
+        // The nonce proves, when Microsoft sends the browser back, that this same browser started the sign-in.
+        // It stays in this tab's sessionStorage and is never put in a URL.
+        sessionStorage.setItem('entra_login_nonce', data.data.nonce);
         window.location.href = data.data.authUrl;
       } else {
         throw new Error('Entra ID is not configured for this organization');

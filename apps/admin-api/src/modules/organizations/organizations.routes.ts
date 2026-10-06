@@ -13,5 +13,6 @@ router.patch('/:id', organizationsController.update)
 router.post('/:id/suspend', organizationsController.suspend)
 router.post('/:id/activate', organizationsController.activate)
 router.post('/:id/resend-invite', organizationsController.resendInvite)
+router.post('/:id/licence', organizationsController.issueLicence)
 
 export default router

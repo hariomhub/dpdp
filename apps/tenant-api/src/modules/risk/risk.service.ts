@@ -1,8 +1,8 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
+import { getRegulationSummaries } from '../../library/regulations'
 import { computeOrgRiskScore } from '../dashboard/dashboard.service'
 
 const db = getTenantPrisma()
-const adminDb = getSuperAdminPrisma()
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 // Real-time computed risk (no historical snapshot engine yet — RiskSnapshot/
@@ -57,6 +57,69 @@ export function computeRiskScore(tasks: TaskLite[], assets: AssetLite[], now = n
   }
 }
 
+// ─── Department / regulation risk (shared by getAnalysis + the daily snapshot job) ────
+
+interface DeptLite { id: string; name: string }
+interface RegLite { id: string; shortCode: string | null; name: string }
+interface TaskWithRegs extends TaskLite { assetId: string; assessment: { regulations: { regulationId: string }[] } }
+interface AssetWithDept extends AssetLite { id: string; departmentId: string }
+
+function regIdOf(t: TaskWithRegs): string | null {
+  return t.assessment.regulations[0]?.regulationId ?? null
+}
+
+/**
+ * Pure — no DB access. Both getAnalysis (which already has richer department/
+ * asset/task data fetched for the heatmap/asset-register) and the daily
+ * snapshot job (which fetches a lean subset just for this) call this same
+ * function, so there is one implementation of "what is a department's/
+ * regulation's risk score," not two.
+ */
+export function computeDeptRegRisk(
+  departments: DeptLite[], assets: AssetWithDept[], tasks: TaskWithRegs[], regulations: RegLite[], now = new Date(),
+) {
+  const assetById = new Map(assets.map(a => [a.id, a]))
+
+  const regulationRisk = regulations.map(reg => {
+    const regTasks = tasks.filter(t => regIdOf(t) === reg.id)
+    const assetIds = [...new Set(regTasks.map(t => t.assetId))]
+    const regAssets = assetIds.map(id => assetById.get(id)).filter(Boolean) as AssetWithDept[]
+    const { score, factors } = computeRiskScore(regTasks, regAssets, now)
+    return { id: reg.id, label: reg.shortCode || reg.name, score, factors }
+  }).sort((a, b) => b.score - a.score)
+
+  const departmentRisk = departments.map(dept => {
+    const deptAssets = assets.filter(a => a.departmentId === dept.id)
+    const deptAssetIds = new Set(deptAssets.map(a => a.id))
+    const deptTasks = tasks.filter(t => deptAssetIds.has(t.assetId))
+    const { score, factors } = computeRiskScore(deptTasks, deptAssets, now)
+    return { id: dept.id, name: dept.name, score, factors }
+  }).sort((a, b) => b.score - a.score)
+
+  return { departmentRisk, regulationRisk }
+}
+
+/** Convenience wrapper for callers (the snapshot job) that don't already have the data fetched. */
+export async function computeDepartmentAndRegulationRisk(tenantId: string, now = new Date()) {
+  const [departments, assets, tasks] = await Promise.all([
+    db.department.findMany({ where: { tenantId }, select: { id: true, name: true } }),
+    db.asset.findMany({
+      where: { tenantId },
+      select: { id: true, departmentId: true, criticality: true, piiRecords: { select: { sensitivity: true, crossBorderTransfer: true } } },
+    }),
+    db.complianceTask.findMany({
+      where: { tenantId },
+      select: { status: true, dueDate: true, assetId: true, assessment: { select: { regulations: { select: { regulationId: true } } } } },
+    }),
+  ])
+  const regulationIds = [...new Set(tasks.flatMap(t => t.assessment.regulations.map(r => r.regulationId)))]
+  const regulations = regulationIds.length > 0
+    ? await getRegulationSummaries(regulationIds)
+    : []
+  const { departmentRisk, regulationRisk } = computeDeptRegRisk(departments, assets, tasks, regulations, now)
+  return { departmentRisk, regulationRisk, regulations: regulations.map(r => ({ id: r.id, label: r.shortCode || r.name })) }
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const riskService = {
@@ -91,31 +154,11 @@ export const riskService = {
       tasks.flatMap(t => t.assessment.regulations.map(r => r.regulationId))
     )]
     const regulations = regulationIds.length > 0
-      ? await adminDb.regulation.findMany({ where: { id: { in: regulationIds } }, select: { id: true, shortCode: true, name: true } })
+      ? await getRegulationSummaries(regulationIds)
       : []
     const regById = new Map(regulations.map(r => [r.id, r]))
 
-    function regIdOf(t: typeof tasks[number]): string | null {
-      return t.assessment.regulations[0]?.regulationId ?? null
-    }
-
-    // ── Regulation-level risk ──────────────────────────────────────────────────
-    const regulationRisk = regulations.map(reg => {
-      const regTasks = tasks.filter(t => regIdOf(t) === reg.id)
-      const assetIds = [...new Set(regTasks.map(t => t.assetId))]
-      const regAssets = assetIds.map(id => assetById.get(id)).filter(Boolean) as typeof assets
-      const { score, factors } = computeRiskScore(regTasks, regAssets, now)
-      return { id: reg.id, label: reg.shortCode || reg.name, score, factors }
-    }).sort((a, b) => b.score - a.score)
-
-    // ── Department-level risk ──────────────────────────────────────────────────
-    const departmentRisk = departments.map(dept => {
-      const deptAssets = assets.filter(a => a.departmentId === dept.id)
-      const deptAssetIds = new Set(deptAssets.map(a => a.id))
-      const deptTasks = tasks.filter(t => deptAssetIds.has(t.assetId))
-      const { score, factors } = computeRiskScore(deptTasks, deptAssets, now)
-      return { id: dept.id, name: dept.name, score, factors }
-    }).sort((a, b) => b.score - a.score)
+    const { departmentRisk, regulationRisk } = computeDeptRegRisk(departments, assets, tasks, regulations, now)
 
     // ── Heatmap: department × regulation ───────────────────────────────────────
     const heatmap = departments.map(dept => {
@@ -164,6 +207,38 @@ export const riskService = {
       assetRegister,
       topDrivers,
       regulations: regulations.map(r => ({ id: r.id, label: r.shortCode || r.name })),
+    }
+  },
+
+  /** Department/regulation-level risk history for the trend chart on the Risk Analysis page. */
+  async getHistory(tenantId: string, days: number) {
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+    since.setHours(0, 0, 0, 0)
+
+    const rows = await db.riskSnapshot.findMany({
+      where: { tenantId, entityType: { in: ['department', 'regulation'] }, snapshotDate: { gte: since } },
+      orderBy: { snapshotDate: 'asc' },
+    })
+
+    function group(entityType: 'department' | 'regulation') {
+      const byEntity = new Map<string, { id: string; name: string; points: { date: string; score: number }[] }>()
+      for (const row of rows) {
+        if (row.entityType !== entityType) continue
+        if (!byEntity.has(row.entityId)) {
+          byEntity.set(row.entityId, { id: row.entityId, name: row.entityName, points: [] })
+        }
+        byEntity.get(row.entityId)!.points.push({
+          date: row.snapshotDate.toISOString().split('T')[0],
+          score: Math.round(row.riskScore),
+        })
+      }
+      return [...byEntity.values()]
+    }
+
+    return {
+      departments: group('department').map(d => ({ id: d.id, name: d.name, points: d.points })),
+      regulations: group('regulation').map(r => ({ id: r.id, label: r.name, points: r.points })),
     }
   },
 }

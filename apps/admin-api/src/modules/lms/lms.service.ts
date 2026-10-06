@@ -1,4 +1,4 @@
-import { getSuperAdminPrisma } from '@dpdp/database'
+import { getSuperAdminPrisma, getTenantPrisma } from '@dpdp/database'
 import {
   CourseStatus, CourseDifficulty, CourseCategory,
   LessonType, VideoSource, ReadingContentType,
@@ -9,6 +9,11 @@ import { parsePagination, buildMeta } from '../../utils/pagination'
 import { logAuditAction } from '../../utils/audit-logger'
 
 const db = getSuperAdminPrisma()
+// The tenant DB is a single shared Postgres instance (multi-tenancy is by
+// tenantId column, not per-tenant databases), so this is a normal query, not
+// a cross-database fan-out. Used only for read-only LMS analytics/certificate
+// reporting — never for writing tenant operational data from admin-api.
+const tenantDb = getTenantPrisma()
 
 export const lmsService = {
   // ─── COURSES ───────────────────────────────────────────
@@ -45,7 +50,13 @@ export const lmsService = {
       db.lmsCourse.count({ where }),
     ])
 
-    return { data: courses, meta: buildMeta(total, page, limit) }
+    // thumbnailUrl stays the stable, persistable URL (the course list card
+    // feeds straight into "Edit"); thumbnailPreviewUrl is a signed, display-
+    // only counterpart for rendering the <img> — never submit that one back.
+    const { getSignedUrl } = await import('../../utils/storage')
+    const data = courses.map(c => ({ ...c, thumbnailPreviewUrl: getSignedUrl(c.thumbnailUrl) }))
+
+    return { data, meta: buildMeta(total, page, limit) }
   },
 
   async getCourseById(id: string) {
@@ -70,7 +81,24 @@ export const lmsService = {
       },
     })
     if (!course) throw new Error('Course not found')
-    return course
+
+    // Same stable-vs-preview split as listCourses, extended to each lesson's
+    // uploaded file. CourseForm reads the stable fields into editable state
+    // and resubmits them on save — signing those in place would eventually
+    // persist an expiring SAS URL into the database.
+    const { getSignedUrl } = await import('../../utils/storage')
+    return {
+      ...course,
+      thumbnailPreviewUrl: getSignedUrl(course.thumbnailUrl),
+      sections: course.sections.map(section => ({
+        ...section,
+        lessons: section.lessons.map(lesson => ({
+          ...lesson,
+          videoPreviewUrl: lesson.type === 'VIDEO' ? getSignedUrl(lesson.videoUrl) : null,
+          readingPreviewUrl: lesson.type === 'READING' && lesson.readingContentType === 'FILE' ? getSignedUrl(lesson.readingContent) : null,
+        })),
+      })),
+    }
   },
 
   async createCourse(params: {
@@ -201,14 +229,27 @@ export const lmsService = {
           const item = secPayload.items[j];
           // Ensure valid enum value
           const lessonType = item.type.toUpperCase().replace('-', '_') as LessonType;
+          const lessonData = {
+            title: item.title,
+            description: item.desc || item.description || null,
+            type: lessonType,
+            orderIndex: j,
+            videoSource: lessonType === 'VIDEO' ? (item.videoSource as VideoSource ?? null) : null,
+            videoUrl: lessonType === 'VIDEO' ? (item.videoUrl ?? null) : null,
+            videoDurationS: lessonType === 'VIDEO' ? (item.videoDurationS ?? null) : null,
+            readingContentType: lessonType === 'READING' ? (item.readingContentType as ReadingContentType ?? null) : null,
+            readingContent: lessonType === 'READING' ? (item.readingContent ?? null) : null,
+            assignmentInstructions: lessonType === 'ASSIGNMENT' ? (item.assignmentInstructions ?? null) : null,
+            assignmentSubmissionType: lessonType === 'ASSIGNMENT' ? (item.assignmentSubmissionType as AssignmentSubmissionType ?? null) : null,
+          };
           if (item.id && existingLessons.find(l => l.id === item.id)) {
             await tx.lmsLesson.update({
               where: { id: item.id },
-              data: { title: item.title, type: lessonType, orderIndex: j }
+              data: lessonData
             });
           } else {
             await tx.lmsLesson.create({
-              data: { sectionId, title: item.title, type: lessonType, orderIndex: j }
+              data: { sectionId, ...lessonData }
             });
           }
         }
@@ -266,31 +307,60 @@ export const lmsService = {
             await tx.quizQuestion.deleteMany({ where: { id: { in: qToDelete.map(q => q.id) } } });
         }
         
+        const isUuid = (id: unknown): id is string =>
+          typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
         for (let k = 0; k < quizPayload.questions.length; k++) {
             const qPayload = quizPayload.questions[k];
             const qType = qPayload.type === 'True-False' || qPayload.type === 'TRUE_FALSE' ? 'TRUE_FALSE' : qPayload.type.toUpperCase().replace('-', '_') as QuestionType;
             const qDiff = qPayload.difficulty.toUpperCase() as Difficulty;
 
-            if (qPayload.id && existingQuestions.find(q => q.id === qPayload.id)) {
+            const baseData = {
+                questionText: qPayload.text,
+                type: qType,
+                marks: qPayload.marks,
+                difficulty: qDiff,
+                topic: qPayload.topic || null,
+                orderIndex: k,
+                tfCorrectAnswer: qType === QuestionType.TRUE_FALSE ? (qPayload.tfCorrectAnswer ?? null) : null,
+                modelAnswer: qType === QuestionType.DESCRIPTIVE ? (qPayload.modelAnswer ?? null) : null,
+                wordLimit: qType === QuestionType.DESCRIPTIVE ? (qPayload.wordLimit ?? null) : null,
+            };
+
+            // Question may already exist either attached to this quiz, or elsewhere
+            // (reused from the question bank via "Add from Question Bank") — only
+            // look it up globally when the id is a real UUID, never a client-side
+            // temp id for a not-yet-persisted question.
+            const existingInQuiz = qPayload.id ? existingQuestions.find(q => q.id === qPayload.id) : undefined;
+            const existingAnywhere = existingInQuiz
+              ?? (isUuid(qPayload.id) ? await tx.quizQuestion.findUnique({ where: { id: qPayload.id } }) : null);
+
+            if (existingAnywhere) {
                 await tx.quizQuestion.update({
-                    where: { id: qPayload.id },
-                    data: {
-                        questionText: qPayload.text,
-                        type: qType,
-                        marks: qPayload.marks,
-                        difficulty: qDiff,
-                        orderIndex: k
-                    }
+                    where: { id: existingAnywhere.id },
+                    data: { ...baseData, quizId }
                 });
+                if (qType === QuestionType.MCQ && qPayload.options) {
+                    await tx.questionOption.deleteMany({ where: { questionId: existingAnywhere.id } });
+                    await tx.questionOption.createMany({
+                        data: qPayload.options.map((o: any, i: number) => ({
+                            questionId: existingAnywhere.id,
+                            optionText: o.optionText,
+                            isCorrect:  !!o.isCorrect,
+                            orderIndex: o.orderIndex ?? i,
+                        })),
+                    });
+                }
             } else {
                 await tx.quizQuestion.create({
                     data: {
                         quizId,
-                        questionText: qPayload.text,
-                        type: qType,
-                        marks: qPayload.marks,
-                        difficulty: qDiff,
-                        orderIndex: k
+                        ...baseData,
+                        options: qType === QuestionType.MCQ && qPayload.options
+                          ? { create: qPayload.options.map((o: any, i: number) => ({
+                              optionText: o.optionText, isCorrect: !!o.isCorrect, orderIndex: o.orderIndex ?? i,
+                            })) }
+                          : undefined,
                     }
                 });
             }
@@ -348,6 +418,39 @@ export const lmsService = {
     })
 
     return updated
+  },
+
+  // Hard delete — only ever safe for a DRAFT course nobody has enrolled in
+  // yet. Anything PUBLISHED (or with even one enrollment) must be archived
+  // instead: tenants may already hold enrollments, progress, quiz attempts,
+  // or issued certificates that reference this course, and hard-deleting it
+  // would orphan that history. Cascading FKs (sections → lessons → quiz →
+  // questions → options, course designations) handle the actual cleanup.
+  async deleteCourse(id: string, adminId: string) {
+    const existing = await db.lmsCourse.findUnique({ where: { id } })
+    if (!existing) throw new Error('Course not found')
+
+    if (existing.status !== CourseStatus.DRAFT) {
+      throw new Error('Only draft courses can be deleted — archive this course instead to remove it from catalogs while keeping its history.')
+    }
+
+    const enrollmentCount = await tenantDb.lmsEnrollment.count({ where: { courseId: id } })
+    if (enrollmentCount > 0) {
+      throw new Error(`Cannot delete: ${enrollmentCount} tenant enrollment(s) already reference this course. Archive it instead.`)
+    }
+
+    await db.lmsCourse.delete({ where: { id } })
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.COURSE_ARCHIVED,
+      targetType: 'lms_course',
+      targetId: id,
+      targetName: existing.title,
+      details: { hardDeleted: true } as Prisma.InputJsonValue,
+    })
+
+    return { message: 'Course deleted' }
   },
 
   // ─── SECTIONS ──────────────────────────────────────────
@@ -621,6 +724,34 @@ export const lmsService = {
     return updated
   },
 
+  async deleteQuestion(id: string, adminId: string) {
+    const existing = await db.quizQuestion.findUnique({ where: { id } })
+    if (!existing) throw new Error('Question not found')
+
+    await db.quizQuestion.delete({ where: { id } })
+
+    if (existing.quizId) {
+      const totalMarks = await db.quizQuestion.aggregate({
+        where: { quizId: existing.quizId },
+        _sum: { marks: true },
+      })
+      await db.lmsQuiz.update({
+        where: { id: existing.quizId },
+        data: { totalMarks: totalMarks._sum.marks ?? 0 },
+      })
+    }
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.QUESTION_ARCHIVED,
+      targetType: 'quiz_question',
+      targetId: id,
+      targetName: existing.questionText.slice(0, 50),
+    })
+
+    return { message: 'Question deleted' }
+  },
+
   async addQuestionToQuiz(quizId: string, questionId: string) {
     const quiz = await db.lmsQuiz.findUnique({ where: { id: quizId } })
     if (!quiz) throw new Error('Quiz not found')
@@ -831,5 +962,149 @@ export const lmsDesignationService = {
         designation: { select: { id: true, name: true, description: true } },
       },
     })
+  },
+}
+
+// ─── LMS Course ↔ Portal Role targeting ──────────────────────────────────────
+// Independent axis from designations — targets a course at the platform's own
+// permission role (CEO/CO/IT_ADMIN/INTERNAL_AUDITOR/EXTERNAL_AUDITOR), for
+// "how do I use this portal" content where relevance follows the tenant role
+// a learner holds in this software, not their real-world job title.
+
+export const lmsCoursePortalRoleService = {
+  async getCoursePortalRoles(courseId: string) {
+    return getSuperAdminPrisma().lmsCoursePortalRole.findMany({
+      where: { courseId },
+      orderBy: { portalRole: 'asc' },
+    })
+  },
+
+  async setCoursePortalRoles(courseId: string, targets: Array<{
+    portalRole: string; isMandatory: boolean
+  }>) {
+    const db = getSuperAdminPrisma()
+    const course = await db.lmsCourse.findUnique({ where: { id: courseId } })
+    if (!course) throw new Error('Course not found')
+
+    // Replace strategy, same as setCourseDesignations
+    await db.lmsCoursePortalRole.deleteMany({ where: { courseId } })
+    if (targets.length > 0) {
+      await db.lmsCoursePortalRole.createMany({
+        data: targets.map(t => ({
+          courseId,
+          portalRole:  t.portalRole,
+          isMandatory: t.isMandatory,
+        })),
+      })
+    }
+    return { courseId, targets: targets.length }
+  },
+}
+
+// ─── LMS Analytics & Certificate Log (reads the shared tenant DB) ────────────
+
+export const lmsAnalyticsService = {
+
+  async getAnalytics() {
+    const [publishedCourses, allEnrollments, allAttempts] = await Promise.all([
+      db.lmsCourse.findMany({
+        where:  { status: CourseStatus.PUBLISHED },
+        select: { id: true, title: true, estimatedHours: true, estimatedMinutes: true },
+      }),
+      tenantDb.lmsEnrollment.findMany({ select: { id: true, courseId: true, isCompleted: true, enrolledAt: true } }),
+      tenantDb.quizAttempt.findMany({ where: { completedAt: { not: null } }, select: { score: true } }),
+    ])
+
+    const totalEnrollments = allEnrollments.length
+    const totalCompletions = allEnrollments.filter(e => e.isCompleted).length
+    const avgQuizScore = allAttempts.length > 0
+      ? Math.round(allAttempts.reduce((s, a) => s + a.score, 0) / allAttempts.length)
+      : 0
+
+    const now = new Date()
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString('en-US', { month: 'short' }) }
+    })
+    const trend = months.map(m => ({
+      month: m.label,
+      enrollments: allEnrollments.filter(e => {
+        const d = e.enrolledAt
+        return `${d.getFullYear()}-${d.getMonth()}` === m.key
+      }).length,
+    }))
+
+    const perCourse = publishedCourses.map(c => {
+      const courseEnrollments = allEnrollments.filter(e => e.courseId === c.id)
+      const completions = courseEnrollments.filter(e => e.isCompleted).length
+      return {
+        courseId:    c.id,
+        title:       c.title,
+        duration:    `${c.estimatedHours}h ${c.estimatedMinutes}m`,
+        enrollments: courseEnrollments.length,
+        completions,
+      }
+    })
+
+    return {
+      totals: { enrollments: totalEnrollments, completions: totalCompletions, avgQuizScore },
+      trend,
+      perCourse,
+    }
+  },
+
+  async getIssuedCertificates() {
+    const issued = await tenantDb.issuedCertificate.findMany({ orderBy: { issuedAt: 'desc' }, take: 200 })
+    if (issued.length === 0) return []
+
+    const [users, tenants, courses] = await Promise.all([
+      tenantDb.user.findMany({
+        where:  { id: { in: [...new Set(issued.map(i => i.userId))] } },
+        select: { id: true, name: true },
+      }),
+      db.tenant.findMany({
+        where:  { id: { in: [...new Set(issued.map(i => i.tenantId))] } },
+        select: { id: true, name: true },
+      }),
+      db.lmsCourse.findMany({
+        where:  { id: { in: [...new Set(issued.map(i => i.courseId))] } },
+        select: { id: true, title: true },
+      }),
+    ])
+    const userMap   = new Map(users.map(u => [u.id, u]))
+    const tenantMap = new Map(tenants.map(t => [t.id, t]))
+    const courseMap = new Map(courses.map(c => [c.id, c]))
+
+    return issued.map(cert => ({
+      id:               cert.id,
+      certificateCode:  cert.certificateCode,
+      learnerName:      userMap.get(cert.userId)?.name ?? 'Unknown',
+      organizationName: tenantMap.get(cert.tenantId)?.name ?? 'Unknown',
+      courseTitle:      courseMap.get(cert.courseId)?.title ?? 'Unknown',
+      issuedAt:         cert.issuedAt,
+      isRevoked:        cert.isRevoked,
+    }))
+  },
+
+  async revokeCertificate(id: string, reason: string, adminId: string) {
+    const existing = await tenantDb.issuedCertificate.findUnique({ where: { id } })
+    if (!existing) throw new Error('Certificate not found')
+    if (existing.isRevoked) throw new Error('Certificate already revoked')
+
+    const updated = await tenantDb.issuedCertificate.update({
+      where: { id },
+      data:  { isRevoked: true, revokedAt: new Date(), revocationReason: reason },
+    })
+
+    await logAuditAction({
+      superAdminId: adminId,
+      action: AuditAction.CERT_TEMPLATE_UPDATED,
+      targetType: 'issued_certificate',
+      targetId: id,
+      targetName: existing.certificateCode,
+      details: { revoked: true, reason } as Prisma.InputJsonValue,
+    })
+
+    return updated
   },
 }

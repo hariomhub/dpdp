@@ -1,13 +1,15 @@
 import { Router } from 'express'
 import { entraController, entraLoginHandler } from './entra.controller'
 import { authenticate, requireRole } from '../../middleware/auth'
+import { authLimiter } from '../../middleware/rate-limit'
 
 const router = Router()
 
 // ── Public (no JWT) ───────────────────────────────────────────────────────────
 // Called after Microsoft OAuth redirect — user is not yet logged in
 router.get('/auth-url', entraController.getAuthUrl)
-router.post('/login', entraLoginHandler)
+// Failed attempts are throttled per address (successful sign-ins are not counted).
+router.post('/login', authLimiter, entraLoginHandler)
 
 // ── Authenticated ─────────────────────────────────────────────────────────────
 router.use(authenticate)

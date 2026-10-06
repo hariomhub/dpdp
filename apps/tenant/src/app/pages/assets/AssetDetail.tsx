@@ -8,7 +8,19 @@ import { useListControls } from '../../../hooks/useControls';
 import { useListTasks } from '../../../hooks/useTasks';
 import { useAssessmentsList } from '../../../hooks/useAssessments';
 import { useAuditLog } from '../../../hooks/useAuditLog';
+import { useRiskAnalysis } from '../../../hooks/useRisk';
 import { ASSET_TYPE_LABELS, CRITICALITY_LABELS, ASSET_COMPLIANCE_LABELS, ASSET_STATUS_LABELS } from '../../../lib/asset-enums';
+
+// Same 5-band scale used on the Risk Analysis / Risk Reports pages and the
+// dashboard risk widgets — kept in sync intentionally, not imported since
+// none of those pages export it as a shared util yet.
+const RISK_LEVEL = (score: number) => {
+  if (score <= 20) return { label: 'Low', color: '#10B981' };
+  if (score <= 40) return { label: 'Moderate', color: '#F59E0B' };
+  if (score <= 60) return { label: 'High', color: '#F97316' };
+  if (score <= 80) return { label: 'Critical', color: '#EF4444' };
+  return { label: 'Severe', color: '#991B1B' };
+};
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   'Database / Data Store': <Database className="w-5 h-5" />,
@@ -48,6 +60,8 @@ export function AssetDetailPage() {
   const { data: tasks = [] } = useListTasks({ assetId: id });
   const { data: assessments = [] } = useAssessmentsList();
   const { data: auditData } = useAuditLog({ targetId: id, limit: 20 });
+  const { data: riskAnalysis } = useRiskAnalysis();
+  const riskRow = riskAnalysis?.assetRegister.find(a => a.id === id);
 
   const asset = useMemo(() => {
     for (const d of departments) {
@@ -365,39 +379,75 @@ export function AssetDetailPage() {
         {/* Right Sidebar */}
         <div className="w-64 flex-shrink-0 space-y-3">
           <Card>
-            <h3 className="text-[14px] font-semibold text-slate-700 mb-3">Compliance Score</h3>
-            <div className="flex items-center justify-center my-2">
-              <div className="relative w-24 h-24">
-                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-                  <circle cx="48" cy="48" r="40" fill="none" stroke="#E2E8F0" strokeWidth="8" />
-                  <circle cx="48" cy="48" r="40" fill="none"
+            <h3 className="text-[13px] font-semibold text-slate-700 mb-2">Compliance Score</h3>
+            <div className="flex items-center justify-center my-1.5">
+              <div className="relative w-20 h-20">
+                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="33" fill="none" stroke="#E2E8F0" strokeWidth="7" />
+                  <circle cx="40" cy="40" r="33" fill="none"
                     stroke={compliancePct >= 80 ? '#22C55E' : compliancePct >= 50 ? '#F59E0B' : '#EF4444'}
-                    strokeWidth="8"
-                    strokeDasharray={`${(compliancePct / 100) * 251.2} 251.2`}
+                    strokeWidth="7"
+                    strokeDasharray={`${(compliancePct / 100) * 207.3} 207.3`}
                     strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[22px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{compliancePct}%</span>
+                  <span className="text-[18px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{compliancePct}%</span>
                 </div>
               </div>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {[
                 ['text-green-600', 'Compliant', compliantCount],
                 ['text-[#1A3E5C]', 'In Progress', inProgressCount],
                 ['text-slate-400', 'Not Started', notStartedCount],
                 ['text-red-500', 'Rejected', rejectedCount],
               ].map(([color, label, val]) => (
-                <div key={label as string} className="flex justify-between text-[14px]">
+                <div key={label as string} className="flex justify-between text-[13px]">
                   <span className={color as string}>● {label as string}</span>
                   <span className="font-medium text-slate-800">{val as number}</span>
                 </div>
               ))}
             </div>
           </Card>
+          {riskRow && (
+            <Card>
+              <h3 className="text-[13px] font-semibold text-slate-700 mb-2">Risk Score</h3>
+              <div className="flex items-center justify-center my-1.5">
+                <div className="relative w-20 h-20">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="33" fill="none" stroke="#E2E8F0" strokeWidth="7" />
+                    <circle cx="40" cy="40" r="33" fill="none"
+                      stroke={RISK_LEVEL(riskRow.score).color}
+                      strokeWidth="7"
+                      strokeDasharray={`${(riskRow.score / 100) * 207.3} 207.3`}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[18px] font-bold text-slate-900" style={{ fontFamily: 'Cinzel, serif' }}>{riskRow.score}</span>
+                    <span className="text-[10px] font-semibold" style={{ color: RISK_LEVEL(riskRow.score).color }}>{RISK_LEVEL(riskRow.score).label}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                {[
+                  ['Rejected tasks', riskRow.factors.nonCompliantTasks],
+                  ['Overdue tasks', riskRow.factors.overdueTasks],
+                  ['Cross-border transfer', riskRow.factors.crossBorderTransfer ? 'Yes' : 'No'],
+                ].map(([k, v]) => (
+                  <div key={k as string} className="flex justify-between text-[13px]">
+                    <span className="text-slate-500">{k as string}</span>
+                    <span className="font-medium text-slate-800">{v}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => navigate('/org/risk/analysis')} className="mt-1.5 text-[12px] text-[#1A3E5C] hover:text-[#D4AF37] font-medium">
+                View Full Risk Analysis →
+              </button>
+            </Card>
+          )}
           <Card>
-            <h3 className="text-[14px] font-semibold text-slate-700 mb-2">Quick Stats</h3>
-            <div className="space-y-1.5">
+            <h3 className="text-[13px] font-semibold text-slate-700 mb-1.5">Quick Stats</h3>
+            <div className="space-y-1">
               {[
                 ['Criticality', critLabel],
                 ['Hosting', asset.hostingLocation],
@@ -406,7 +456,7 @@ export function AssetDetailPage() {
                 ['PII Records', String(asset.piiRecords.length)],
                 ['Vendor', asset.vendorName || 'None'],
               ].map(([k, v]) => (
-                <div key={k} className="flex justify-between text-[14px] gap-2">
+                <div key={k} className="flex justify-between text-[13px] gap-2">
                   <span className="text-slate-500 flex-shrink-0">{k}</span>
                   <span className={`font-medium text-right ${k === 'Internet Facing' ? (asset.internetFacing ? 'text-orange-600' : 'text-green-600') : 'text-slate-800'}`}>{v}</span>
                 </div>

@@ -9,6 +9,7 @@ import authRoutes from './modules/auth/auth.routes'
 import organizationRoutes from './modules/organizations/organizations.routes'
 import regulationRoutes from './modules/regulations/regulations.routes'
 import controlRoutes from './modules/controls/controls.routes'
+import masterControlRoutes from './modules/master-controls/master-controls.routes'
 import lmsRoutes from './modules/lms/lms.routes'
 import auditRoutes from './modules/audit/audit.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
@@ -54,6 +55,10 @@ app.use(limiter)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// NOTE: there is deliberately no static route for uploaded files any more. They used to be served publicly from
+// /uploads; sample evidence now lives in a private container and is opened by tenants through the tenant API's
+// authenticated link endpoint, and LMS media is served via signed URLs.
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'admin-api' })
@@ -64,6 +69,7 @@ app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/organizations', organizationRoutes)
 app.use('/api/v1/regulations', regulationRoutes)
 app.use('/api/v1/controls', controlRoutes)
+app.use('/api/v1/master-controls', masterControlRoutes)
 app.use('/api/v1/lms', lmsRoutes)
 app.use('/api/v1/audit-logs', auditRoutes)
 app.use('/api/v1/dashboard', dashboardRoutes)

@@ -1,12 +1,48 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
 import { TaskStatus, TenantRole, TenantAuditAction, EvidenceType, GapReasonCode, Prisma } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
-import { deleteFile } from '../../utils/storage'
+import { discardStoredFile, ingestUpload, IncomingFile, StoredFile } from '../../storage/uploads'
+import { hasStoredFile } from '../../storage/stores'
+import { getRegulationSummaries } from '../../library/regulations'
+import { getProductNames } from '../../library/controls'
+import { getControlForTask, getControlHeads } from '../controls/control-directory'
 
 const db      = getTenantPrisma()
-const adminDb = getSuperAdminPrisma()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * What the browser is allowed to know about a stored file: that one exists, its name/size/type - never where it
+ * lives. Files are opened through POST /files/.../link, which authorises and audits every access.
+ */
+function serializeEvidenceVersion(v: any) {
+  return {
+    id:             v.id,
+    version:        v.version,
+    title:          v.title,
+    description:    v.description,
+    fileName:       v.fileName,
+    fileSize:       v.fileSize,
+    contentType:    v.contentType,
+    hasFile:        hasStoredFile(v),
+    linkUrl:        v.linkUrl,
+    textContent:    v.textContent,
+    uploadedById:   v.uploadedById,
+    uploadedAt:     v.uploadedAt,
+    supersededAt:   v.supersededAt,
+    supersededById: v.supersededById,
+  }
+}
+
+function serializeEvidence(ev: any) {
+  // Storage coordinates and the hash stay server-side.
+  const { fileUrl, storageProvider, storageKey, sha256, deletedAt, deletedById, versions, ...rest } = ev
+  return {
+    ...rest,
+    hasFile:  hasStoredFile(ev),
+    versions: (versions ?? []).map(serializeEvidenceVersion),
+  }
+}
 
 function computeIsOverdue(dueDate: Date, status: string): boolean {
   const terminal = ['COMPLIANT', 'REJECTED']
@@ -84,7 +120,7 @@ export const tasksService = {
             regulations: { select: { regulationId: true } },
           },
         },
-        _count: { select: { evidence: true, reviewNotes: true } },
+        _count: { select: { evidence: { where: { deletedAt: null } }, reviewNotes: true } },
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
     })
@@ -93,22 +129,12 @@ export const tasksService = {
     const regulationIds = [...new Set(
       tasks.flatMap(t => t.assessment.regulations.map(r => r.regulationId))
     )]
-    const regulations = regulationIds.length > 0
-      ? await adminDb.regulation.findMany({
-          where: { id: { in: regulationIds } }, select: { id: true, shortCode: true, name: true },
-        })
-      : []
+    const regulations = await getRegulationSummaries(regulationIds)
     const regMap = new Map(regulations.map(r => [r.id, r]))
 
-    // Enrich with control titles from super-admin
+    // Enrich with control titles and chapter labels from the Library (platform controls) / the tenant's own (custom)
     const controlIds = [...new Set(tasks.map(t => t.controlId))]
-    const controls = controlIds.length > 0
-      ? await adminDb.control.findMany({
-          where: { id: { in: controlIds } },
-          select: { id: true, title: true, regulationMappings: { select: { chapter: { select: { name: true } } } } },
-        })
-      : []
-    const ctrlMap = new Map(controls.map(c => [c.id, c]))
+    const ctrlMap = await getControlHeads(tenantId, controlIds)
 
     return tasks.map(t => {
       const regId  = t.assessment.regulations[0]?.regulationId
@@ -131,7 +157,7 @@ export const tasksService = {
         assignedTo:   t.assignedTo,
         assessment:   { id: t.assessment.id, name: t.assessment.name },
         regulation:   reg ? { id: regId, shortCode: reg.shortCode, name: reg.name } : null,
-        control:      ctrl ? { id: ctrl.id, title: ctrl.title, chapter: ctrl.regulationMappings?.[0]?.chapter?.name ?? null } : null,
+        control:      ctrl ? { id: ctrl.id, title: ctrl.title, chapter: ctrl.chapter } : null,
         evidenceCount: t._count.evidence,
         reviewNoteCount: t._count.reviewNotes,
       }
@@ -148,7 +174,11 @@ export const tasksService = {
         createdBy:   { select: { id: true, name: true } },
         reviewedBy:  { select: { id: true, name: true } },
         assessment:  { include: { regulations: true } },
-        evidence:    { orderBy: { createdAt: 'desc' }, include: { actionLinks: true } },
+        evidence:    {
+          where:   { deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          include: { actionLinks: true, versions: { orderBy: { version: 'desc' } } },
+        },
         reviewNotes: { orderBy: { createdAt: 'desc' } },
         statusHistory: { orderBy: { createdAt: 'desc' } },
       },
@@ -180,38 +210,26 @@ export const tasksService = {
       statusHistory
     };
 
-    // Enrich control + predefined actions (with their mapped products + master evidence) from super-admin
-    const ctrl = await adminDb.control.findUnique({
-      where:   { id: task.controlId },
-      include: {
-        regulationMappings: { include: { chapter: { select: { name: true, title: true } } } },
-        predefinedActions: {
-          orderBy: { orderIndex: 'asc' },
-          include: { products: { include: { product: true, masterEvidences: true } } },
-        },
-      },
-    })
+    // The control with its actions (and, for platform controls, their suggested products and sample evidence)
+    const ctrl: any = await getControlForTask(tenantId, task.controlId)
 
     // This task's own per-action tracking rows (only exist for actions with at least one evidence upload or gap finding)
     const taskActions = await db.taskAction.findMany({
       where:   { taskId },
       include: {
-        evidenceLinks:   { include: { evidence: true }, orderBy: { createdAt: 'desc' } },
+        evidenceLinks:   { where: { evidence: { deletedAt: null } }, include: { evidence: true }, orderBy: { createdAt: 'desc' } },
         gapFindingLinks: { include: { gapFinding: { include: { files: true } } }, orderBy: { createdAt: 'desc' } },
       },
     })
     const taskActionByPredefinedId = new Map(taskActions.map(ta => [ta.predefinedActionId, ta]))
     const predefinedIdByTaskActionId = new Map(taskActions.map(ta => [ta.id, ta.predefinedActionId]))
-    const actionTitleByPredefinedId = new Map((ctrl?.predefinedActions ?? []).map(a => [a.id, a.title]))
+    const actionTitleByPredefinedId = new Map<string, string>((ctrl?.predefinedActions ?? []).map((a: any) => [a.id, a.title] as [string, string]))
 
     // Resolve product names for anything tagged via evidence (may not be a "suggested" product for that action)
     const linkedProductIds = [...new Set(
       taskActions.flatMap(ta => ta.evidenceLinks.map(el => el.productId).filter(Boolean))
     )] as string[]
-    const linkedProducts = linkedProductIds.length > 0
-      ? await adminDb.product.findMany({ where: { id: { in: linkedProductIds } }, select: { id: true, name: true } })
-      : []
-    const productNameById = new Map(linkedProducts.map(p => [p.id, p.name]))
+    const productNameById = await getProductNames(linkedProductIds)
 
     // Resolve who raised each gap finding
     const gapFindingRaiserIds = [...new Set(
@@ -231,11 +249,11 @@ export const tasksService = {
         createdAt:   gf.createdAt,
         raisedByName: gf.raisedById ? raiserNameById.get(gf.raisedById) ?? null : null,
         actionTitles,
-        files: gf.files.map(f => ({ id: f.id, fileName: f.fileName, fileUrl: f.fileUrl })),
+        files: gf.files.map(f => ({ id: f.id, fileName: f.fileName, fileSize: f.fileSize, contentType: f.contentType, hasFile: hasStoredFile(f) })),
       }
     }
 
-    const actions = (ctrl?.predefinedActions ?? []).map(action => {
+    const actions = (ctrl?.predefinedActions ?? []).map((action: any) => {
       const ta = taskActionByPredefinedId.get(action.id)
       return {
         id:               action.id,
@@ -245,19 +263,28 @@ export const tasksService = {
         suggestedDueDays: action.suggestedDueDays,
         priority:         action.priority,
         orderIndex:       action.orderIndex,
-        products: action.products.map(ap => ({
+        products: action.products.map((ap: any) => ({
           id:             ap.product.id,
           name:           ap.product.name,
           vendor:         ap.product.vendor,
           logoUrl:        ap.product.logoUrl,
-          masterEvidence: ap.masterEvidences[0] ?? null,
+          // Vendor sample evidence: no raw URL to the browser, opened via POST /files/master-evidence/:id/link
+          masterEvidence: ap.masterEvidences[0]
+            ? {
+                id:          ap.masterEvidences[0].id,
+                title:       ap.masterEvidences[0].title,
+                description: ap.masterEvidences[0].description,
+                fileName:    ap.masterEvidences[0].fileName,
+                hasFile:     !!ap.masterEvidences[0].fileUrl,
+              }
+            : null,
         })),
         evidence: (ta?.evidenceLinks ?? []).map(el => ({
           id:          el.evidence.id,
           title:       el.evidence.title,
           type:        el.evidence.type,
           description: el.evidence.description,
-          fileUrl:     el.evidence.fileUrl,
+          hasFile:     hasStoredFile(el.evidence),
           fileName:    el.evidence.fileName,
           linkUrl:     el.evidence.linkUrl,
           textContent: el.evidence.textContent,
@@ -285,7 +312,7 @@ export const tasksService = {
       .map(({ gf, actionTitles }) => formatGapFinding(gf, [...actionTitles]))
 
     const evidenceWithLinks = taskWithUsers.evidence.map((ev: any) => ({
-      ...ev,
+      ...serializeEvidence(ev),
       linkedActions: (ev.actionLinks ?? []).map((al: any) => {
         const predefinedId = predefinedIdByTaskActionId.get(al.taskActionId) ?? null
         return {
@@ -302,10 +329,7 @@ export const tasksService = {
     let regulation = null
     if (task.assessment.regulations.length > 0) {
       const regId = task.assessment.regulations[0].regulationId
-      regulation  = await adminDb.regulation.findUnique({
-        where:  { id: regId },
-        select: { id: true, name: true, shortCode: true },
-      })
+      regulation  = (await getRegulationSummaries([regId]))[0] ?? null
     }
 
     return {
@@ -482,7 +506,8 @@ export const tasksService = {
       description?: string
       linkUrl?: string
       textContent?: string
-      file?: { fileName: string; fileSize: number; fileUrl: string; storageProvider: string }
+      /** the uploaded temp file, if any - validated and moved into storage below, after the permission checks */
+      upload?: IncomingFile
       actions: { actionId: string; productId?: string; otherLabel?: string }[]
     }
   }) {
@@ -492,55 +517,72 @@ export const tasksService = {
     if (!['IN_PROGRESS', 'REJECTED'].includes(task.status)) throw new Error('Task must be IN_PROGRESS or REJECTED to add evidence')
     if (!params.data.actions || params.data.actions.length === 0) throw new Error('At least one action must be tagged')
 
-    const evidence = await db.$transaction(async (tx) => {
-      const ev = await tx.evidence.create({
-        data: {
-          tenantId:      params.tenantId,
-          taskId:        params.taskId,
-          title:         params.data.title,
-          type:          params.data.type,
-          description:   params.data.description ?? null,
-          fileUrl:       params.data.file?.fileUrl ?? null,
-          fileName:      params.data.file?.fileName ?? null,
-          fileSize:      params.data.file?.fileSize ?? null,
-          linkUrl:       params.data.linkUrl ?? null,
-          textContent:   params.data.textContent ?? null,
-          submittedById: params.userId,
-        },
-      })
+    // Only now - permissions and task state are fine - is the file accepted into storage.
+    const stored = params.data.upload
+      ? await ingestUpload(params.data.upload, { tenantId: params.tenantId, area: 'evidence', parentId: params.taskId })
+      : undefined
 
-      for (const tag of params.data.actions) {
-        const taskAction = await tx.taskAction.upsert({
-          where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: tag.actionId } },
-          update: {},
-          create: { taskId: params.taskId, predefinedActionId: tag.actionId },
-        })
-        await tx.evidenceAction.create({
+    let evidence
+    try {
+      evidence = await db.$transaction(async (tx) => {
+        const ev = await tx.evidence.create({
           data: {
-            evidenceId:   ev.id,
-            taskActionId: taskAction.id,
-            productId:    tag.productId ?? null,
-            otherLabel:   tag.otherLabel ?? null,
+            tenantId:        params.tenantId,
+            taskId:          params.taskId,
+            title:           params.data.title,
+            type:            params.data.type,
+            description:     params.data.description ?? null,
+            fileName:        stored?.fileName ?? null,
+            fileSize:        stored?.fileSize ?? null,
+            storageProvider: stored?.storageProvider ?? null,
+            storageKey:      stored?.storageKey ?? null,
+            contentType:     stored?.contentType ?? null,
+            sha256:          stored?.sha256 ?? null,
+            linkUrl:         params.data.linkUrl ?? null,
+            textContent:     params.data.textContent ?? null,
+            submittedById:   params.userId,
           },
         })
-      }
 
-      return ev
-    })
+        for (const tag of params.data.actions) {
+          const taskAction = await tx.taskAction.upsert({
+            where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: tag.actionId } },
+            update: {},
+            create: { taskId: params.taskId, predefinedActionId: tag.actionId },
+          })
+          await tx.evidenceAction.create({
+            data: {
+              evidenceId:   ev.id,
+              taskActionId: taskAction.id,
+              productId:    tag.productId ?? null,
+              otherLabel:   tag.otherLabel ?? null,
+            },
+          })
+        }
+
+        return ev
+      })
+    } catch (err) {
+      // The database write failed after the file was stored: don't leave an orphan behind.
+      if (stored) await discardStoredFile(stored)
+      throw err
+    }
 
     await logTenantAction({
       tenantId: params.tenantId, userId: params.userId,
       action: TenantAuditAction.EVIDENCE_UPLOADED, targetType: 'evidence', targetId: evidence.id,
       targetName: evidence.title,
-      details: { taskId: params.taskId, actionIds: params.data.actions.map(a => a.actionId) },
+      details: { taskId: params.taskId, actionIds: params.data.actions.map(a => a.actionId), sha256: stored?.sha256 ?? null },
     })
 
-    return evidence
+    return serializeEvidence(evidence)
   },
 
   // ── Delete evidence (uploader only, while task is still editable) ──────────
+  // A soft delete: the record, its file and its version history are all retained, and nothing is auto-purged.
+  // It disappears from the working view; auditors can still be shown what was submitted.
   async deleteEvidence(tenantId: string, taskId: string, evidenceId: string, userId: string) {
-    const evidence = await db.evidence.findFirst({ where: { id: evidenceId, taskId, tenantId } })
+    const evidence = await db.evidence.findFirst({ where: { id: evidenceId, taskId, tenantId, deletedAt: null } })
     if (!evidence) throw new Error('Evidence not found')
     if (evidence.submittedById !== userId) throw new Error('Only the uploader can delete this evidence')
 
@@ -549,20 +591,19 @@ export const tasksService = {
       throw new Error('Task must be IN_PROGRESS or REJECTED to delete evidence')
     }
 
-    if (evidence.fileUrl) {
-      await deleteFile(evidence.fileUrl, 'local').catch(() => {})
-    }
-    await db.evidence.delete({ where: { id: evidenceId } })
+    await db.evidence.update({ where: { id: evidenceId }, data: { deletedAt: new Date(), deletedById: userId } })
 
     await logTenantAction({
-      tenantId, userId, action: TenantAuditAction.EVIDENCE_UPDATED, targetType: 'evidence', targetId: evidenceId,
-      targetName: evidence.title, details: { deleted: true, taskId },
+      tenantId, userId, action: TenantAuditAction.EVIDENCE_DELETED, targetType: 'evidence', targetId: evidenceId,
+      targetName: evidence.title, details: { taskId, hadFile: hasStoredFile(evidence), version: evidence.version },
     })
 
     return { success: true }
   },
 
   // ── Edit evidence metadata / replace file (uploader only, while task is editable) ──
+  // The previous state is snapshotted into EvidenceVersion before anything changes, so replacing a file never
+  // destroys what was submitted (and possibly rejected) earlier.
   async updateEvidence(params: {
     tenantId: string; taskId: string; evidenceId: string; userId: string
     data: {
@@ -570,10 +611,12 @@ export const tasksService = {
       description?: string
       linkUrl?: string
       textContent?: string
-      file?: { fileName: string; fileSize: number; fileUrl: string }
+      upload?: IncomingFile
     }
   }) {
-    const evidence = await db.evidence.findFirst({ where: { id: params.evidenceId, taskId: params.taskId, tenantId: params.tenantId } })
+    const evidence = await db.evidence.findFirst({
+      where: { id: params.evidenceId, taskId: params.taskId, tenantId: params.tenantId, deletedAt: null },
+    })
     if (!evidence) throw new Error('Evidence not found')
     if (evidence.submittedById !== params.userId) throw new Error('Only the uploader can edit this evidence')
 
@@ -582,32 +625,80 @@ export const tasksService = {
       throw new Error('Task must be IN_PROGRESS or REJECTED to edit evidence')
     }
 
-    if (params.data.file && evidence.fileUrl) {
-      await deleteFile(evidence.fileUrl, 'local').catch(() => {})
+    const d = params.data
+    const next = {
+      title:       d.title ?? evidence.title,
+      description: d.description !== undefined ? d.description : evidence.description,
+      linkUrl:     d.linkUrl ?? evidence.linkUrl,
+      textContent: d.textContent ?? evidence.textContent,
     }
+    const changed = !!d.upload
+      || next.title !== evidence.title
+      || next.description !== evidence.description
+      || next.linkUrl !== evidence.linkUrl
+      || next.textContent !== evidence.textContent
+    if (!changed) return serializeEvidence(evidence)
 
-    const updated = await db.evidence.update({
-      where: { id: params.evidenceId },
-      data: {
-        title:       params.data.title ?? evidence.title,
-        description: params.data.description !== undefined ? params.data.description : evidence.description,
-        linkUrl:     params.data.linkUrl ?? evidence.linkUrl,
-        textContent: params.data.textContent ?? evidence.textContent,
-        ...(params.data.file ? {
-          fileUrl:  params.data.file.fileUrl,
-          fileName: params.data.file.fileName,
-          fileSize: params.data.file.fileSize,
-        } : {}),
-      },
-    })
+    const stored = d.upload
+      ? await ingestUpload(d.upload, { tenantId: params.tenantId, area: 'evidence', parentId: params.taskId })
+      : undefined
+
+    let updated
+    try {
+      updated = await db.$transaction(async (tx) => {
+        await tx.evidenceVersion.create({
+          data: {
+            evidenceId:      evidence.id,
+            version:         evidence.version,
+            title:           evidence.title,
+            description:     evidence.description,
+            fileUrl:         evidence.fileUrl,
+            fileName:        evidence.fileName,
+            fileSize:        evidence.fileSize,
+            storageProvider: evidence.storageProvider,
+            storageKey:      evidence.storageKey,
+            contentType:     evidence.contentType,
+            sha256:          evidence.sha256,
+            linkUrl:         evidence.linkUrl,
+            textContent:     evidence.textContent,
+            uploadedById:    evidence.submittedById,
+            uploadedAt:      evidence.updatedAt,
+            supersededById:  params.userId,
+          },
+        })
+
+        // Guarded by `version` so two simultaneous edits cannot both snapshot and overwrite the same version.
+        const res = await tx.evidence.updateMany({
+          where: { id: evidence.id, version: evidence.version },
+          data: {
+            ...next,
+            version: { increment: 1 },
+            ...(stored ? {
+              fileUrl:         null,
+              fileName:        stored.fileName,
+              fileSize:        stored.fileSize,
+              storageProvider: stored.storageProvider,
+              storageKey:      stored.storageKey,
+              contentType:     stored.contentType,
+              sha256:          stored.sha256,
+            } : {}),
+          },
+        })
+        if (res.count !== 1) throw new Error('This evidence was changed by someone else. Reload and try again.')
+        return tx.evidence.findUniqueOrThrow({ where: { id: evidence.id }, include: { versions: { orderBy: { version: 'desc' } } } })
+      })
+    } catch (err) {
+      if (stored) await discardStoredFile(stored)
+      throw err
+    }
 
     await logTenantAction({
       tenantId: params.tenantId, userId: params.userId, action: TenantAuditAction.EVIDENCE_UPDATED,
       targetType: 'evidence', targetId: params.evidenceId, targetName: updated.title,
-      details: { taskId: params.taskId, replacedFile: !!params.data.file },
+      details: { taskId: params.taskId, replacedFile: !!stored, fromVersion: evidence.version, toVersion: updated.version, sha256: stored?.sha256 ?? null },
     })
 
-    return updated
+    return serializeEvidence(updated)
   },
 
   // ── Record a gap finding when rejecting a task ──────────────────────────────
@@ -618,7 +709,8 @@ export const tasksService = {
       otherReason?: string
       remediation: string
       actionIds: string[]
-      files: { fileName: string; fileSize: number; fileUrl: string }[]
+      /** uploaded temp files, validated and moved into storage below */
+      uploads: IncomingFile[]
     }
   }) {
     const task = await db.complianceTask.findFirst({ where: { tenantId: params.tenantId, id: params.taskId } })
@@ -627,45 +719,62 @@ export const tasksService = {
     const user = await db.user.findUnique({ where: { id: params.userId }, select: { role: true } })
     if (!user) throw new Error('User not found')
 
-    const finding = await db.$transaction(async (tx) => {
-      const gf = await tx.gapFinding.create({
-        data: {
-          tenantId:    params.tenantId,
-          taskId:      params.taskId,
-          raisedById:  params.userId,
-          role:        user.role,
-          reasonCodes: params.data.reasonCodes,
-          otherReason: params.data.otherReason ?? null,
-          remediation: params.data.remediation,
-        },
+    const stored: StoredFile[] = []
+    let finding
+    try {
+      for (const file of params.data.uploads) {
+        stored.push(await ingestUpload(file, { tenantId: params.tenantId, area: 'gap-findings', parentId: params.taskId }))
+      }
+
+      finding = await db.$transaction(async (tx) => {
+        const gf = await tx.gapFinding.create({
+          data: {
+            tenantId:    params.tenantId,
+            taskId:      params.taskId,
+            raisedById:  params.userId,
+            role:        user.role,
+            reasonCodes: params.data.reasonCodes,
+            otherReason: params.data.otherReason ?? null,
+            remediation: params.data.remediation,
+          },
+        })
+
+        for (const actionId of params.data.actionIds) {
+          const taskAction = await tx.taskAction.upsert({
+            where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: actionId } },
+            update: {},
+            create: { taskId: params.taskId, predefinedActionId: actionId },
+          })
+          await tx.gapFindingAction.create({
+            data: { gapFindingId: gf.id, taskActionId: taskAction.id },
+          })
+        }
+
+        if (stored.length > 0) {
+          await tx.gapFindingFile.createMany({
+            data: stored.map(f => ({
+              gapFindingId:    gf.id,
+              fileName:        f.fileName,
+              fileSize:        f.fileSize,
+              storageProvider: f.storageProvider,
+              storageKey:      f.storageKey,
+              contentType:     f.contentType,
+              sha256:          f.sha256,
+            })),
+          })
+        }
+
+        return gf
       })
-
-      for (const actionId of params.data.actionIds) {
-        const taskAction = await tx.taskAction.upsert({
-          where:  { taskId_predefinedActionId: { taskId: params.taskId, predefinedActionId: actionId } },
-          update: {},
-          create: { taskId: params.taskId, predefinedActionId: actionId },
-        })
-        await tx.gapFindingAction.create({
-          data: { gapFindingId: gf.id, taskActionId: taskAction.id },
-        })
-      }
-
-      if (params.data.files.length > 0) {
-        await tx.gapFindingFile.createMany({
-          data: params.data.files.map(f => ({
-            gapFindingId: gf.id, fileUrl: f.fileUrl, fileName: f.fileName, fileSize: f.fileSize,
-          })),
-        })
-      }
-
-      return gf
-    })
+    } catch (err) {
+      await Promise.all(stored.map(discardStoredFile))
+      throw err
+    }
 
     await logTenantAction({
       tenantId: params.tenantId, userId: params.userId, action: TenantAuditAction.GAP_FINDING_CREATED,
       targetType: 'task', targetId: params.taskId, targetName: task.title,
-      details: { gapFindingId: finding.id, actionIds: params.data.actionIds, reasonCodes: params.data.reasonCodes },
+      details: { gapFindingId: finding.id, actionIds: params.data.actionIds, reasonCodes: params.data.reasonCodes, files: stored.length },
     })
 
     return finding

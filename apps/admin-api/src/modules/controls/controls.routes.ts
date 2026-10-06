@@ -1,10 +1,11 @@
 import { Router } from 'express'
-import multer from 'multer'
 import { controlsController } from './controls.controller'
 import { authenticate } from '../../middleware/auth'
+import { cleanupTempUploads, createUploader } from '../../storage/master-evidence'
 
 const router  = Router()
-const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } })
+// Sample-evidence uploads stream to a temp file (not RAM); the service validates and stores them.
+const upload  = createUploader()
 
 router.use(authenticate)
 
@@ -26,6 +27,7 @@ router.put('/:id/actions/:actionId/products',  (controlsController as any).setAc
 // ── Master Evidence ───────────────────────────────────────────────────────────
 router.post(
   '/:id/actions/:actionId/products/:productId/master-evidence',
+  cleanupTempUploads,
   upload.single('file'),
   (controlsController as any).createMasterEvidence
 )

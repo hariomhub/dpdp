@@ -1,8 +1,14 @@
+// Settings are validated before anything else runs (see config/boot-check-worker.ts).
+import './config/boot-check-worker'
 import { Worker, Job } from 'bullmq'
+import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { cloudScansQueue } from './queue/queues'
 import { CLOUD_SCANS_QUEUE_NAME, JOB_NAMES } from './queue/queues'
+import { DASHBOARD_SNAPSHOTS_QUEUE_NAME, SNAPSHOT_JOB_NAMES, dashboardSnapshotsQueue } from './queue/snapshot-queue'
 import { getRedisConnectionOptions } from './queue/redis-connection'
 import { processConnectionTest } from './queue/processors/connection-test.processor'
 import { processDiscoveryScan } from './queue/processors/discovery-scan.processor'
+import { processCaptureDailySnapshot } from './queue/processors/dashboard-snapshot.processor'
 
 async function dispatch(job: Job): Promise<void> {
   switch (job.name) {
@@ -10,6 +16,15 @@ async function dispatch(job: Job): Promise<void> {
       return processConnectionTest(job.data)
     case JOB_NAMES.DISCOVERY_SCAN:
       return processDiscoveryScan(job.data)
+    default:
+      throw new Error(`No processor registered for job name "${job.name}"`)
+  }
+}
+
+async function dispatchSnapshot(job: Job): Promise<void> {
+  switch (job.name) {
+    case SNAPSHOT_JOB_NAMES.CAPTURE_DAILY:
+      return processCaptureDailySnapshot()
     default:
       throw new Error(`No processor registered for job name "${job.name}"`)
   }
@@ -33,10 +48,47 @@ worker.on('failed', (job, err) => {
   console.error(`[worker] Job ${job?.id} (${job?.name}) failed:`, err.message)
 })
 
-console.log(`[worker] Listening on queue "${CLOUD_SCANS_QUEUE_NAME}"...`)
-
-process.on('SIGTERM', async () => {
-  console.log('[worker] SIGTERM received, closing gracefully...')
-  await worker.close()
-  process.exit(0)
+const snapshotWorker = new Worker(DASHBOARD_SNAPSHOTS_QUEUE_NAME, dispatchSnapshot, {
+  connection: getRedisConnectionOptions(),
+  concurrency: 1,
 })
+
+snapshotWorker.on('completed', (job) => {
+  console.log(`[worker] Job ${job.id} (${job.name}) completed`)
+})
+
+snapshotWorker.on('failed', (job, err) => {
+  console.error(`[worker] Job ${job?.id} (${job?.name}) failed:`, err.message)
+})
+
+// Idempotent/keyed — safe to call on every worker restart without
+// duplicating the schedule (BullMQ dedupes by scheduler id).
+dashboardSnapshotsQueue.upsertJobScheduler(
+  'daily-dashboard-snapshot',
+  { pattern: '0 1 * * *' }, // 01:00 daily
+  { name: SNAPSHOT_JOB_NAMES.CAPTURE_DAILY, data: {} }
+).catch(err => console.error('[worker] Failed to register daily snapshot scheduler:', err))
+
+console.log(`[worker] Listening on queues "${CLOUD_SCANS_QUEUE_NAME}", "${DASHBOARD_SNAPSHOTS_QUEUE_NAME}"...`)
+
+// Finish the jobs in progress, then release queues and database connections. A job that is still running when the
+// platform's kill timeout hits is picked up again by another worker (BullMQ stalled-job handling).
+let closing = false
+async function shutdown(signal: string) {
+  if (closing) return
+  closing = true
+  console.log(`[worker] ${signal} received, closing gracefully...`)
+  try {
+    await worker.close()
+    await snapshotWorker.close()
+    await cloudScansQueue.close()
+    await dashboardSnapshotsQueue.close()
+    await getTenantPrisma().$disconnect()
+    await getSuperAdminPrisma().$disconnect()
+  } catch (err) {
+    console.error('[worker] error while closing', err)
+  }
+  process.exit(0)
+}
+process.on('SIGTERM', () => { void shutdown('SIGTERM') })
+process.on('SIGINT',  () => { void shutdown('SIGINT') })

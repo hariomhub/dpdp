@@ -149,6 +149,25 @@ export const regulationsController = {
     }
   },
 
+  async deleteRegulation(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        password: z.string().min(1, 'Password is required'),
+        confirmShortCode: z.string().min(1, 'Confirmation text is required'),
+      }).parse(req.body)
+
+      const result = await regulationsService.deleteRegulation({
+        id: req.params.id,
+        ...body,
+        adminId: req.adminId!,
+        ipAddress: req.ip,
+      })
+      res.json({ success: true, data: result, message: 'Regulation deleted' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   async addControl(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { controlId } = z.object({
@@ -206,6 +225,148 @@ export const regulationSectionsController = {
     try {
       await regulationSectionsService.deleteSection(req.params.sid)
       res.json({ success: true, message: 'Section deleted' })
+    } catch (err) { next(err) }
+  },
+}
+
+// ─── Node controller (generic tree — appended) ───────────────────────────
+import { regulationNodesService, regulationApplicabilityService } from './regulations.service'
+
+export const regulationNodesController = {
+  async list(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await regulationNodesService.getNodes(req.params.id)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+
+  async create(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        parentId: z.string().uuid().nullable().optional(),
+        nodeType: z.string().min(1),
+        code: z.string().min(1),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        orderIndex: z.number().int().optional(),
+      }).parse(req.body)
+
+      const node = await regulationNodesService.createNode({
+        regulationId: req.params.id,
+        ...body,
+        adminId: req.adminId!,
+      })
+      res.status(201).json({ success: true, data: node, message: 'Node created' })
+    } catch (err) { next(err) }
+  },
+
+  async update(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        nodeType: z.string().min(1).optional(),
+        code: z.string().min(1).optional(),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        orderIndex: z.number().int().optional(),
+      }).parse(req.body)
+
+      const node = await regulationNodesService.updateNode({
+        nodeId: req.params.nodeId,
+        data: body,
+        adminId: req.adminId!,
+      })
+      res.json({ success: true, data: node, message: 'Node updated' })
+    } catch (err) { next(err) }
+  },
+
+  async delete(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await regulationNodesService.deleteNode(req.params.nodeId, req.adminId!)
+      res.json({ success: true, message: 'Node deleted' })
+    } catch (err) { next(err) }
+  },
+
+  async move(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { newParentId } = z.object({ newParentId: z.string().uuid().nullable() }).parse(req.body)
+      await regulationNodesService.moveNode({ nodeId: req.params.nodeId, newParentId, adminId: req.adminId! })
+      res.json({ success: true, message: 'Node moved' })
+    } catch (err) { next(err) }
+  },
+}
+
+export const regulationApplicabilityController = {
+  async listCategories(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await regulationApplicabilityService.listCategories(req.params.id)
+      res.json({ success: true, data })
+    } catch (err) { next(err) }
+  },
+
+  async createCategory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        code: z.string().min(1),
+        label: z.string().min(1),
+        criteriaSummary: z.string().optional(),
+        orderIndex: z.number().int().optional(),
+      }).parse(req.body)
+
+      const category = await regulationApplicabilityService.createCategory({
+        regulationId: req.params.id,
+        ...body,
+        adminId: req.adminId!,
+      })
+      res.status(201).json({ success: true, data: category, message: 'Category created' })
+    } catch (err) { next(err) }
+  },
+
+  async updateCategory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        code: z.string().min(1).optional(),
+        label: z.string().min(1).optional(),
+        criteriaSummary: z.string().optional(),
+        orderIndex: z.number().int().optional(),
+      }).parse(req.body)
+
+      const category = await regulationApplicabilityService.updateCategory({
+        categoryId: req.params.categoryId,
+        data: body,
+        adminId: req.adminId!,
+      })
+      res.json({ success: true, data: category, message: 'Category updated' })
+    } catch (err) { next(err) }
+  },
+
+  async deleteCategory(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await regulationApplicabilityService.deleteCategory(req.params.categoryId)
+      res.json({ success: true, message: 'Category deleted' })
+    } catch (err) { next(err) }
+  },
+
+  async setNodeApplicability(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        applicabilityCategoryId: z.string().uuid(),
+        status: z.enum(['MANDATORY', 'APPLICABLE', 'EXEMPT']),
+        note: z.string().optional(),
+      }).parse(req.body)
+
+      const result = await regulationApplicabilityService.setNodeApplicability({
+        nodeId: req.params.nodeId,
+        ...body,
+        adminId: req.adminId!,
+      })
+      res.json({ success: true, data: result, message: 'Node applicability set' })
+    } catch (err) { next(err) }
+  },
+
+  async listNodeApplicabilities(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await regulationApplicabilityService.listNodeApplicabilities(req.params.nodeId)
+      res.json({ success: true, data })
     } catch (err) { next(err) }
   },
 }

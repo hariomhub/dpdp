@@ -1,7 +1,4 @@
-import {
-  getTenantPrisma,
-  getSuperAdminPrisma,
-} from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
 import {
   AssetType,
   AssetStatus,
@@ -14,9 +11,10 @@ import {
 } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
 import { sendTeamInviteEmail } from '../../utils/email'
+import { HttpError } from '../../utils/http-error'
+import { nextCode } from '../../utils/code-counter'
 
 const db = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
 
 // ─── Enum mappers (frontend label → Prisma enum) ─────────────────────────────
 
@@ -122,26 +120,6 @@ function parseVolume(raw: string | number | undefined): number {
   return isNaN(n) ? 0 : Math.max(0, n)
 }
 
-/** Pads an asset counter into AST-NNN format */
-function buildAssetCode(n: number): string {
-  return `AST-${String(n).padStart(3, '0')}`
-}
-
-/**
- * Returns the highest numeric suffix currently used in this tenant's asset
- * codes, so new codes always increment past the last one ever assigned.
- */
-async function getMaxAssetCodeNumber(tenantId: string): Promise<number> {
-  const codes = await db.asset.findMany({
-    where: { tenantId },
-    select: { assetCode: true },
-  })
-  return codes.reduce((max, { assetCode }) => {
-    const n = parseInt(assetCode.replace('AST-', ''), 10)
-    return isNaN(n) ? max : Math.max(max, n)
-  }, 0)
-}
-
 // ─── Input types (exported for controller use) ────────────────────────────────
 
 export interface PiiRecordInput {
@@ -208,7 +186,7 @@ export const onboardingService = {
 
   // ── GET /onboarding/status ──────────────────────────────────────────────────
   async getStatus(tenantId: string) {
-    const tenant = await superAdminDb.tenant.findUnique({
+    const tenant = await db.tenantProfile.findUnique({
       where: { id: tenantId },
       select: {
         name:           true,
@@ -283,7 +261,7 @@ export const onboardingService = {
       ceoName: string
     }
   }) {
-    const updated = await superAdminDb.tenant.update({
+    const updated = await db.tenantProfile.update({
       where: { id: params.tenantId },
       data: params.data,
     })
@@ -308,7 +286,7 @@ export const onboardingService = {
     classification: string
     classUncertain: boolean
   }) {
-    const updated = await superAdminDb.tenant.update({
+    const updated = await db.tenantProfile.update({
       where: { id: params.tenantId },
       data: {
         classification: params.classification,
@@ -349,6 +327,13 @@ export const onboardingService = {
   }) {
     const { tenantId, userId, departments } = params
 
+    // This call REPLACES each department's assets and suppliers, which is only safe before anything references them.
+    // Once onboarding is complete, structure is changed through Settings (the org endpoints), never by re-running the wizard.
+    const tenantState = await db.tenantProfile.findUnique({ where: { id: tenantId }, select: { onboardedAt: true } })
+    if (tenantState?.onboardedAt) {
+      throw HttpError.forbidden('Onboarding is already complete. Change departments and assets from Settings instead.')
+    }
+
     if (departments.length === 0) {
       throw new Error('At least one department is required')
     }
@@ -358,9 +343,6 @@ export const onboardingService = {
     if (new Set(deptNames).size !== deptNames.length) {
       throw new Error('Department names must be unique within the payload')
     }
-
-    // Get current max asset code to avoid duplicate codes across repeated saves
-    let assetCounter = await getMaxAssetCodeNumber(tenantId)
 
     const savedDepartments: Array<{ frontendId: string; dbId: string; name: string }> = []
 
@@ -404,8 +386,9 @@ export const onboardingService = {
               )
             }
 
-            assetCounter++
-            const assetCode = buildAssetCode(assetCounter)
+            // Allocated by the database inside this transaction: repeated saves continue the sequence and two
+            // concurrent saves can never be handed the same code.
+            const assetCode = await nextCode(tx, tenantId, 'ASSET')
 
             const allPiiCategories = [
               ...new Set(assetInput.piiRecords.flatMap(p => p.categories)),
@@ -505,8 +488,6 @@ export const onboardingService = {
                   `"${saInput.assetType}" is not a recognised asset type`
                 )
               }
-
-              assetCounter++ // Keeps global uniqueness for future code expansion
 
               const supplierAsset = await tx.supplierAsset.create({
                 data: {
@@ -610,7 +591,7 @@ export const onboardingService = {
         where:  { id: userId },
         select: { name: true },
       }),
-      superAdminDb.tenant.findUnique({
+      db.tenantProfile.findUnique({
         where:  { id: tenantId },
         select: { name: true },
       }),
@@ -730,7 +711,7 @@ export const onboardingService = {
     userId:     string
     ipAddress?: string
   }) {
-    const tenant = await superAdminDb.tenant.findUnique({
+    const tenant = await db.tenantProfile.findUnique({
       where: { id: params.tenantId },
       select: {
         name:           true,
@@ -765,7 +746,7 @@ export const onboardingService = {
       )
     }
 
-    await superAdminDb.tenant.update({
+    await db.tenantProfile.update({
       where: { id: params.tenantId },
       data:  { status: 'ACTIVE', onboardedAt: new Date() },
     })

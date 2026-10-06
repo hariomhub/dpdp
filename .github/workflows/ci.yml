@@ -1,0 +1,89 @@
+name: CI
+
+# Quality gate for every pull request and every push to main: typecheck, tests (including the Azure-storage adapter
+# against the Azurite emulator), and a replay of the database migrations from an EMPTY database - which is exactly what
+# a fresh install (cloud or on-prem) does. The deploy workflows are separate and unchanged.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      # Throwaway Postgres for the migration replay below.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      # `prisma generate` only reads the schema; these URLs are not connected to by that step.
+      SUPER_ADMIN_DATABASE_URL: postgresql://postgres:ci@localhost:5432/ci_super_admin
+      TENANT_DATABASE_URL: postgresql://postgres:ci@localhost:5432/ci_tenant
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # The Prisma clients are generated into node_modules, so they must be (re)generated after every install.
+      - name: Generate Prisma clients
+        run: npm run generate --workspace=packages/database
+
+      - name: Typecheck
+        run: |
+          npx tsc --noEmit -p apps/tenant-api
+          npx tsc --noEmit -p apps/admin-api
+          npx tsc --noEmit -p apps/tenant
+          npx tsc --noEmit -p packages/storage
+
+      - name: Start Azure Storage emulator (Azurite)
+        run: |
+          npx azurite --silent --location "$RUNNER_TEMP/azurite" --skipApiVersionCheck --blobHost 127.0.0.1 &
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null http://127.0.0.1:10000/ && break
+            sleep 1
+          done
+
+      - name: Test
+        env:
+          AZURE_TEST_CONNECTION_STRING: UseDevelopmentStorage=true
+        run: npm test
+
+      # Creates scratch databases, applies every migration of both schemas, runs the database-backed tests
+      # (code counters, deactivation, directory sync, sessions, assessments, the real HTTP app), drops them.
+      - name: Database tests
+        env:
+          TEST_PG_ADMIN_URL: postgresql://postgres:ci@localhost:5432/postgres
+        run: npm run test:db
+
+      # A fresh install runs every migration in order against an empty database. This proves the whole history still
+      # replays, and that the result matches schema.prisma exactly (no hand-edited or drifted migrations).
+      - name: Tenant migrations - replay from empty + drift check
+        run: |
+          npm run migrate:tenant:prod --workspace=packages/database
+          cd packages/database
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/tenant/schema.prisma --config=prisma/tenant/prisma.config.ts --exit-code
+
+      - name: Super Admin migrations - replay from empty + drift check
+        run: |
+          npm run migrate:super-admin:prod --workspace=packages/database
+          cd packages/database
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/super-admin/schema.prisma --config=prisma/super-admin/prisma.config.ts --exit-code

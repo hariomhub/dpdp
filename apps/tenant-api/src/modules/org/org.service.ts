@@ -1,9 +1,11 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
 import {
   AssetType, AssetStatus, Criticality, Sensitivity,
   LegalBasis, PrincipalType, TenantAuditAction,
 } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
+import { nextCode } from '../../utils/code-counter'
+import { HttpError } from '../../utils/http-error'
 
 const db = getTenantPrisma()
 
@@ -36,15 +38,6 @@ const mapSens   = (v: string) => ({ Low: Sensitivity.LOW, Medium: Sensitivity.ME
 const mapLegal  = (v: string) => ({ Consent: LegalBasis.CONSENT, Contract: LegalBasis.CONTRACT, 'Legal Obligation': LegalBasis.LEGAL_OBLIGATION, 'Legitimate Interest': LegalBasis.LEGITIMATE_INTEREST, 'Vital Interest': LegalBasis.VITAL_INTEREST } as Record<string, LegalBasis>)[v] ?? LegalBasis.CONSENT
 const mapPrinc  = (v: string) => ({ Customer: PrincipalType.CUSTOMER, Employee: PrincipalType.EMPLOYEE, Vendor: PrincipalType.VENDOR, Minor: PrincipalType.MINOR, Other: PrincipalType.OTHER } as Record<string, PrincipalType>)[v] ?? PrincipalType.OTHER
 const mapStatus = (v: string) => ({ Active: AssetStatus.ACTIVE, Inactive: AssetStatus.INACTIVE, 'Under Review': AssetStatus.UNDER_REVIEW } as Record<string, AssetStatus>)[v] ?? AssetStatus.ACTIVE
-
-async function nextAssetCode(tenantId: string): Promise<string> {
-  const codes = await db.asset.findMany({ where: { tenantId }, select: { assetCode: true } })
-  const max = codes.reduce((m, { assetCode }) => {
-    const n = parseInt(assetCode.replace('AST-', ''), 10)
-    return isNaN(n) ? m : Math.max(m, n)
-  }, 0)
-  return `AST-${String(max + 1).padStart(3, '0')}`
-}
 
 function parseVolume(raw: string | number | undefined): number {
   if (typeof raw === 'number') return Math.max(0, Math.floor(raw))
@@ -175,7 +168,7 @@ export const orgService = {
     const dept = await db.department.findFirst({ where: { tenantId, id: deptId } })
     if (!dept) throw new Error('Department not found')
 
-    const assetCode = await nextAssetCode(tenantId)
+    const assetCode = await nextCode(db, tenantId, 'ASSET')
 
     const asset = await db.asset.create({
       data: {
@@ -210,6 +203,13 @@ export const orgService = {
   }) {
     const asset = await db.asset.findFirst({ where: { tenantId, id: assetId } })
     if (!asset) throw new Error('Asset not found')
+
+    // The owner is a soft reference (no foreign key), so nothing else would stop an id from another record or a
+    // deactivated person being stored here. Clearing the owner (null) is always allowed.
+    if (data.ownerId) {
+      const owner = await db.user.findFirst({ where: { tenantId, id: data.ownerId, status: 'ACTIVE' }, select: { id: true } })
+      if (!owner) throw HttpError.badRequest('The selected owner is not an active user of your organization')
+    }
 
     const updated = await db.asset.update({
       where: { id: assetId },

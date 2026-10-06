@@ -251,12 +251,15 @@ export function RiskReportsPage() {
                     ['Regulations', filters.regs.length ? filters.regs.join(', ') : 'All regulations'],
                     ['Assets', filters.assets.length ? filters.assets.join(', ') : 'All assets'],
                     ['Risk Levels', filters.riskLevels.length ? filters.riskLevels.join(', ') : 'All levels'],
-                    ['Rows in export', String(
-                      selectedType === 'department' ? filteredDepts.length
-                      : selectedType === 'asset' ? filteredAssets.length
-                      : selectedType === 'regulation' ? filteredRegs.length
-                      : (risk?.topDrivers.length ?? 0)
-                    )],
+                    ['Rows in export',
+                      selectedType === 'department' ? String(filteredDepts.length)
+                      : selectedType === 'asset' ? String(filteredAssets.length)
+                      : selectedType === 'regulation' ? String(filteredRegs.length)
+                      // 'overall' exports a summary metric row plus the full top-drivers
+                      // list — a bare count of just topDrivers.length would understate
+                      // what's actually in the CSV.
+                      : `1 summary metric + ${risk?.topDrivers.length ?? 0} risk driver${(risk?.topDrivers.length ?? 0) !== 1 ? 's' : ''}`
+                    ],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <p className="text-[12.5px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{k}</p>

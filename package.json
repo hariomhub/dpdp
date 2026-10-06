@@ -11,11 +11,16 @@
     "dev": "concurrently -n turbo,scanner -c blue,magenta \"turbo dev\" \"node scripts/dev-scanner.js\"",
     "build": "turbo build",
     "lint": "turbo lint",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "test": "vitest run",
+    "azurite": "azurite --silent --location .azurite --skipApiVersionCheck",
+    "test:db": "node scripts/test-db.js"
   },
   "devDependencies": {
+    "azurite": "^3.35.0",
     "concurrently": "^9.1.0",
-    "turbo": "^2.9.7"
+    "turbo": "^2.9.7",
+    "vitest": "^3.2.0"
   },
   "engines": {
     "node": ">=18"

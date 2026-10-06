@@ -1,20 +1,12 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
+import { lib } from '../../library/client'
 import { TenantAuditAction } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
-import { encryptWithKey, decryptWithKey } from '../../utils/crypto'
-import { config } from '../../config'
+import { encryptCreds, decryptCreds, loadConnectionWithCredentials } from './credentials'
 import { enqueueConnectionTest } from '../../queue/queues'
 
 const db = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
-
-function encryptCreds(credentials: Record<string, unknown>): string {
-  return encryptWithKey(JSON.stringify(credentials), config.cloudScanner.encryptionKey)
-}
-
-function decryptCreds(ciphertext: string): Record<string, unknown> {
-  return JSON.parse(decryptWithKey(ciphertext, config.cloudScanner.encryptionKey))
-}
+const superAdminDb = lib()   // Library content (cloud provider catalog)
 
 export const cloudConnectionsService = {
 
@@ -101,7 +93,6 @@ export const cloudConnectionsService = {
       tenantId: params.tenantId,
       connectionId: connection.id,
       provider: params.providerKey,
-      credentials: params.credentials,
     })
 
     return connection
@@ -114,13 +105,10 @@ export const cloudConnectionsService = {
     })
     if (!connection) throw new Error('Connection not found')
 
-    const credentials = decryptCreds(connection.credentialEncrypted)
-
     await enqueueConnectionTest({
       tenantId: params.tenantId,
       connectionId: connection.id,
       provider: connection.providerKey,
-      credentials,
     })
 
     return { queued: true }
@@ -144,12 +132,14 @@ export const cloudConnectionsService = {
     return { disconnected: true }
   },
 
-  // Internal — used by the discovery module, not exposed as its own route.
-  async getDecryptedCredentials(connectionId: string, tenantId: string) {
+  // Internal — used by the discovery module to confirm a connection exists before queueing a scan. It deliberately
+  // returns no credentials: they are loaded and decrypted by the worker (see credentials.ts).
+  async getConnectionForScan(connectionId: string, tenantId: string) {
     const connection = await db.tenantCloudConnection.findFirst({
       where: { id: connectionId, tenantId },
+      select: { id: true, providerKey: true },
     })
     if (!connection) throw new Error('Connection not found')
-    return { providerKey: connection.providerKey, credentials: decryptCreds(connection.credentialEncrypted) }
+    return { providerKey: connection.providerKey }
   },
 }

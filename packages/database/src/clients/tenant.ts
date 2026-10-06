@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/tenant-client'
-import { Pool } from 'pg'
+import { createPool } from './pool'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 let instance: PrismaClient | undefined
@@ -9,7 +9,7 @@ export function getTenantPrisma(): PrismaClient {
     if (!process.env.TENANT_DATABASE_URL) {
       throw new Error('TENANT_DATABASE_URL is not defined')
     }
-    const pool = new Pool({ connectionString: process.env.TENANT_DATABASE_URL })
+    const pool = createPool(process.env.TENANT_DATABASE_URL, 'tenant')
     const adapter = new PrismaPg(pool)
     instance = new PrismaClient({ adapter })
   }

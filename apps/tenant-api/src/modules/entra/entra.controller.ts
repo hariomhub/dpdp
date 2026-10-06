@@ -21,9 +21,16 @@ const mappingSchema = z.object({
 })
 
 const loginSchema = z.object({
-  code: z.string().min(1, 'Authorization code is required'),
-  tenantId: z.string().uuid('Tenant ID is required'),
-  redirectUri: z.string().url('Redirect URI must be a valid URL'),
+  code:  z.string().min(1, 'Authorization code is required'),
+  // Signed token created by GET /entra/auth-url, and the browser-held value that proves the same browser started the
+  // sign-in. The organisation and redirect address are NOT taken from the request.
+  state: z.string().min(20, 'Sign-in state is required'),
+  nonce: z.string().min(20, 'Sign-in nonce is required'),
+})
+
+const syncSchema = z.object({
+  /** Set after the person has seen the "this would remove N users" warning and agreed. */
+  confirmRemovals: z.boolean().optional(),
 })
 
 export const entraController = {
@@ -109,14 +116,16 @@ export const entraController = {
   /** No credentials in request — reads from stored EntraConfig */
   async syncUsers(req: AuthRequest, res: Response, next: NextFunction) {
     try {
+      const body = syncSchema.parse(req.body ?? {})
       const result = await entraService.syncUsers({
         tenantId: req.tenantId!,
         userId: req.userId!,
+        confirmRemovals: body.confirmRemovals,
       })
       res.json({
         success: true,
         data: result,
-        message: `Sync complete: ${result.created} created, ${result.updated} updated`,
+        message: `Sync complete: ${result.created} created, ${result.updated} updated, ${result.deactivated} deactivated`,
       })
     } catch (err) { next(err) }
   },

@@ -1,0 +1,11 @@
+# SKELETON (step 6). Override: use the customer's own PostgreSQL (managed by their DBAs) instead of the bundled one.
+#   docker compose -f compose.yaml -f compose.external-db.yaml up -d
+# Set TENANT_DATABASE_URL in .env to the customer's server (sslmode=require recommended). The customer's DBA creates the
+# database and a role with the privileges the migration step needs; the application role needs only data access.
+# The `postgres` service is disabled via a profile, and nothing depends on it any more.
+services:
+  postgres:
+    profiles: ["bundled-db"]            # not started unless asked for
+  migrate:
+    depends_on: !reset {}               # no dependency on the bundled database
+    networks: [data, frontend]          # needs to reach the customer's server

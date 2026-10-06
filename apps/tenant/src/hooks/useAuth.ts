@@ -88,6 +88,22 @@ export function useLogin() {
   })
 }
 
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      apiClient.post<{ success: boolean; message: string }>('/auth/forgot-password', { email }),
+    onError: (err: Error) => toast.error(err.message || 'Could not send the reset email'),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: { token: string; password: string }) =>
+      apiClient.post<{ success: boolean; message: string }>('/auth/reset-password', data),
+    onError: (err: Error) => toast.error(err.message || 'Could not reset the password'),
+  })
+}
+
 export function useVerifyInvite(token: string) {
   return useQuery({
     queryKey: ['auth', 'invite', token],
@@ -142,7 +158,8 @@ export function useLogout() {
   const queryClient  = useQueryClient()
 
   return useMutation({
-    mutationFn: () => apiClient.post('/auth/logout'),
+    // Sending the refresh token lets the server end this session for good, not just forget it in the browser.
+    mutationFn: () => apiClient.post('/auth/logout', { refreshToken: apiClient.tokens.getRefresh() }),
     onSettled: () => {
       apiClient.tokens.clear()
       queryClient.clear()

@@ -5,11 +5,12 @@ import {
   Database, Shield, ChevronRight, Edit2, Loader2, Check, RefreshCw, Trash2, Link as LinkIcon, SlidersHorizontal
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { apiOrigin } from '../../../lib/api-client';
+import { openStoredFile } from '../../../lib/files';
 import {
   useListTasks, useTaskDetail, useStartTask, useSubmitTask,
   useReviewTask, useSignoffTask, useRejectFinalTask, useAssignTask,
   useAssignableUsers, useDeleteEvidence, type Task, type Action, type Evidence, type ActionEvidence, type GapFinding,
+  type EvidenceVersionRef,
 } from '../../../hooks/useTasks';
 import { useAvailableAssets, useAssessmentsList } from '../../../hooks/useAssessments';
 import { useListDepartments } from '../../../hooks/useOrg';
@@ -65,12 +66,46 @@ function relativeTime(iso: string): string {
   return `${d} days ago`;
 }
 
-type ViewableEvidence = Pick<Evidence, 'type' | 'linkUrl' | 'fileUrl' | 'title' | 'textContent'>;
+type ViewableEvidence = Pick<Evidence, 'id' | 'type' | 'linkUrl' | 'hasFile' | 'title' | 'textContent'>;
 
 function viewEvidence(ev: ViewableEvidence, onShowText: (title: string, text: string) => void) {
   if (ev.type === 'TEXT_NOTE') { onShowText(ev.title, ev.textContent ?? ''); return; }
-  const url = ev.type === 'LINK' ? ev.linkUrl : ev.fileUrl ? `${apiOrigin}${ev.fileUrl}` : null;
-  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  if (ev.type === 'LINK') {
+    if (ev.linkUrl) window.open(ev.linkUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  // Files are opened through the server, which checks access and records the view - there is no public file URL.
+  if (ev.hasFile) void openStoredFile({ kind: 'evidence', id: ev.id });
+}
+
+/** Earlier versions of an evidence record (kept when a file is replaced), each openable on its own. */
+function EvidenceVersionList({ evidenceId, versions }: { evidenceId: string; versions: EvidenceVersionRef[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1">
+      <button onClick={() => setOpen(o => !o)}
+        className="text-[13.5px] text-[#1A3E5C]/70 hover:text-[#1A3E5C] underline">
+        {open ? 'Hide' : 'Show'} previous versions ({versions.length})
+      </button>
+      {open && (
+        <ul className="mt-1 space-y-0.5">
+          {versions.map(v => (
+            <li key={v.id} className="flex items-center gap-2 text-[13.5px] text-slate-500">
+              <span className="font-medium">v{v.version}</span>
+              <span className="truncate">{v.fileName ?? v.title ?? 'details only'}</span>
+              <span className="text-slate-400 flex-shrink-0">· replaced {relativeTime(v.supersededAt)}</span>
+              {v.hasFile && (
+                <button onClick={() => void openStoredFile({ kind: 'evidence', id: evidenceId, versionId: v.id })}
+                  className="text-slate-400 hover:text-[#D4AF37] flex-shrink-0" title="View this version">
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function TextNoteModal({ title, text, onClose }: { title: string; text: string; onClose: () => void }) {
@@ -403,6 +438,7 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
                           Linked to: {ev.linkedActions.map(l => l.actionTitle).filter(Boolean).join(', ')}
                         </p>
                       )}
+                      {ev.versions?.length > 0 && <EvidenceVersionList evidenceId={ev.id} versions={ev.versions} />}
                     </div>
                     <button onClick={() => viewEvidence(ev, (title, text) => setViewingText({ title, text }))}
                       className="text-slate-400 hover:text-[#D4AF37] flex-shrink-0"><Eye className="w-4 h-4" /></button>
@@ -444,10 +480,10 @@ function TaskDetail({ taskId, onBack }: { taskId: string; onBack: () => void }) 
                   {gf.files.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-0.5">
                       {gf.files.map(f => (
-                        <a key={f.id} href={`${apiOrigin}${f.fileUrl}`} target="_blank" rel="noreferrer"
-                          className="text-[14px] text-red-600 underline flex items-center gap-1">
+                        <button key={f.id} onClick={() => void openStoredFile({ kind: 'gap', id: f.id })} disabled={!f.hasFile}
+                          className="text-[14px] text-red-600 underline flex items-center gap-1 disabled:no-underline disabled:opacity-50">
                           <FileText className="w-3 h-3" /> {f.fileName}
-                        </a>
+                        </button>
                       ))}
                     </div>
                   )}

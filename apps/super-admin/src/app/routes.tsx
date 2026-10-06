@@ -8,6 +8,7 @@ import { AdminDashboardPage } from './pages/superadmin/AdminDashboard';
 import { AdminOrganizationsPage } from './pages/superadmin/AdminOrganizations';
 import { AdminControlsPage } from './pages/superadmin/AdminControls';
 import { AdminControlFamilies } from './pages/superadmin/AdminControlFamilies';
+import { AdminMasterControlsPage } from './pages/superadmin/AdminMasterControls';
 import { AdminProductFamilies } from './pages/superadmin/AdminProductFamilies';
 import { AdminCloudProviders } from './pages/superadmin/AdminCloudProviders';
 import { AdminGenericAssetCatalog } from './pages/superadmin/AdminGenericAssetCatalog';
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
   { path: '/admin/organizations/:id', Component: Protected(AdminOrganizationsPage) },
   { path: '/admin/controls', Component: Protected(AdminControlsPage) },
   { path: '/admin/control-families', Component: Protected(AdminControlFamilies) },
+  { path: '/admin/master-controls', Component: Protected(AdminMasterControlsPage) },
   { path: '/admin/product-families', Component: Protected(AdminProductFamilies) },
   { path: '/admin/cloud-providers', Component: Protected(AdminCloudProviders) },
   { path: '/admin/asset-catalog', Component: Protected(AdminGenericAssetCatalog) },

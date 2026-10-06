@@ -1,12 +1,14 @@
 import axios from 'axios'
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
+import { lib } from '../../library/client'
 import { TenantAuditAction } from '@prisma/tenant-client'
 import { config } from '../../config'
 import { logTenantAction } from '../../utils/audit-logger'
+import { loadConnectionWithCredentials } from '../../modules/cloud-connections/credentials'
 import { DiscoveryScanJobData } from '../queues'
 
 const db = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
+const superAdminDb = lib()   // Library content (cloud provider catalog, generic asset templates)
 
 interface ScannerResource {
   uid: string
@@ -27,7 +29,14 @@ interface ScannerDiscoveryResponse {
 }
 
 export async function processDiscoveryScan(data: DiscoveryScanJobData): Promise<void> {
-  const { tenantId, connectionId, provider, credentials } = data
+  const { tenantId, connectionId, provider } = data
+
+  const connection = await loadConnectionWithCredentials(connectionId, tenantId)
+  if (!connection) {
+    console.warn(`[worker] discovery-scan skipped: connection ${connectionId} no longer exists`)
+    return
+  }
+  const { credentials } = connection
 
   const response = await axios.post<ScannerDiscoveryResponse>(
     `${config.cloudScanner.scannerServiceUrl}/discover`,

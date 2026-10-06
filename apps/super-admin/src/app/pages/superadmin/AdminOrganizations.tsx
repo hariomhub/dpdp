@@ -4,7 +4,7 @@ import {
   Plus, ArrowLeft, CheckCircle2, Mail, Search, Eye, Headphones,
   Ban, Building2, Users, Shield, ClipboardList, Activity, Clock,
   CreditCard, Download, Database, ChevronRight, ChevronDown,
-  Package, AlertTriangle, X, Loader2
+  Package, AlertTriangle, X, Loader2, KeyRound, Copy
 } from 'lucide-react'
 import {
   useOrganizations,
@@ -13,6 +13,7 @@ import {
   useSuspendOrganization,
   useActivateOrganization,
   useResendInvite,
+  useIssueLicence,
 } from '../../../hooks/useOrganizations'
 
 
@@ -137,8 +138,68 @@ function OrgStructureTab() {
   );
 }
 
+/** Generates the signed licence that activates the customer's deployment (and, later, renews it). */
+function LicenceModal({ orgId, orgName, onClose }: { orgId: string; orgName: string; onClose: () => void }) {
+  const issue = useIssueLicence();
+  const [airGapped, setAirGapped] = useState(false);
+  const [extend, setExtend] = useState('');
+  const result = issue.data;
+
+  const download = () => {
+    if (!result) return;
+    const url = URL.createObjectURL(new Blob([result.licence], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `${orgName.replace(/[^A-Za-z0-9]+/g, '-')}.licence`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2" style={{ fontFamily: 'Cinzel, serif' }}><KeyRound className="w-5 h-5 text-[#D4AF37]" /> Licence for {orgName}</h3>
+            <p className="text-[14px] text-slate-500 mt-1">The customer pastes this into their deployment (first-run page or Settings → Licence), or supplies it as a deployment secret. It names the organization, its plan and term, and lets the deployment invite its own CEO.</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        </div>
+
+        {!result ? (
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[14.5px] text-slate-700">
+              <input type="checkbox" checked={airGapped} onChange={e => setAirGapped(e.target.checked)} />
+              For a site that never connects to the internet (longer grace period: 60 days instead of 30)
+            </label>
+            <label className="flex items-center gap-2 text-[14.5px] text-slate-700">
+              Renew: extend the term by
+              <select value={extend} onChange={e => setExtend(e.target.value)} className="border border-slate-300 rounded px-2 py-1">
+                <option value="">— issue for the current term —</option>
+                {[1, 3, 6, 12, 24, 36].map(m => <option key={m} value={m}>{m} month{m > 1 ? 's' : ''}</option>)}
+              </select>
+            </label>
+            <button onClick={() => issue.mutate({ id: orgId, airGapped, extendMonths: extend ? Number(extend) : undefined })} disabled={issue.isPending}
+              className="px-4 py-2 bg-[#1A3E5C] hover:bg-[#15324a] text-white text-[14.5px] font-semibold rounded-lg disabled:opacity-60">
+              {issue.isPending ? 'Generating…' : 'Generate licence'}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-[14px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Valid until {new Date(result.validUntil).toLocaleDateString('en-IN')} · signed with key {result.keyId}</p>
+            <textarea readOnly value={result.licence} rows={6} className="w-full border border-slate-300 rounded-lg p-3 text-[12px] font-mono" onFocus={e => e.currentTarget.select()} />
+            <div className="flex gap-2">
+              <button onClick={() => navigator.clipboard?.writeText(result.licence)} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] border border-slate-300 rounded-lg hover:bg-slate-50"><Copy className="w-3.5 h-3.5" /> Copy</button>
+              <button onClick={download} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] border border-slate-300 rounded-lg hover:bg-slate-50"><Download className="w-3.5 h-3.5" /> Download file</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState('Org Details');
+  const [licenceOpen, setLicenceOpen] = useState(false);
   const { data: org, isLoading } = useOrganization(orgId);
 
   if (isLoading) {
@@ -176,6 +237,9 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setLicenceOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-[#1A3E5C] border border-[#1A3E5C]/30 rounded-lg hover:bg-[#1A3E5C]/5 transition-colors">
+              <KeyRound className="w-3.5 h-3.5" /> Licence
+            </button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-[14px] text-slate-600 border border-[#64748B]/20 rounded-lg hover:bg-slate-50 transition-colors">
               <Headphones className="w-3.5 h-3.5" /> Support Access
             </button>
@@ -191,6 +255,8 @@ function OrgDetailPage({ orgId, onBack }: { orgId: string; onBack: () => void })
           </div>
         </div>
       </div>
+
+      {licenceOpen && <LicenceModal orgId={orgId} orgName={org.name} onClose={() => setLicenceOpen(false)} />}
 
       {/* Tabs */}
       <div className="flex border-b border-[#64748B]/20 gap-0 overflow-x-auto">
@@ -695,10 +761,8 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
             <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 rounded-xl">
               <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
               <p className="text-[14px] text-amber-700 leading-relaxed">
-                An invitation email will be sent to{' '}
-                <strong>{form.ceoEmail}</strong>. The link expires in{' '}
-                {48} hours. If unused,
-                you can resend from the organization detail page.
+                After you create the organization, generate its <strong>licence</strong> from the organization page and give it to the customer.
+                Their deployment uses it to set itself up and invites <strong>{form.ceoEmail || 'the CEO'}</strong> by email.
               </p>
             </div>
 
@@ -737,10 +801,10 @@ function OnboardForm({ onBack }: { onBack: () => void }) {
           <p className="text-[13px] font-bold text-[#64748B] uppercase tracking-widest mb-3">What Happens Next</p>
           <div className="space-y-3">
             {[
-              { n: 1, t: 'Invitation sent', d: 'The CEO gets a setup link by email as soon as you submit.' },
-              { n: 2, t: 'CEO completes setup', d: 'They set a password and confirm organization details.' },
-              { n: 3, t: 'Status updates automatically', d: 'The org shows "Onboarding" until setup finishes, then "Active".' },
-              { n: 4, t: 'Resend anytime', d: "If the link expires unused, resend it from the org's detail page." },
+              { n: 1, t: 'Generate the licence', d: "Open the organization and press Licence. It is signed by you and names the organization, plan and term." },
+              { n: 2, t: 'Customer activates', d: 'They paste it into their deployment (or supply it as a secret). The deployment sets itself up and emails the CEO.' },
+              { n: 3, t: 'CEO completes setup', d: 'They set a password and confirm organization details.' },
+              { n: 4, t: 'Renew anytime', d: 'Before the term ends, generate a renewal licence from the same button; the customer installs it in Settings → Licence.' },
             ].map(s => (
               <div key={s.n} className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-[#64748B]/10 text-[#64748B] text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{s.n}</span>

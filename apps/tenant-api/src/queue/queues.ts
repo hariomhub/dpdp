@@ -26,18 +26,17 @@ export const cloudScansQueue = new Queue(CLOUD_SCANS_QUEUE_NAME, {
 
 // ─── Job payload types ─────────────────────────────────────────────────────
 
+// Payloads carry identifiers only - never credentials. The worker loads and decrypts them when it runs a job.
 export interface ConnectionTestJobData {
   tenantId: string
   connectionId: string
   provider: string
-  credentials: Record<string, unknown>
 }
 
 export interface DiscoveryScanJobData {
   tenantId: string
   connectionId: string
   provider: string
-  credentials: Record<string, unknown>
 }
 
 export const JOB_NAMES = {

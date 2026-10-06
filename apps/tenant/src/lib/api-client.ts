@@ -1,8 +1,9 @@
 import { appConfig } from '../config/env'
 
 const BASE = appConfig.apiUrl
-// Uploaded file/evidence URLs come back as root-relative paths (e.g. "/uploads/…"),
-// served outside the /api/v1 prefix — strip it to get the API server's origin.
+export const apiBase = BASE
+// The API server's origin. Uploaded files are no longer served from a public path; they are opened through the
+// authenticated /files endpoints (see lib/files.ts).
 export const apiOrigin = BASE.replace(/\/api\/v1\/?$/, '')
 
 // ─── Token management (localStorage) ─────────────────────────────────────────
@@ -59,7 +60,9 @@ async function parseResponse<T>(res: Response): Promise<T> {
     } else if (data.error) {
       msg = `${msg} (${data.error})`
     }
-    throw new Error(msg)
+    // Keep the server's full answer and status on the error, so a caller can act on more than the message (for example
+    // an Entra sync that needs the person's confirmation).
+    throw Object.assign(new Error(msg), { status: res.status, data })
   }
   return data
 }

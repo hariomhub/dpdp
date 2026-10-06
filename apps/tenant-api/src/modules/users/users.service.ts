@@ -1,10 +1,13 @@
-import { getTenantPrisma, getSuperAdminPrisma } from '@dpdp/database'
+import { getTenantPrisma } from '@dpdp/database'
+import { getOrgSummary } from '../../platform/tenant-profile'
 import { TenantRole, TenantAuditAction } from '@prisma/tenant-client'
 import { logTenantAction } from '../../utils/audit-logger'
 import { sendTeamInviteEmail } from '../../utils/email'
+import { lmsService } from '../lms/lms.service'
+import { invalidateUserAccess } from '../../utils/user-access'
+import { releaseWorkingTasks, HandoverResult } from './task-handover'
 
 const db = getTenantPrisma()
-const superAdminDb = getSuperAdminPrisma()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,10 +129,7 @@ export const usersService = {
 
     // Fetch org name + inviter name for email
     const [tenant, inviter] = await Promise.all([
-      superAdminDb.tenant.findUnique({
-        where:  { id: params.tenantId },
-        select: { name: true },
-      }),
+      getOrgSummary(params.tenantId),
       db.user.findUnique({
         where:  { id: params.actorId },
         select: { name: true },
@@ -194,9 +194,7 @@ export const usersService = {
     })
 
     const [tenant, inviter] = await Promise.all([
-      superAdminDb.tenant.findUnique({
-        where: { id: params.tenantId }, select: { name: true },
-      }),
+      getOrgSummary(params.tenantId),
       db.user.findUnique({
         where: { id: params.actorId }, select: { name: true },
       }),
@@ -230,7 +228,7 @@ export const usersService = {
     await logTenantAction({
       tenantId:   params.tenantId,
       userId:     params.actorId,
-      action:     TenantAuditAction.USER_DEACTIVATED,
+      action:     TenantAuditAction.INVITATION_CANCELLED,
       targetType: 'user_invitation',
       targetId:   params.invitationId,
       targetName: inv.email,
@@ -270,12 +268,19 @@ export const usersService = {
     }
 
     const oldRole = target.role
+    let handover: HandoverResult | null = null
 
     await db.$transaction(async tx => {
       await tx.user.update({
         where: { id: params.targetUserId },
         data:  { role: params.newRole },
       })
+
+      // Only an IT Admin can hold working tasks. Someone who stops being one hands back the work they were doing;
+      // work already submitted or in review stays where it is (see task-handover.ts).
+      if (oldRole === TenantRole.IT_ADMIN && params.newRole !== TenantRole.IT_ADMIN) {
+        handover = await releaseWorkingTasks(tx as any, params.tenantId, params.targetUserId, 'user is no longer an IT Admin', params.actorId)
+      }
 
       // If role changed away from IT_ADMIN or INTERNAL_AUDITOR,
       // clean up their department assignments
@@ -303,12 +308,21 @@ export const usersService = {
     await logTenantAction({
       tenantId:   params.tenantId,
       userId:     params.actorId,
-      action:     TenantAuditAction.USER_ACTIVATED,
+      action:     TenantAuditAction.USER_ROLE_CHANGED,
       targetType: 'user',
       targetId:   params.targetUserId,
       targetName: target.name,
-      details:    { oldRole, newRole: params.newRole },
+      details:    { oldRole, newRole: params.newRole, ...(handover ? { releasedTasks: (handover as HandoverResult).released, tasksInReview: (handover as HandoverResult).inReview } : {}) },
     })
+
+    // The new role applies from the next request on this instance (and within seconds on any other).
+    invalidateUserAccess(params.targetUserId)
+
+    // Independent LMS targeting axis — a role change can newly qualify this
+    // user for portal-usage courses targeted at their new role.
+    if (params.newRole !== oldRole) {
+      await lmsService.applyPortalRoleEnrollment(params.tenantId, params.targetUserId, params.newRole)
+    }
 
     return { success: true, oldRole, newRole: params.newRole }
   },
@@ -330,22 +344,18 @@ export const usersService = {
     if (target.role === TenantRole.CEO) throw new Error('The organization CEO cannot be deactivated')
     if (target.status === 'INACTIVE')   throw new Error('User is already inactive')
 
+    let handover!: HandoverResult
+
     await db.$transaction(async tx => {
-      // Set user inactive
+      // Set user inactive. The reason is recorded so a directory sync never re-enables someone an administrator
+      // switched off.
       await tx.user.update({
         where: { id: params.targetUserId },
-        data:  { status: 'INACTIVE' },
+        data:  { status: 'INACTIVE', deactivatedReason: 'ADMIN' },
       })
 
-      // Unassign all open tasks → reset to PENDING
-      await tx.complianceTask.updateMany({
-        where: {
-          tenantId:     params.tenantId,
-          assignedToId: params.targetUserId,
-          status:       { notIn: ['COMPLIANT', 'REJECTED'] },
-        },
-        data: { assignedToId: null, status: 'PENDING' },
-      })
+      // Hand back the work they were doing. Work already submitted / under review / approved is NOT reopened.
+      handover = await releaseWorkingTasks(tx as any, params.tenantId, params.targetUserId, 'user deactivated', params.actorId)
 
       // Clear as department primary IT Admin
       await tx.department.updateMany({
@@ -370,9 +380,13 @@ export const usersService = {
       targetType: 'user',
       targetId:   params.targetUserId,
       targetName: target.name,
+      details:    { releasedTasks: handover.released, tasksInReview: handover.inReview },
     })
 
-    return { success: true }
+    // Their sessions stop working now on this instance (within seconds on any other).
+    invalidateUserAccess(params.targetUserId)
+
+    return { success: true, releasedTasks: handover.released, tasksInReview: handover.inReview }
   },
 
   // ── Reactivate a user ───────────────────────────────────────────────────────
@@ -389,8 +403,9 @@ export const usersService = {
 
     await db.user.update({
       where: { id: params.targetUserId },
-      data:  { status: 'ACTIVE' },
+      data:  { status: 'ACTIVE', deactivatedReason: null },
     })
+    invalidateUserAccess(params.targetUserId)
 
     await logTenantAction({
       tenantId:   params.tenantId,
@@ -488,7 +503,7 @@ export const usersService = {
     await logTenantAction({
       tenantId:   params.tenantId,
       userId:     params.actorId,
-      action:     TenantAuditAction.USER_ACTIVATED,
+      action:     TenantAuditAction.USER_DEPARTMENTS_UPDATED,
       targetType: 'user',
       targetId:   params.targetUserId,
       targetName: target.name,

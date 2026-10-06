@@ -1,0 +1,105 @@
+# SKELETON (step 6) — shows the intended stack; not runnable until the images exist (step 4).
+# Architecture and rationale: README.md. Settings: .env.example (copy to .env).
+name: niyamsaathi
+
+x-app: &app
+  image: ${IMAGE_REGISTRY:?set IMAGE_REGISTRY}/niyamsaathi-api:${APP_VERSION:?set APP_VERSION}   # pinned by digest in production
+  env_file: .env
+  restart: unless-stopped
+  read_only: true                      # root filesystem is read-only; only /tmp is writable
+  tmpfs: [/tmp]
+  user: "10001:10001"                  # non-root
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+services:
+  proxy:
+    image: caddy:2                     # pin by digest
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]        # the ONLY published ports
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro              # the customer's certificate and key
+      - caddydata:/data
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [frontend]
+
+  api:
+    <<: *app
+    networks: [data, frontend]         # data: database + queue (private); frontend: proxy in, mail / identity provider / updates out
+    volumes:
+      - evidence:/data/evidence        # STORAGE_PROVIDER=local, UPLOAD_DIR=/data/evidence
+    expose: ["3000"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 40s             # longer than SHUTDOWN_GRACE_SECONDS (default 25)
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey:  { condition: service_healthy }
+
+  worker:
+    <<: *app
+    networks: [data, frontend]         # frontend only for outbound calls (the cloud scanner, mail)
+    command: ["node", "dist/worker.js"]
+    stop_grace_period: 40s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey:  { condition: service_healthy }
+
+  migrate:                              # one-shot: backup gate -> lock -> migrate -> drift check (dpdpctl migrate, step 4)
+    <<: *app
+    command: ["dpdpctl", "migrate"]
+    networks: [data]                    # database only: a migration needs no outside access
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  postgres:
+    image: postgres:17                  # pin by digest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dpdp}
+      POSTGRES_DB: ${POSTGRES_DB:-dpdp_tenant}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dpdp} -d ${POSTGRES_DB:-dpdp_tenant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [data]
+
+  valkey:                               # the job queue needs noeviction; persistence on
+    image: valkey/valkey:8              # pin by digest
+    restart: unless-stopped
+    command: ["valkey-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--requirepass", "${VALKEY_PASSWORD:?set VALKEY_PASSWORD}"]
+    volumes: [valkeydata:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+    networks: [data]
+
+networks:
+  data:                                 # PRIVATE: no route out, nothing published. Only postgres, valkey and the app containers are on it.
+    internal: true
+  frontend: {}                          # the proxy (the only published ports) and the app's outbound access
+
+volumes:
+  pgdata:
+  valkeydata:
+  evidence:
+  caddydata:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password   # created by `dpdpctl install`; never committed

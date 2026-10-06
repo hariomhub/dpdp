@@ -29,6 +29,9 @@
     "db:reset:tenant": "prisma migrate reset --config=prisma/tenant/prisma.config.ts",
     "postinstall": "npm run generate",
     "seed:tenant": "ts-node src/seed/tenant-seed.ts",
-    "seed:cloud-catalog": "ts-node src/seed/cloud-catalog-seed.ts"
+    "seed:lms-demo": "ts-node src/seed/lms-demo-seed.ts",
+    "seed:cloud-catalog": "ts-node src/seed/cloud-catalog-seed.ts",
+    "backfill:regulation-nodes": "ts-node src/backfill/regulation-node-hierarchy-backfill.ts",
+    "backfill:dashboard-snapshots": "ts-node src/backfill/dashboard-snapshot-backfill.ts"
   }
 }
